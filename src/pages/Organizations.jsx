@@ -5,6 +5,7 @@ import adminService from '../services/adminService'
 import { useAuth } from '../contexts/AuthContext'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../services/firebase'
+import OrganizationProfileCard from '../components/OrganizationProfileCard'
 
 export default function Organizations() {
   const { organizations, loading } = useOrganizations()
@@ -16,6 +17,8 @@ export default function Organizations() {
   const [selectedOrg, setSelectedOrg] = useState(null)
   const [followers, setFollowers] = useState([])
   const [followersLoading, setFollowersLoading] = useState(false)
+  const [showProfileCard, setShowProfileCard] = useState(false)
+  const [selectedProfileOrg, setSelectedProfileOrg] = useState(null)
 
   useEffect(() => {
     if (currentUser && organizations.length > 0) {
@@ -126,6 +129,20 @@ export default function Organizations() {
     fetchFollowers(org.id)
   }
 
+  // Function to open organization profile card
+  const openProfileCard = async (org) => {
+    setSelectedProfileOrg(org)
+    setShowProfileCard(true)
+    
+    // Check follow status for this organization
+    try {
+      const following = await adminService.isFollowingOrganization(org.id)
+      setFollowingStatus(prev => ({ ...prev, [org.id]: following }))
+    } catch (error) {
+      console.error('Error checking follow status:', error)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -202,7 +219,10 @@ export default function Organizations() {
                           </span>
                         </div>
                         <div className="flex space-x-2">
-                          <button className="btn-secondary text-sm px-3 py-1">
+                          <button 
+                            className="btn-secondary text-sm px-3 py-1"
+                            onClick={() => openProfileCard(org)}
+                          >
                             View Details
                           </button>
                           <button 
@@ -288,7 +308,10 @@ export default function Organizations() {
                           </span>
                         </div>
                         <div className="flex space-x-2">
-                          <button className="btn-secondary text-sm px-3 py-1">
+                          <button 
+                            className="btn-secondary text-sm px-3 py-1"
+                            onClick={() => openProfileCard(org)}
+                          >
                             View Details
                           </button>
                           {isAdmin && (
@@ -392,6 +415,15 @@ export default function Organizations() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Organization Profile Card */}
+      {showProfileCard && selectedProfileOrg && (
+        <OrganizationProfileCard
+          organization={selectedProfileOrg}
+          isOpen={showProfileCard}
+          onClose={() => setShowProfileCard(false)}
+        />
       )}
     </div>
   )

@@ -1,5 +1,5 @@
 import { db, auth } from './firebase'
-import { doc, getDoc, collection, getDocs, query, where, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, collection, getDocs, query, where, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'
 
 class AdminService {
   constructor() {
@@ -165,32 +165,110 @@ class AdminService {
 
   // Check if user is following an organization
   async isFollowingOrganization(organizationId) {
-    console.log('🔍 Checking if following organization:', organizationId)
-    
     if (!this.currentUser) {
-      console.log('❌ No current user found')
       return false
     }
 
     try {
-      // Check if organization exists in user's followed organizations
-      const userDoc = doc(db, 'users', this.currentUser.uid)
-      const followedOrgDoc = doc(userDoc, 'followedOrganizations', organizationId)
-      
-      const docSnap = await getDoc(followedOrgDoc)
-      
-      if (docSnap.exists) {
-        const data = docSnap.data()
-        const isFollowing = data.isFollowing || false
-        console.log('✅ Following status for', organizationId, ':', isFollowing)
-        return isFollowing
-      } else {
-        console.log('ℹ️ Not following organization', organizationId)
-        return false
+      const userDoc = await getDoc(doc(db, 'users', this.currentUser.uid))
+      if (userDoc.exists()) {
+        const userData = userDoc.data()
+        const followedOrganizations = userData.followedOrganizations || {}
+        return followedOrganizations[organizationId] === true
       }
-      
+      return false
     } catch (error) {
-      console.error('❌ Error checking follow status for organization', organizationId, ':', error)
+      console.error('Error checking follow status:', error)
+      return false
+    }
+  }
+
+  // Follow an organization
+  async followOrganization(organizationId) {
+    if (!this.currentUser) {
+      throw new Error('User not authenticated')
+    }
+
+    try {
+      const userRef = doc(db, 'users', this.currentUser.uid)
+      const userDoc = await getDoc(userRef)
+      
+      if (!userDoc.exists()) {
+        throw new Error('User document not found')
+      }
+
+      const userData = userDoc.data()
+      const followedOrganizations = userData.followedOrganizations || {}
+      
+      // Add organization to followed list
+      followedOrganizations[organizationId] = true
+      
+      // Update user document
+      await updateDoc(userRef, {
+        followedOrganizations,
+        updatedAt: serverTimestamp()
+      })
+
+      // Also update organizationFollowers collection
+      await addDoc(collection(db, 'organizationFollowers'), {
+        organizationId,
+        userId: this.currentUser.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      })
+
+      console.log('✅ User now following organization:', organizationId)
+      return true
+    } catch (error) {
+      console.error('Error following organization:', error)
+      throw error
+    }
+  }
+
+  // Unfollow an organization
+  async unfollowOrganization(organizationId) {
+    if (!this.currentUser) {
+      throw new Error('User not authenticated')
+    }
+
+    try {
+      const userRef = doc(db, 'users', this.currentUser.uid)
+      const userDoc = await getDoc(userRef)
+      
+      if (!userDoc.exists()) {
+        throw new Error('User document not found')
+      }
+
+      const userData = userDoc.data()
+      const followedOrganizations = userData.followedOrganizations || {}
+      
+      // Remove organization from followed list
+      delete followedOrganizations[organizationId]
+      
+      // Update user document
+      await updateDoc(userRef, {
+        followedOrganizations,
+        updatedAt: serverTimestamp()
+      })
+
+      // Also remove from organizationFollowers collection
+      const followersQuery = query(
+        collection(db, 'organizationFollowers'),
+        where('organizationId', '==', organizationId),
+        where('userId', '==', this.currentUser.uid)
+      )
+      const followersSnapshot = await getDocs(followersQuery)
+      
+      for (const doc of followersSnapshot.docs) {
+        await updateDoc(doc.ref, {
+          deletedAt: serverTimestamp()
+        })
+      }
+
+      console.log('✅ User unfollowed organization:', organizationId)
+      return true
+    } catch (error) {
+      console.error('Error unfollowing organization:', error)
       throw error
     }
   }
