@@ -101,7 +101,7 @@ export default function Map() {
     if (!mapInstanceRef.current || !organizations.length) return
 
     // Clear existing markers
-    markersRef.current.forEach(marker => marker.setMap(null))
+    markersRef.current.forEach(marker => marker.map = null)
     markersRef.current = []
 
     const mappableOrgs = getMappableOrganizations()
@@ -113,28 +113,25 @@ export default function Map() {
       const isAdmin = adminOrgs.some(adminOrg => adminOrg.id === org.id)
       const isFollowing = followingStatus[org.id] || false
 
-      // Create marker
-      const marker = new window.google.maps.Marker({
+      // Create custom marker element
+      const markerElement = document.createElement('div')
+      markerElement.innerHTML = `
+        <div class="relative">
+          <div class="w-8 h-8 rounded-full border-2 cursor-pointer transition-transform hover:scale-110 ${
+            isAdmin 
+              ? 'bg-yellow-500 border-yellow-600 shadow-lg' 
+              : 'bg-blue-500 border-blue-600 shadow-md'
+          }"></div>
+          ${isAdmin ? '<div class="absolute -top-1 -right-1 text-yellow-600">👑</div>' : ''}
+        </div>
+      `
+
+      // Create advanced marker
+      const marker = new window.google.maps.marker.AdvancedMarkerElement({
         position: coords,
         map: mapInstanceRef.current,
         title: org.name,
-        icon: {
-          url: isAdmin 
-            ? 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="16" cy="16" r="12" fill="#fbbf24" stroke="#d97706" stroke-width="2"/>
-                  <path d="M16 8l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6z" fill="#d97706"/>
-                </svg>
-              `)
-            : 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="16" cy="16" r="12" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
-                  <circle cx="16" cy="16" r="4" fill="#1d4ed8"/>
-                </svg>
-              `),
-          scaledSize: new window.google.maps.Size(32, 32),
-          anchor: new window.google.maps.Point(16, 32)
-        }
+        content: markerElement
       })
 
       // Create info window content
