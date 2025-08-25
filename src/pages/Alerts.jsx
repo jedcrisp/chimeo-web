@@ -128,15 +128,31 @@ export default function Alerts() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Type
                   </label>
-                  <select
-                    value={newAlert.type}
-                    onChange={(e) => setNewAlert({ ...newAlert, type: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="info">Info</option>
-                    <option value="warning">Warning</option>
-                    <option value="emergency">Emergency</option>
-                  </select>
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    {[
+                      { value: 'info', label: '📢 Info', color: 'bg-blue-100 border-blue-300 text-blue-800' },
+                      { value: 'warning', label: '⚠️ Warning', color: 'bg-yellow-100 border-yellow-300 text-yellow-800' },
+                      { value: 'emergency', label: '🚨 Emergency', color: 'bg-red-100 border-red-300 text-red-800' }
+                    ].map((type) => (
+                      <button
+                        key={type.value}
+                        type="button"
+                        onClick={() => setNewAlert({ ...newAlert, type: type.value })}
+                        className={`p-3 border-2 rounded-lg font-medium transition-all ${
+                          newAlert.type === type.value 
+                            ? `${type.color} border-current` 
+                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        {type.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {newAlert.type === 'info' && 'General information for your community'}
+                    {newAlert.type === 'warning' && 'Important notice requiring attention'}
+                    {newAlert.type === 'emergency' && 'Critical situation requiring immediate action'}
+                  </p>
                 </div>
                 
                 <div>
@@ -151,6 +167,36 @@ export default function Alerts() {
                     placeholder="Location (optional)"
                   />
                 </div>
+                
+                {/* Alert Preview */}
+                {newAlert.title && newAlert.message && (
+                  <div className="p-4 bg-gray-50 rounded-lg border">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Preview:</h4>
+                    <div className={`p-3 rounded-lg border-2 ${
+                      newAlert.type === 'info' ? 'bg-blue-50 border-blue-200' :
+                      newAlert.type === 'warning' ? 'bg-yellow-50 border-yellow-200' :
+                      'bg-red-50 border-red-200'
+                    }`}>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <span className={`text-lg ${
+                          newAlert.type === 'info' ? 'text-blue-600' :
+                          newAlert.type === 'warning' ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`}>
+                          {newAlert.type === 'info' ? '📢' : newAlert.type === 'warning' ? '⚠️' : '🚨'}
+                        </span>
+                        <h5 className="font-semibold text-gray-900">{newAlert.title}</h5>
+                      </div>
+                      <p className="text-gray-700">{newAlert.message}</p>
+                      {newAlert.location && (
+                        <p className="text-sm text-gray-500 mt-2">📍 {newAlert.location}</p>
+                      )}
+                      <div className="mt-2 text-xs text-gray-500">
+                        This alert will be sent to all followers of your organization via phone notifications.
+                      </div>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="flex space-x-3 pt-4">
                   <button

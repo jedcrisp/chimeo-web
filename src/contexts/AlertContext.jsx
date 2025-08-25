@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { collection, query, orderBy, onSnapshot, addDoc, updateDoc, doc, deleteDoc, getDocs } from 'firebase/firestore'
+import { collection, query, orderBy, onSnapshot, addDoc, updateDoc, doc, deleteDoc, getDocs, getDoc } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import { useAuth } from './AuthContext'
 import toast from 'react-hot-toast'
@@ -48,14 +48,68 @@ export function AlertProvider({ children }) {
         throw new Error('User not authenticated or profile not loaded')
       }
 
-      // Get user's organization info
-      let organizationId = 'default'
-      let organizationName = 'Default Organization'
+      console.log('🔧 AlertContext: Creating alert with data:', alertData)
+      console.log('🔧 AlertContext: Current user:', currentUser.uid)
+      console.log('🔧 AlertContext: User profile:', userProfile)
+
+      // Refresh user profile to ensure we have the latest organization information
+      try {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid))
+        if (userDoc.exists()) {
+          const freshProfile = userDoc.data()
+          console.log('🔧 AlertContext: Fresh user profile:', freshProfile)
+          
+          // Update local userProfile if it has new organization info
+          if (freshProfile.organizationId && freshProfile.organizationName) {
+            console.log('🔧 AlertContext: Found fresh organization info:', {
+              organizationId: freshProfile.organizationId,
+              organizationName: freshProfile.organizationName
+            })
+          }
+        }
+      } catch (error) {
+        console.warn('Could not refresh user profile:', error)
+      }
+
+      // Get user's organization info - we need to find which organization they're an admin of
+      let organizationId = null
+      let organizationName = null
       
-      // Try to get the user's primary organization
-      if (userProfile.organizationId) {
+      // Check if user is an admin of any organization
+      if (userProfile.isOrganizationAdmin) {
+        // Try to get the organization ID from userProfile or find it in organizations
         organizationId = userProfile.organizationId
-        organizationName = userProfile.organizationName || 'Unknown Organization'
+        organizationName = userProfile.organizationName
+        console.log('🔧 AlertContext: User is org admin, using profile org info:', { organizationId, organizationName })
+      } else {
+        console.log('🔧 AlertContext: User is not an org admin according to profile')
+      }
+
+      // If we don't have organization info, try to get it from adminService
+      if (!organizationId) {
+        try {
+          console.log('🔧 AlertContext: Trying to get organization info from adminService...')
+          const adminService = (await import('../services/adminService')).default
+          adminService.setCurrentUser(currentUser)
+          
+          const hasAdminAccess = await adminService.hasOrganizationAdminAccess()
+          if (hasAdminAccess) {
+            const adminOrgs = await adminService.getAdminOrganizations()
+            if (adminOrgs.length > 0) {
+              const primaryOrg = adminOrgs[0]
+              organizationId = primaryOrg.id
+              organizationName = primaryOrg.name
+              console.log('🔧 AlertContext: Found organization info via adminService:', { organizationId, organizationName })
+            }
+          }
+        } catch (error) {
+          console.warn('Could not get organization info from adminService:', error)
+        }
+      }
+
+      // If we still don't have organization info, we can't send phone notifications
+      if (!organizationId) {
+        throw new Error('You must be an organization administrator to create alerts that send phone notifications. Please check your profile to ensure you have admin access.')
       }
 
       // Create alert in the mobile app structure for cloud function compatibility
@@ -66,7 +120,7 @@ export function AlertProvider({ children }) {
         organizationName: organizationName,
         type: alertData.type,
         severity: alertData.type === 'emergency' ? 'high' : 'medium',
-        postedBy: userProfile.displayName || currentUser.email,
+        postedBy: userProfile.creatorName || userProfile.displayName || currentUser.email,
         postedByUserId: currentUser.uid,
         isActive: true,
         createdAt: new Date(),
@@ -77,23 +131,29 @@ export function AlertProvider({ children }) {
         webAlertData: alertData
       }
 
-      // Store in the main alerts collection (for web app display)
-      const docRef = await addDoc(collection(db, 'organizationAlerts'), alertPayload)
+      console.log('🔧 Creating alert in mobile app structure:', {
+        organizationId,
+        organizationName,
+        alertPayload
+      })
+
+      // Store in the mobile app structure to trigger cloud function for phone notifications
+      console.log('🔧 AlertContext: About to create alert in mobile app structure at path: organizations/' + organizationId + '/alerts')
+      const mobileAlertRef = await addDoc(collection(db, 'organizations', organizationId, 'alerts'), alertPayload)
+      console.log('✅ Alert created in mobile app structure:', mobileAlertRef.id)
+      console.log('✅ Full path:', 'organizations/' + organizationId + '/alerts/' + mobileAlertRef.id)
+      console.log('✅ This should trigger the cloud function: sendAlertNotifications')
       
-      // Also store in the mobile app structure to trigger cloud function
-      if (organizationId !== 'default') {
-        try {
-          await addDoc(collection(db, 'organizations', organizationId, 'alerts'), alertPayload)
-        } catch (error) {
-          console.warn('Could not create alert in mobile app structure:', error)
-        }
-      }
+      // Also store in the main alerts collection (for web app display)
+      const webAlertRef = await addDoc(collection(db, 'organizationAlerts'), alertPayload)
+      console.log('✅ Alert created in web app structure:', webAlertRef.id)
 
       toast.success('Alert created successfully! Phone notifications will be sent to followers.')
-      return docRef
+      console.log('🎉 Alert creation complete! Check Firebase Functions logs for cloud function execution.')
+      return webAlertRef
     } catch (error) {
       console.error('Error creating alert:', error)
-      toast.error('Failed to create alert')
+      toast.error(error.message || 'Failed to create alert')
       throw error
     }
   }

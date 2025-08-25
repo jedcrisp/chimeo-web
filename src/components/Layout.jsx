@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { MapPin, Users, User, LogOut, Menu, X, Building } from 'lucide-react'
+import { MapPin, Users, User, LogOut, Menu, X, Building, Home, Bell } from 'lucide-react'
 import { useState } from 'react'
 
 // Custom Bell Icon component
@@ -26,11 +26,10 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: BellIcon },
-    { name: 'Alerts', href: '/alerts', icon: BellIcon },
-    { name: 'Organizations', href: '/organizations', icon: Users },
+    { name: 'Dashboard', href: '/', icon: Home },
+    { name: 'Alerts', href: '/alerts', icon: Bell },
+    { name: 'Organizations', href: '/organizations', icon: Building },
     { name: 'Map', href: '/map', icon: MapPin },
-    { name: 'Request Organization', href: '/request-org', icon: Building },
     { name: 'Profile', href: '/profile', icon: User },
   ]
 

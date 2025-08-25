@@ -124,23 +124,6 @@ export default function Dashboard() {
           </div>
         </Link>
 
-        <Link
-          to="/request-org"
-          className="card hover:shadow-md transition-shadow cursor-pointer group bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200"
-        >
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-purple-100 group-hover:bg-purple-200">
-                <Building className="h-5 w-5 text-purple-600" />
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-purple-800">Request Access</p>
-              <p className="text-sm text-purple-700">Join or create orgs</p>
-            </div>
-          </div>
-        </Link>
-
         {hasAdminAccess && (
           <Link
             to="/alerts"

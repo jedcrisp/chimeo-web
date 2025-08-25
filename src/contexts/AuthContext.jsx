@@ -1,15 +1,16 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { auth, db } from '../services/firebase'
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signOut, 
   onAuthStateChanged,
+  updateProfile,
   GoogleAuthProvider,
-  signInWithPopup,
-  updateProfile
+  signInWithPopup
 } from 'firebase/auth'
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { auth, db } from '../services/firebase'
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
+import adminService from '../services/adminService'
 
 const AuthContext = createContext()
 
@@ -36,6 +37,22 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [forceUpdate, setForceUpdate] = useState(0) // Force re-render
 
+  // Debug: Track currentUser state changes
+  useEffect(() => {
+    console.log('🔍 AuthContext: currentUser state changed to:', currentUser)
+    if (currentUser && typeof currentUser === 'string') {
+      console.log('⚠️ WARNING: currentUser is a string UID instead of user object!')
+      console.log('⚠️ This should not happen - currentUser should always be the full user object or null')
+      console.log('⚠️ Attempting to recover by getting the full user object from auth.currentUser')
+      
+      // Try to recover by getting the full user object
+      if (auth.currentUser && auth.currentUser.uid === currentUser) {
+        console.log('🔧 Recovering: Setting currentUser to full auth.currentUser object')
+        setCurrentUser(auth.currentUser)
+      }
+    }
+  }, [currentUser])
+
   console.log('🔧 AuthProvider: Component rendered, loading:', loading, 'currentUser:', currentUser, 'forceUpdate:', forceUpdate)
 
   async function signup(email, password, displayName) {
@@ -61,11 +78,16 @@ export function AuthProvider({ children }) {
         updatedAt: serverTimestamp(),
         role: 'user',
         isActive: true,
-        hasRequestedOrganization: false
+        hasRequestedOrganization: false,
+        isOrganizationAdmin: false // Add this field to match mobile app
       }
       
       await setDoc(doc(db, 'users', result.user.uid), userProfile)
       console.log('✅ AuthContext: User profile created in Firestore')
+      
+      // Update admin service with current user
+      adminService.setCurrentUser(result.user)
+      console.log('🔧 AuthContext: Updated admin service with new user:', result.user.uid)
       
       return result
     } catch (error) {
@@ -90,21 +112,33 @@ export function AuthProvider({ children }) {
       
       // Force a check of the current auth state
       console.log('🔧 AuthContext: Checking if auth state was updated...')
-      const currentAuthUser = auth.currentUser
-      if (currentAuthUser) {
-        console.log('✅ AuthContext: Auth state updated successfully, current user:', currentAuthUser.uid)
-        // Manually update the context state since onAuthStateChanged might not fire immediately
-        console.log('🔧 AuthContext: Manually updating context state...')
-        console.log('🔧 AuthContext: Setting currentUser to:', currentAuthUser.uid)
-        setCurrentUser(currentAuthUser)
+      if (result.user) {
+        console.log('✅ AuthContext: Login successful, user:', result.user.uid)
+        if (typeof result.user === 'string') {
+          console.log('⚠️ WARNING: result.user is string, getting full user object instead')
+          const fullUser = auth.currentUser
+          if (fullUser && fullUser.uid === result.user) {
+            setCurrentUser(fullUser)
+          } else {
+            console.log('❌ ERROR: Cannot recover full user object, setting to null')
+            setCurrentUser(null)
+          }
+        } else {
+          setCurrentUser(result.user)
+        }
+        
+        // Update admin service with current user
+        adminService.setCurrentUser(result.user)
+        console.log('🔧 AuthContext: Updated admin service with user:', result.user.uid)
+        
         console.log('🔧 AuthContext: Fetching user profile...')
-        await fetchUserProfile(currentAuthUser.uid)
+        await fetchUserProfile(result.user.uid)
         console.log('🔧 AuthContext: Setting loading to false...')
         setLoading(false)
         console.log('🔧 AuthContext: Force updating context...')
         setForceUpdate(prev => prev + 1)
         console.log('🔧 AuthContext: Manual update complete. New state should be:', {
-          currentUser: currentAuthUser.uid,
+          currentUser: result.user.uid,
           loading: false,
           userProfile: 'fetched'
         })
@@ -139,12 +173,27 @@ export function AuthProvider({ children }) {
           updatedAt: serverTimestamp(),
           role: 'user',
           isActive: true,
-          hasRequestedOrganization: false
+          hasRequestedOrganization: false,
+          isOrganizationAdmin: false // Add this field to match mobile app
         }
         
         await setDoc(doc(db, 'users', result.user.uid), userProfile)
         console.log('✅ Created new user profile for Google sign-in')
       }
+      
+      // Update admin service with current user
+      if (typeof result.user === 'string') {
+        console.log('⚠️ WARNING: result.user is string in Google sign-in, getting full user object instead')
+        const fullUser = auth.currentUser
+        if (fullUser && fullUser.uid === result.user) {
+          adminService.setCurrentUser(fullUser)
+        } else {
+          console.log('❌ ERROR: Cannot recover full user object for Google sign-in')
+        }
+      } else {
+        adminService.setCurrentUser(result.user)
+      }
+      console.log('🔧 AuthContext: Updated admin service with Google user:', result.user.uid)
       
       return result
     } catch (error) {
@@ -154,7 +203,20 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
-    return signOut(auth)
+    try {
+      console.log('🔧 AuthContext: Logging out user...')
+      
+      // Clear admin service user
+      adminService.setCurrentUser(null)
+      console.log('🔧 AuthContext: Cleared admin service user')
+      
+      // Sign out from Firebase
+      await signOut(auth)
+      console.log('✅ AuthContext: User signed out successfully')
+    } catch (error) {
+      console.error('❌ AuthContext: Error during logout:', error)
+      throw error
+    }
   }
 
   // Manual function to check and update auth state
@@ -165,7 +227,22 @@ export function AuthProvider({ children }) {
     
     if (user) {
       console.log('🔧 AuthContext: User found, updating state...')
-      setCurrentUser(user)
+      if (typeof user === 'string') {
+        console.log('⚠️ WARNING: user is string in checkAuthState, getting full user object instead')
+        const fullUser = auth.currentUser
+        if (fullUser && fullUser.uid === user) {
+          setCurrentUser(fullUser)
+          adminService.setCurrentUser(fullUser)
+        } else {
+          console.log('❌ ERROR: Cannot recover full user object in checkAuthState')
+          setCurrentUser(null)
+          adminService.setCurrentUser(null)
+        }
+      } else {
+        setCurrentUser(user)
+        adminService.setCurrentUser(user)
+      }
+      console.log('🔧 AuthContext: Updated admin service with user:', user.uid)
       await fetchUserProfile(user.uid)
       setLoading(false)
       setForceUpdate(prev => prev + 1)
@@ -173,13 +250,47 @@ export function AuthProvider({ children }) {
       console.log('🔧 AuthContext: No user found, clearing state...')
       setCurrentUser(null)
       setUserProfile(null)
+      adminService.setCurrentUser(null)
+      console.log('🔧 AuthContext: Cleared admin service user')
       setLoading(false)
       setForceUpdate(prev => prev + 1)
     }
   }
 
+  // Function to fix user ID mismatch by signing out and clearing auth state
+  async function fixUserMismatch() {
+    try {
+      console.log('🔧 AuthContext: Fixing user ID mismatch...')
+      console.log('🔧 AuthContext: Current auth user:', auth.currentUser?.uid || 'null')
+      
+      // Sign out from Firebase
+      await signOut(auth)
+      console.log('✅ AuthContext: User signed out successfully')
+      
+      // Clear all local state
+      setCurrentUser(null)
+      setUserProfile(null)
+      adminService.setCurrentUser(null)
+      setLoading(false)
+      setForceUpdate(prev => prev + 1)
+      
+      console.log('✅ AuthContext: Local state cleared, ready for fresh authentication')
+      console.log('🔧 AuthContext: Please sign in again with the correct account')
+      
+    } catch (error) {
+      console.error('❌ AuthContext: Error fixing user mismatch:', error)
+    }
+  }
+
   async function fetchUserProfile(uid) {
     try {
+      if (typeof uid === 'string') {
+        console.log('🔧 AuthContext: Fetching user profile for UID:', uid)
+      } else {
+        console.log('⚠️ WARNING: fetchUserProfile called with non-string UID:', uid)
+        return
+      }
+      
       const userDoc = await getDoc(doc(db, 'users', uid))
       if (userDoc.exists()) {
         const profileData = userDoc.data()
@@ -196,7 +307,8 @@ export function AuthProvider({ children }) {
           updatedAt: serverTimestamp(),
           role: 'user',
           isActive: true,
-          hasRequestedOrganization: false
+          hasRequestedOrganization: false,
+          isOrganizationAdmin: false // Add this field to match mobile app
         }
         await setDoc(doc(db, 'users', uid), newProfile)
         setUserProfile(newProfile)
@@ -214,8 +326,30 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log('🔧 AuthProvider: Auth state changed, user:', user ? user.uid : 'null')
       console.log('🔧 AuthProvider: Previous currentUser:', currentUser?.uid || 'null')
-      setCurrentUser(user)
+      
+      if (typeof user === 'string') {
+        console.log('⚠️ WARNING: onAuthStateChanged received string, getting full user object instead')
+        const fullUser = auth.currentUser
+        if (fullUser && fullUser.uid === user) {
+          setCurrentUser(fullUser)
+        } else {
+          console.log('❌ ERROR: Cannot recover full user object, setting to null')
+          setCurrentUser(null)
+        }
+      } else {
+        setCurrentUser(user)
+      }
+      
       console.log('🔧 AuthProvider: Updated currentUser state to:', user?.uid || 'null')
+      
+      // Update admin service with current user
+      if (user) {
+        adminService.setCurrentUser(user)
+        console.log('🔧 AuthProvider: Updated admin service with user:', user.uid)
+      } else {
+        adminService.setCurrentUser(null)
+        console.log('🔧 AuthProvider: Cleared admin service user')
+      }
       
       if (user) {
         console.log('🔧 AuthProvider: User authenticated, fetching profile...')
@@ -230,14 +364,28 @@ export function AuthProvider({ children }) {
     
     // Check initial auth state
     console.log('🔧 AuthProvider: Checking initial auth state...')
-    const currentUser = auth.currentUser
-    console.log('🔧 AuthProvider: Initial auth.currentUser:', currentUser?.uid || 'null')
+    const initialUser = auth.currentUser
+    console.log('🔧 AuthProvider: Initial auth.currentUser:', initialUser?.uid || 'null')
     
     // If there's already a user, update the state immediately
-    if (currentUser) {
+    if (initialUser) {
       console.log('🔧 AuthProvider: User already authenticated, updating state immediately...')
-      setCurrentUser(currentUser)
-      fetchUserProfile(currentUser.uid)
+      console.log('🔍 Setting currentUser to initialUser object:', initialUser)
+      if (typeof initialUser === 'string') {
+        console.log('⚠️ WARNING: initialUser is string, getting full user object instead')
+        const fullUser = auth.currentUser
+        if (fullUser && fullUser.uid === initialUser) {
+          setCurrentUser(fullUser)
+        } else {
+          console.log('❌ ERROR: Cannot recover full user object, setting to null')
+          setCurrentUser(null)
+        }
+      } else {
+        setCurrentUser(initialUser)
+      }
+      adminService.setCurrentUser(initialUser)
+      console.log('🔧 AuthProvider: Updated admin service with initial user:', initialUser.uid)
+      fetchUserProfile(initialUser.uid)
       setLoading(false)
     }
     
@@ -253,7 +401,8 @@ export function AuthProvider({ children }) {
     login,
     signInWithGoogle,
     logout,
-    checkAuthState
+    checkAuthState,
+    fixUserMismatch
   }
 
   // Log when any of the key values change
