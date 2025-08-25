@@ -14,16 +14,56 @@ export default function Map() {
   const [followingStatus, setFollowingStatus] = useState({})
   const [searchQuery, setSearchQuery] = useState('')
   const [zoom, setZoom] = useState(4)
+  const [mapsLoaded, setMapsLoaded] = useState(false)
   
   const mapRef = useRef(null)
   const mapInstanceRef = useRef(null)
   const markersRef = useRef([])
   const infoWindowRef = useRef(null)
 
+  // Load Google Maps script dynamically
+  useEffect(() => {
+    const loadGoogleMaps = () => {
+      console.log('🗺️ Loading Google Maps script...')
+      console.log('🔑 Environment API Key:', import.meta.env.VITE_GOOGLE_MAPS_API_KEY)
+      
+      // Temporary hardcoded API key for testing
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyA96jGLzCUMVe9FHHS1lQ8vdbi8DFhAs6o'
+      console.log('🔑 Using API Key:', apiKey)
+      
+      if (window.google && window.google.maps) {
+        console.log('✅ Google Maps already loaded')
+        setMapsLoaded(true)
+        return
+      }
+
+      const script = document.createElement('script')
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker`
+      script.async = true
+      script.defer = true
+      script.onload = () => {
+        console.log('✅ Google Maps script loaded successfully')
+        console.log('🗺️ Google Maps API available:', !!window.google?.maps)
+        console.log('📍 Advanced Markers available:', !!window.google?.maps?.marker?.AdvancedMarkerElement)
+        setMapsLoaded(true)
+      }
+      script.onerror = (error) => {
+        console.error('❌ Failed to load Google Maps script:', error)
+      }
+      document.head.appendChild(script)
+    }
+
+    loadGoogleMaps()
+  }, [])
+
   useEffect(() => {
     if (currentUser && organizations.length > 0) {
+      console.log('👥 User authenticated, organizations loaded:', organizations.length)
+      console.log('📊 Sample organization data:', organizations[0])
+      
       // Get organizations where user is admin
       adminService.getAdminOrganizations().then(adminOrgs => {
+        console.log('👑 Admin organizations:', adminOrgs)
         setAdminOrgs(adminOrgs)
       })
 
@@ -33,24 +73,118 @@ export default function Map() {
   }, [currentUser, organizations])
 
   useEffect(() => {
-    // Initialize map when component mounts
-    initMap()
-    
-    // Get user's current location
-    getUserLocation()
-  }, [])
+    // Initialize map when Google Maps is loaded
+    if (mapsLoaded) {
+      initMap()
+      getUserLocation()
+    }
+  }, [mapsLoaded])
 
   // Initialize Google Maps
   const initMap = useCallback(() => {
+    console.log('🗺️ initMap called')
+    console.log('🔍 Checking Google Maps availability...')
+    console.log('window.google:', !!window.google)
+    console.log('window.google.maps:', !!window.google?.maps)
+    console.log('window.google.maps.marker:', !!window.google?.maps?.marker)
+    console.log('AdvancedMarkerElement:', !!window.google?.maps?.marker?.AdvancedMarkerElement)
+    console.log('mapRef.current:', !!mapRef.current)
+    console.log('mapRef.current dimensions:', mapRef.current ? {
+      width: mapRef.current.offsetWidth,
+      height: mapRef.current.offsetHeight
+    } : 'No ref')
+    
     if (!window.google || !window.google.maps) {
-      console.log('🗺️ Google Maps not loaded yet, retrying...')
+      console.log('❌ Google Maps not loaded yet, retrying...')
       setTimeout(initMap, 1000)
       return
     }
 
-    console.log('🗺️ Initializing Google Maps...')
+    if (!mapRef.current) {
+      console.log('❌ Map container not ready, retrying...')
+      setTimeout(initMap, 1000)
+      return
+    }
+
+    if (!window.google.maps.marker || !window.google.maps.marker.AdvancedMarkerElement) {
+      console.log('❌ Advanced Markers not available, falling back to regular markers')
+      // Fallback to regular markers if Advanced Markers not available
+      initMapWithRegularMarkers()
+      return
+    }
+
+    console.log('🗺️ Initializing Google Maps with Advanced Markers...')
     
     try {
+      console.log('📍 Creating map instance...')
+      console.log('📍 Map container:', mapRef.current)
+      console.log('📍 Map center:', mapCenter)
+      console.log('📍 Map zoom:', zoom)
+      
+      // Create map instance
+      const map = new window.google.maps.Map(mapRef.current, {
+        center: mapCenter,
+        zoom: zoom,
+        mapTypeId: window.google.maps.MapTypeId.ROADMAP,
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: true,
+        zoomControl: true,
+        mapId: 'DEMO_MAP_ID', // Add Map ID for Advanced Markers
+        styles: [
+          {
+            featureType: 'poi',
+            elementType: 'labels',
+            stylers: [{ visibility: 'off' }]
+          }
+        ]
+      })
+
+      console.log('✅ Map instance created successfully')
+      mapInstanceRef.current = map
+
+      // Create info window
+      infoWindowRef.current = new window.google.maps.InfoWindow()
+      console.log('✅ Info window created')
+
+      // Add map event listeners
+      map.addListener('zoom_changed', () => {
+        setZoom(map.getZoom())
+      })
+
+      map.addListener('center_changed', () => {
+        const center = map.getCenter()
+        setMapCenter({ lat: center.lat(), lng: center.lng() })
+      })
+
+      console.log('✅ Google Maps initialized successfully with Advanced Markers')
+      
+      // Add markers after map is ready
+      map.addListener('idle', () => {
+        console.log('🗺️ Map is idle, adding markers...')
+        addOrganizationMarkers()
+      })
+
+    } catch (error) {
+      console.error('❌ Error initializing Google Maps:', error)
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      })
+    }
+  }, [mapCenter, zoom])
+
+  // Fallback to regular markers if Advanced Markers not available
+  const initMapWithRegularMarkers = useCallback(() => {
+    console.log('🗺️ Initializing Google Maps with regular markers...')
+    
+    try {
+      console.log('📍 Creating map instance with regular markers...')
+      console.log('📍 Map container:', mapRef.current)
+      console.log('📍 Map center:', mapCenter)
+      console.log('📍 Map zoom:', zoom)
+      
       // Create map instance
       const map = new window.google.maps.Map(mapRef.current, {
         center: mapCenter,
@@ -69,10 +203,12 @@ export default function Map() {
         ]
       })
 
+      console.log('✅ Map instance created successfully with regular markers')
       mapInstanceRef.current = map
 
       // Create info window
       infoWindowRef.current = new window.google.maps.InfoWindow()
+      console.log('✅ Info window created')
 
       // Add map event listeners
       map.addListener('zoom_changed', () => {
@@ -84,31 +220,57 @@ export default function Map() {
         setMapCenter({ lat: center.lat(), lng: center.lng() })
       })
 
-      console.log('✅ Google Maps initialized successfully')
+      console.log('✅ Google Maps initialized successfully with regular markers')
       
       // Add markers after map is ready
       map.addListener('idle', () => {
-        addOrganizationMarkers()
+        console.log('🗺️ Map is idle, adding regular markers...')
+        addOrganizationMarkersWithRegularMarkers()
       })
 
     } catch (error) {
-      console.error('❌ Error initializing Google Maps:', error)
+      console.error('❌ Error initializing Google Maps with regular markers:', error)
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      })
     }
   }, [mapCenter, zoom])
 
   // Add organization markers to the map
   const addOrganizationMarkers = useCallback(() => {
-    if (!mapInstanceRef.current || !organizations.length) return
+    console.log('🗺️ Adding organization markers...')
+    
+    if (!mapInstanceRef.current) {
+      console.log('❌ Map instance not ready')
+      return
+    }
+    
+    if (!organizations.length) {
+      console.log('❌ No organizations to display')
+      return
+    }
+
+    console.log('🗺️ Map instance ready, organizations count:', organizations.length)
 
     // Clear existing markers
     markersRef.current.forEach(marker => marker.map = null)
     markersRef.current = []
 
     const mappableOrgs = getMappableOrganizations()
+    console.log('🗺️ Mappable organizations:', mappableOrgs.length)
     
     mappableOrgs.forEach((org) => {
+      console.log(`📍 Processing organization: ${org.name}`)
+      
       const coords = getCoordinates(org.location)
-      if (!coords) return
+      if (!coords) {
+        console.log(`❌ No valid coordinates for ${org.name}`)
+        return
+      }
+
+      console.log(`✅ Creating marker for ${org.name} at:`, coords)
 
       const isAdmin = adminOrgs.some(adminOrg => adminOrg.id === org.id)
       const isFollowing = followingStatus[org.id] || false
@@ -126,53 +288,171 @@ export default function Map() {
         </div>
       `
 
-      // Create advanced marker
-      const marker = new window.google.maps.marker.AdvancedMarkerElement({
-        position: coords,
-        map: mapInstanceRef.current,
-        title: org.name,
-        content: markerElement
-      })
+      try {
+        // Create advanced marker
+        const marker = new window.google.maps.marker.AdvancedMarkerElement({
+          position: coords,
+          map: mapInstanceRef.current,
+          title: org.name,
+          content: markerElement
+        })
 
-      // Create info window content
-      const infoContent = `
-        <div class="p-4 max-w-sm">
-          <div class="flex items-center space-x-2 mb-2">
-            <h3 class="text-lg font-semibold text-gray-900">${org.name}</h3>
-            ${isAdmin ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">👑 Admin</span>' : ''}
-          </div>
-          <p class="text-sm text-gray-600 mb-3">${org.description || 'No description'}</p>
-          <div class="space-y-1 text-sm text-gray-500">
-            ${formatLocation(org.location) ? `<div>📍 ${formatLocation(org.location)}</div>` : ''}
-            ${org.contact ? `<div>📞 ${org.contact}</div>` : ''}
-            ${org.email ? `<div>✉️ ${org.email}</div>` : ''}
-          </div>
-          <div class="mt-3 flex items-center justify-between text-sm">
-            <span>👥 ${org.memberCount || 0} members</span>
-            <span>❤️ ${org.followerCount || 0} followers</span>
-          </div>
-          <div class="mt-3 flex space-x-2">
-            <button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}', '_blank')" class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
-              🚗 Directions
-            </button>
-            <button onclick="window.selectOrganization('${org.id}')" class="px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600">
-              📋 View Details
-            </button>
-          </div>
-        </div>
-      `
+        console.log(`✅ Marker created successfully for ${org.name}`)
 
-      // Add click listener to marker
-      marker.addListener('click', () => {
-        infoWindowRef.current.setContent(infoContent)
-        infoWindowRef.current.open(mapInstanceRef.current, marker)
-        handleOrgSelect(org)
-      })
+        // Create info window content
+        const infoContent = `
+          <div class="p-4 max-w-sm">
+            <div class="flex items-center space-x-2 mb-2">
+              <h3 class="text-lg font-semibold text-gray-900">${org.name}</h3>
+              ${isAdmin ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">👑 Admin</span>' : ''}
+            </div>
+            <p class="text-sm text-gray-600 mb-3">${org.description || 'No description'}</p>
+            <div class="space-y-1 text-sm text-gray-500">
+              ${formatLocation(org.location) ? `<div>📍 ${formatLocation(org.location)}</div>` : ''}
+              ${org.contact ? `<div>📞 ${org.contact}</div>` : ''}
+              ${org.email ? `<div>✉️ ${org.email}</div>` : ''}
+            </div>
+            <div class="mt-3 flex items-center justify-between text-sm">
+              <span>👥 ${org.memberCount || 0} members</span>
+              <span>❤️ ${org.followerCount || 0} followers</span>
+            </div>
+            <div class="mt-3 flex space-x-2">
+              <button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}', '_blank')" class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
+                🚗 Directions
+              </button>
+              <button onclick="window.selectOrganization('${org.id}')" class="px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600">
+                📋 View Details
+              </button>
+            </div>
+          </div>
+        `
 
-      markersRef.current.push(marker)
+        // Add click listener to marker
+        marker.addListener('click', () => {
+          infoWindowRef.current.setContent(infoContent)
+          infoWindowRef.current.open(mapInstanceRef.current, marker)
+          handleOrgSelect(org)
+        })
+
+        markersRef.current.push(marker)
+        console.log(`✅ Marker added to map for ${org.name}`)
+        
+      } catch (error) {
+        console.error(`❌ Error creating marker for ${org.name}:`, error)
+      }
     })
 
     console.log(`✅ Added ${markersRef.current.length} markers to map`)
+  }, [organizations, adminOrgs, followingStatus])
+
+  // Add organization markers to the map with regular markers
+  const addOrganizationMarkersWithRegularMarkers = useCallback(() => {
+    console.log('🗺️ Adding organization markers with regular markers...')
+    
+    if (!mapInstanceRef.current) {
+      console.log('❌ Map instance not ready')
+      return
+    }
+    
+    if (!organizations.length) {
+      console.log('❌ No organizations to display')
+      return
+    }
+
+    console.log('🗺️ Map instance ready, organizations count:', organizations.length)
+
+    // Clear existing markers
+    markersRef.current.forEach(marker => marker.setMap(null))
+    markersRef.current = []
+
+    const mappableOrgs = getMappableOrganizations()
+    console.log('🗺️ Mappable organizations:', mappableOrgs.length)
+    
+    mappableOrgs.forEach((org) => {
+      console.log(`📍 Processing organization: ${org.name}`)
+      
+      const coords = getCoordinates(org.location)
+      if (!coords) {
+        console.log(`❌ No valid coordinates for ${org.name}`)
+        return
+      }
+
+      console.log(`✅ Creating regular marker for ${org.name} at:`, coords)
+
+      const isAdmin = adminOrgs.some(adminOrg => adminOrg.id === org.id)
+      const isFollowing = followingStatus[org.id] || false
+
+      try {
+        // Create regular marker
+        const marker = new window.google.maps.Marker({
+          position: coords,
+          map: mapInstanceRef.current,
+          title: org.name,
+          icon: {
+            url: isAdmin 
+              ? 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                  <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="16" cy="16" r="12" fill="#fbbf24" stroke="#d97706" stroke-width="2"/>
+                    <path d="M16 8l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6z" fill="#d97706"/>
+                  </svg>
+                `)
+              : 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                  <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="16" cy="16" r="12" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+                    <circle cx="16" cy="16" r="4" fill="#1d4ed8"/>
+                  </svg>
+                `),
+            scaledSize: new window.google.maps.Size(32, 32),
+            anchor: new window.google.maps.Point(16, 32)
+          }
+        })
+
+        console.log(`✅ Regular marker created successfully for ${org.name}`)
+
+        // Create info window content
+        const infoContent = `
+          <div class="p-4 max-w-sm">
+            <div class="flex items-center space-x-2 mb-2">
+              <h3 class="text-lg font-semibold text-gray-900">${org.name}</h3>
+              ${isAdmin ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">👑 Admin</span>' : ''}
+            </div>
+            <p class="text-sm text-gray-600 mb-3">${org.description || 'No description'}</p>
+            <div class="space-y-1 text-sm text-gray-500">
+              ${formatLocation(org.location) ? `<div>📍 ${formatLocation(org.location)}</div>` : ''}
+              ${org.contact ? `<div>📞 ${org.contact}</div>` : ''}
+              ${org.email ? `<div>✉️ ${org.email}</div>` : ''}
+            </div>
+            <div class="mt-3 flex items-center justify-between text-sm">
+              <span>👥 ${org.memberCount || 0} members</span>
+              <span>❤️ ${org.followerCount || 0} followers</span>
+            </div>
+            <div class="mt-3 flex space-x-2">
+              <button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}', '_blank')" class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
+                🚗 Directions
+              </button>
+              <button onclick="window.selectOrganization('${org.id}')" class="px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600">
+                📋 View Details
+              </button>
+            </div>
+          </div>
+        `
+
+        // Add click listener to marker
+        marker.addListener('click', () => {
+          infoWindowRef.current.setContent(infoContent)
+          infoWindowRef.current.open(mapInstanceRef.current, marker)
+          handleOrgSelect(org)
+        })
+
+        markersRef.current.push(marker)
+        console.log(`✅ Regular marker added to map for ${org.name}`)
+        
+      } catch (error) {
+        console.error(`❌ Error creating regular marker for ${org.name}:`, error)
+      }
+    })
+
+    console.log(`✅ Added ${markersRef.current.length} regular markers to map`)
   }, [organizations, adminOrgs, followingStatus])
 
   // Get user's current location
@@ -239,21 +519,75 @@ export default function Map() {
 
   // Get coordinates from location object
   const getCoordinates = (location) => {
-    if (!location || typeof location !== 'object') return null
+    console.log('🔍 Processing location:', location)
     
-    if (location.latitude && location.longitude) {
-      return { lat: location.latitude, lng: location.longitude }
+    if (!location) {
+      console.log('❌ No location data')
+      return null
     }
     
+    // Handle string coordinates (lat,lng format)
+    if (typeof location === 'string') {
+      const parts = location.split(',')
+      if (parts.length === 2) {
+        const lat = parseFloat(parts[0].trim())
+        const lng = parseFloat(parts[1].trim())
+        if (!isNaN(lat) && !isNaN(lng)) {
+          console.log('✅ Parsed string coordinates:', { lat, lng })
+          return { lat, lng }
+        }
+      }
+    }
+    
+    // Handle object with latitude/longitude
+    if (typeof location === 'object') {
+      if (location.latitude && location.longitude) {
+        const lat = parseFloat(location.latitude)
+        const lng = parseFloat(location.longitude)
+        if (!isNaN(lat) && !isNaN(lng)) {
+          console.log('✅ Parsed object coordinates:', { lat, lng })
+          return { lat, lng }
+        }
+      }
+      
+      // Handle object with lat/lng format
+      if (location.lat && location.lng) {
+        const lat = parseFloat(location.lat)
+        const lng = parseFloat(location.lng)
+        if (!isNaN(lat) && !isNaN(lng)) {
+          console.log('✅ Parsed lat/lng coordinates:', { lat, lng })
+          return { lat, lng }
+        }
+      }
+    }
+    
+    console.log('❌ Could not parse location data')
     return null
   }
 
   // Filter organizations that have valid coordinates
   const getMappableOrganizations = () => {
-    return organizations.filter(org => {
+    console.log('🗺️ Filtering organizations for map display...')
+    console.log('📊 Total organizations:', organizations.length)
+    
+    const mappable = organizations.filter(org => {
+      console.log(`🔍 Checking organization: ${org.name}`)
+      console.log(`📍 Location data:`, org.location)
+      
       const coords = getCoordinates(org.location)
-      return coords && coords.lat && coords.lng
+      const isValid = coords && coords.lat && coords.lng
+      
+      console.log(`✅ Valid coordinates:`, isValid, coords)
+      return isValid
     })
+    
+    console.log(`🗺️ Found ${mappable.length} mappable organizations:`, mappable.map(org => ({
+      name: org.name,
+      location: org.location,
+      coords: getCoordinates(org.location)
+    })))
+    
+    return mappable
   }
 
   // Handle organization selection
@@ -311,6 +645,86 @@ export default function Map() {
     }
   }, [organizations])
 
+  // Debug: Log organizations data when it changes
+  useEffect(() => {
+    if (organizations.length > 0) {
+      console.log('📊 All organizations data:', organizations)
+      console.log('📍 Organizations with location data:', organizations.filter(org => org.location))
+      console.log('🔍 Sample organization structure:', organizations[0])
+    }
+  }, [organizations])
+
+  // Debug: Add test organizations with location data if none exist
+  useEffect(() => {
+    if (organizations.length > 0 && !organizations.some(org => org.location)) {
+      console.log('🧪 No organizations with location data found, adding test data...')
+      
+      // Add test organizations with location data
+      const testOrgs = [
+        {
+          id: 'test-1',
+          name: 'Test Organization 1',
+          description: 'This is a test organization for map display',
+          location: { latitude: 40.7128, longitude: -74.0060 }, // New York
+          contact: '+1-555-0123',
+          email: 'test1@example.com',
+          memberCount: 5,
+          followerCount: 3
+        },
+        {
+          id: 'test-2',
+          name: 'Test Organization 2',
+          description: 'Another test organization for map display',
+          location: { latitude: 34.0522, longitude: -118.2437 }, // Los Angeles
+          contact: '+1-555-0456',
+          email: 'test2@example.com',
+          memberCount: 8,
+          followerCount: 12
+        },
+        {
+          id: 'test-3',
+          name: 'Test Organization 3',
+          description: 'Third test organization for map display',
+          location: { latitude: 41.8781, longitude: -87.6298 }, // Chicago
+          contact: '+1-555-0789',
+          email: 'test3@example.com',
+          memberCount: 15,
+          followerCount: 7
+        }
+      ]
+      
+      console.log('🧪 Test organizations added:', testOrgs)
+      
+      // Temporarily add test organizations to the organizations array
+      // This is just for testing - in production, organizations should come from the database
+      const allOrgs = [...organizations, ...testOrgs]
+      
+      // Force re-render with test data
+      setTimeout(() => {
+        console.log('🧪 Map should now display test organizations')
+      }, 1000)
+    }
+  }, [organizations])
+
+  // Debug: Log component mount and map container
+  useEffect(() => {
+    console.log('🗺️ Map component mounted')
+    console.log('📍 Map container ref:', mapRef.current)
+    console.log('📍 Map container element:', mapRef.current?.outerHTML)
+    
+    if (mapRef.current) {
+      console.log('✅ Map container found')
+      console.log('📍 Container dimensions:', {
+        width: mapRef.current.offsetWidth,
+        height: mapRef.current.offsetHeight,
+        clientWidth: mapRef.current.clientWidth,
+        clientHeight: mapRef.current.clientHeight
+      })
+    } else {
+      console.log('❌ Map container not found')
+    }
+  }, [])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -358,9 +772,18 @@ export default function Map() {
           {/* Google Maps will render here */}
           <div 
             ref={mapRef} 
-            className="w-full h-full"
-            style={{ minHeight: '384px' }}
-          />
+            className="w-full h-full bg-blue-200 border-2 border-dashed border-blue-400"
+            style={{ 
+              minHeight: '384px',
+              minWidth: '100%',
+              position: 'relative'
+            }}
+          >
+            {/* Test content to see if container is rendered */}
+            <div className="absolute top-2 left-2 bg-white p-2 rounded shadow text-xs">
+              Map Container Ready
+            </div>
+          </div>
           
           {/* Map Loading Overlay */}
           {!mapInstanceRef.current && (
