@@ -16,6 +16,7 @@ export default function Map() {
   const [zoom, setZoom] = useState(4)
   const [mapsLoaded, setMapsLoaded] = useState(false)
   const [mapError, setMapError] = useState(null)
+  const [useFallback, setUseFallback] = useState(false)
   
   const mapRef = useRef(null)
   const mapInstanceRef = useRef(null)
@@ -29,7 +30,7 @@ export default function Map() {
       console.log('🔑 Environment API Key:', import.meta.env.VITE_GOOGLE_MAPS_API_KEY)
       
       // Get API key from environment or use a fallback
-      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg'
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyC7vPqK8qK8qK8qK8qK8qK8qK8qK8qK8qK8'
       console.log('🔑 Using API Key:', apiKey ? 'Set' : 'Not set')
       
       if (window.google && window.google.maps) {
@@ -50,7 +51,8 @@ export default function Map() {
       }
       script.onerror = (error) => {
         console.error('❌ Failed to load Google Maps script:', error)
-        setMapError('Failed to load Google Maps. Please check your internet connection and try again.')
+        setMapError('Failed to load Google Maps. Using fallback view.')
+        setUseFallback(true)
       }
       document.head.appendChild(script)
     }
@@ -86,9 +88,10 @@ export default function Map() {
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (!mapsLoaded && !mapError) {
-        setMapError('Map is taking too long to load. Please check your internet connection.')
+        setMapError('Map is taking too long to load. Using fallback view.')
+        setUseFallback(true)
       }
-    }, 10000) // 10 second timeout
+    }, 5000) // 5 second timeout
 
     return () => clearTimeout(timeout)
   }, [mapsLoaded, mapError])
@@ -784,57 +787,144 @@ export default function Map() {
         </button>
       </div>
 
-      {/* Map Container */}
+      {/* Map Container or Fallback */}
       <div className="card p-0 overflow-hidden">
-        <div className="bg-gray-100 h-96 relative">
-          {/* Google Maps will render here */}
-          <div 
-            ref={mapRef} 
-            className="w-full h-full bg-blue-200 border-2 border-dashed border-blue-400"
-            style={{ 
-              minHeight: '384px',
-              minWidth: '100%',
-              position: 'relative'
-            }}
-          >
-            {/* Test content to see if container is rendered */}
-            <div className="absolute top-2 left-2 bg-white p-2 rounded shadow text-xs">
-              Map Container Ready
+        {useFallback ? (
+          /* Fallback Grid View */
+          <div className="p-6">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-2">🗺️</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Map View Unavailable</h3>
+              <p className="text-sm text-gray-500">Showing organizations in list view</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {mappableOrgs.map((org) => {
+                const isAdmin = adminOrgs.some(adminOrg => adminOrg.id === org.id)
+                const coords = getCoordinates(org.location)
+                
+                return (
+                  <div
+                    key={org.id}
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                      selectedOrg?.id === org.id 
+                        ? 'border-blue-300 bg-blue-50' 
+                        : isAdmin 
+                          ? 'border-yellow-300 bg-yellow-50' 
+                          : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                    onClick={() => handleOrgSelect(org)}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="text-lg font-medium text-gray-900">{org.name}</h3>
+                      {isAdmin && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          👑 Admin
+                        </span>
+                      )}
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 mb-3">{org.description || 'No description'}</p>
+                    
+                    <div className="space-y-2 text-sm text-gray-500">
+                      {coords && (
+                        <div className="flex items-center">
+                          <MapPin className="h-4 w-4 mr-2" />
+                          <span>Lat: {coords.lat.toFixed(4)}, Lng: {coords.lng.toFixed(4)}</span>
+                        </div>
+                      )}
+                      {org.contact && (
+                        <div className="flex items-center">
+                          <Phone className="h-4 w-4 mr-2" />
+                          {org.contact}
+                        </div>
+                      )}
+                      {org.email && (
+                        <div className="flex items-center">
+                          <Mail className="h-4 w-4 mr-2" />
+                          {org.email}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between">
+                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <span>{org.memberCount || 0} members</span>
+                        <span className="flex items-center">
+                          <Users className="h-4 w-4 mr-1" />
+                          {org.followerCount || 0} followers
+                        </span>
+                      </div>
+                      
+                      {coords && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            getDirections(org)
+                          }}
+                          className="btn-secondary text-sm px-3 py-1 flex items-center"
+                        >
+                          <Navigation className="h-3 w-3 mr-1" />
+                          Directions
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
-          
-          {/* Map Loading Overlay */}
-          {!mapInstanceRef.current && !mapError && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
-                <p className="text-sm text-gray-500">Loading map...</p>
+        ) : (
+          /* Map View */
+          <div className="bg-gray-100 h-96 relative">
+            {/* Google Maps will render here */}
+            <div 
+              ref={mapRef} 
+              className="w-full h-full bg-blue-200 border-2 border-dashed border-blue-400"
+              style={{ 
+                minHeight: '384px',
+                minWidth: '100%',
+                position: 'relative'
+              }}
+            >
+              {/* Test content to see if container is rendered */}
+              <div className="absolute top-2 left-2 bg-white p-2 rounded shadow text-xs">
+                Map Container Ready
               </div>
             </div>
-          )}
+            
+            {/* Map Loading Overlay */}
+            {!mapInstanceRef.current && !mapError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                  <p className="text-sm text-gray-500">Loading map...</p>
+                </div>
+              </div>
+            )}
 
-          {/* Map Error Overlay */}
-          {mapError && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-              <div className="text-center p-6">
-                <div className="text-red-500 text-4xl mb-4">🗺️</div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Map Unavailable</h3>
-                <p className="text-sm text-gray-500 mb-4">{mapError}</p>
-                <button
-                  onClick={() => {
-                    setMapError(null)
-                    setMapsLoaded(false)
-                    // Reload the page to retry
-                    window.location.reload()
-                  }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  Retry
-                </button>
+            {/* Map Error Overlay */}
+            {mapError && !useFallback && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                <div className="text-center p-6">
+                  <div className="text-red-500 text-4xl mb-4">🗺️</div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Map Unavailable</h3>
+                  <p className="text-sm text-gray-500 mb-4">{mapError}</p>
+                  <button
+                    onClick={() => {
+                      setMapError(null)
+                      setMapsLoaded(false)
+                      setUseFallback(true)
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    Use List View
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Organization List */}
