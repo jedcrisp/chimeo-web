@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useCalendar } from '../contexts/CalendarContext'
 import { CalendarViewMode, CalendarViewModeLabels } from '../models/calendarModels'
-import { Calendar, Plus, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, Plus, Filter, ChevronLeft, ChevronRight, Clock } from 'lucide-react'
 import MonthCalendarView from '../components/calendar/MonthCalendarView'
 import WeekCalendarView from '../components/calendar/WeekCalendarView'
 import DayCalendarView from '../components/calendar/DayCalendarView'
@@ -19,11 +19,13 @@ export default function CalendarPage() {
     setViewMode,
     setFilter,
     loadCalendarData,
-    clearLoading
+    clearLoading,
+    processScheduledAlerts
   } = useCalendar()
 
   const [showCreateAlert, setShowCreateAlert] = useState(false)
   const [showFilter, setShowFilter] = useState(false)
+  const [isProcessingAlerts, setIsProcessingAlerts] = useState(false)
 
   useEffect(() => {
     loadCalendarData()
@@ -79,6 +81,23 @@ export default function CalendarPage() {
 
   const handleToday = () => {
     setSelectedDate(new Date())
+  }
+
+  const handleProcessScheduledAlerts = async () => {
+    setIsProcessingAlerts(true)
+    try {
+      const processedAlerts = await processScheduledAlerts()
+      if (processedAlerts.length > 0) {
+        alert(`Processed ${processedAlerts.length} scheduled alerts: ${processedAlerts.join(', ')}`)
+      } else {
+        alert('No scheduled alerts were due for processing.')
+      }
+    } catch (error) {
+      console.error('Error processing scheduled alerts:', error)
+      alert('Error processing scheduled alerts. Check console for details.')
+    } finally {
+      setIsProcessingAlerts(false)
+    }
   }
 
   const formatDateTitle = () => {
@@ -150,6 +169,15 @@ export default function CalendarPage() {
           >
             <Filter className="h-4 w-4 mr-2" />
             Filter
+          </button>
+          
+          <button
+            onClick={handleProcessScheduledAlerts}
+            disabled={isProcessingAlerts}
+            className="flex items-center px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Clock className="h-4 w-4 mr-2" />
+            {isProcessingAlerts ? 'Processing...' : 'Process Alerts'}
           </button>
           
           <div className="relative">

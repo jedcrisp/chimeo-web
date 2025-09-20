@@ -1,6 +1,7 @@
 import { createContext, useContext, useReducer, useEffect } from 'react'
 import { useAuth } from './AuthContext'
 import calendarService from '../services/calendarService'
+import scheduledAlertProcessor from '../services/scheduledAlertProcessor'
 
 // Calendar Context
 const CalendarContext = createContext()
@@ -230,6 +231,42 @@ export function CalendarProvider({ children }) {
     dispatch({ type: CALENDAR_ACTIONS.SET_LOADING, payload: false })
   }
 
+  const processScheduledAlerts = async () => {
+    try {
+      console.log('⏰ Processing scheduled alerts...')
+      const processedAlerts = await scheduledAlertProcessor.processScheduledAlerts()
+      
+      if (processedAlerts.length > 0) {
+        console.log(`✅ Processed ${processedAlerts.length} scheduled alerts`)
+        // Reload calendar data to show new alerts
+        await loadCalendarData()
+      }
+      
+      return processedAlerts
+    } catch (error) {
+      console.error('❌ Error processing scheduled alerts:', error)
+      throw error
+    }
+  }
+
+  const processScheduledAlertsForOrganization = async (organizationId) => {
+    try {
+      console.log(`⏰ Processing scheduled alerts for organization: ${organizationId}`)
+      const processedAlerts = await scheduledAlertProcessor.processScheduledAlertsForOrganization(organizationId)
+      
+      if (processedAlerts.length > 0) {
+        console.log(`✅ Processed ${processedAlerts.length} scheduled alerts for organization`)
+        // Reload calendar data to show new alerts
+        await loadCalendarData()
+      }
+      
+      return processedAlerts
+    } catch (error) {
+      console.error('❌ Error processing scheduled alerts for organization:', error)
+      throw error
+    }
+  }
+
   // Helper functions
   const getEventsForDate = (date) => {
     return calendarService.getEventsForDate(date)
@@ -267,6 +304,8 @@ export function CalendarProvider({ children }) {
     setSelectedDate,
     setViewMode,
     clearLoading,
+    processScheduledAlerts,
+    processScheduledAlertsForOrganization,
     
     // Helper functions
     getEventsForDate,
