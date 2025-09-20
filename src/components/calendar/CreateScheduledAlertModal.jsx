@@ -502,28 +502,32 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={() => setShowDuplicateModal(true)}
-                className="flex items-center justify-center space-x-2 px-6 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:text-blue-800 hover:bg-blue-100 hover:border-blue-300 transition-all duration-200 shadow-sm whitespace-nowrap min-w-[160px]"
-              >
-                <Calendar className="h-4 w-4 flex-shrink-0" />
-                <span>Duplicate to Multiple Days</span>
-              </button>
+            <div className="flex flex-col gap-4 pt-4 border-t border-gray-200">
+              {/* Duplicate Button */}
+              <div className="flex justify-start">
+                <button
+                  type="button"
+                  onClick={() => setShowDuplicateModal(true)}
+                  className="flex items-center justify-center space-x-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:text-blue-800 hover:bg-blue-100 hover:border-blue-300 transition-all duration-200 shadow-sm whitespace-nowrap"
+                >
+                  <Calendar className="h-4 w-4 flex-shrink-0" />
+                  <span>Duplicate to Multiple Days</span>
+                </button>
+              </div>
               
-              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              {/* Form Actions */}
+              <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 whitespace-nowrap min-w-[100px]"
+                  className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 whitespace-nowrap"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="px-6 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 whitespace-nowrap min-w-[140px]"
+                  className="px-6 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 whitespace-nowrap"
                 >
                   {isLoading ? 'Scheduling...' : 'Schedule Alert'}
                 </button>

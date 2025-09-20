@@ -467,12 +467,13 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
+          <div className="flex flex-col gap-4 mt-8 pt-6 border-t border-gray-200">
+            {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
                 onClick={handleDelete}
-                className="flex items-center justify-center space-x-2 px-6 py-2 text-red-600 bg-red-50 border border-red-200 hover:text-red-800 hover:bg-red-100 hover:border-red-300 rounded-lg transition-all duration-200 shadow-sm whitespace-nowrap min-w-[160px]"
+                className="flex items-center justify-center space-x-2 px-4 py-2 text-red-600 bg-red-50 border border-red-200 hover:text-red-800 hover:bg-red-100 hover:border-red-300 rounded-lg transition-all duration-200 shadow-sm whitespace-nowrap"
               >
                 <Trash2 className="h-4 w-4 flex-shrink-0" />
                 <span>Delete Alert</span>
@@ -481,25 +482,26 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
               <button
                 type="button"
                 onClick={() => setShowDuplicateModal(true)}
-                className="flex items-center justify-center space-x-2 px-6 py-2 text-blue-600 bg-blue-50 border border-blue-200 hover:text-blue-800 hover:bg-blue-100 hover:border-blue-300 rounded-lg transition-all duration-200 shadow-sm whitespace-nowrap min-w-[160px]"
+                className="flex items-center justify-center space-x-2 px-4 py-2 text-blue-600 bg-blue-50 border border-blue-200 hover:text-blue-800 hover:bg-blue-100 hover:border-blue-300 rounded-lg transition-all duration-200 shadow-sm whitespace-nowrap"
               >
                 <Calendar className="h-4 w-4 flex-shrink-0" />
                 <span>Duplicate to Multiple Days</span>
               </button>
             </div>
             
-            <div className="flex space-x-3">
+            {/* Form Actions */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                className="px-6 py-2 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors whitespace-nowrap"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
               >
                 {isLoading ? 'Updating...' : 'Update Alert'}
               </button>
