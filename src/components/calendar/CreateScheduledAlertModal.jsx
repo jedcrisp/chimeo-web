@@ -46,7 +46,7 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
 
   // Auto-set user's organization and fetch groups when modal opens
   useEffect(() => {
-    if (isOpen && userProfile?.isOrganizationAdmin && userProfile?.organizations?.length > 0) {
+    if (isOpen && userProfile?.organizations?.length > 0) {
       const organizationId = userProfile.organizations[0] // Use first organization
       
       setFormData(prev => ({
@@ -88,11 +88,6 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
     
     if (!formData.groupId) {
       setError('Target group is required')
-      return
-    }
-    
-    if (!formData.organizationId) {
-      setError('Organization is required')
       return
     }
 
@@ -150,11 +145,14 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
 
     try {
       // First create the original alert
+      const organizationId = userProfile?.organizations?.[0] || formData.organizationId
+      const organizationName = organizationId?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || formData.organizationName
+      
       const originalAlertData = {
         title: formData.title,
         description: formData.description,
-        organizationId: formData.organizationId,
-        organizationName: formData.organizationName,
+        organizationId: organizationId,
+        organizationName: organizationName,
         groupId: formData.groupId || null,
         groupName: formData.groupName || null,
         type: formData.type,
