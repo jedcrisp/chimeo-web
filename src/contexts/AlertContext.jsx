@@ -23,18 +23,25 @@ export function AlertProvider({ children }) {
     }
 
     // Listen to alerts from all organizations the user follows
+    console.log('🔍 AlertContext: Setting up alert listener for collection: organizationAlerts')
     const unsubscribe = onSnapshot(
       query(collection(db, 'organizationAlerts'), orderBy('createdAt', 'desc')),
       (snapshot) => {
-        const alertsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
+        console.log('🔍 AlertContext: Received alert snapshot with', snapshot.docs.length, 'alerts')
+        const alertsData = snapshot.docs.map(doc => {
+          const data = doc.data()
+          console.log('🔍 AlertContext: Alert data:', { id: doc.id, title: data.title, createdAt: data.createdAt })
+          return {
+            id: doc.id,
+            ...data
+          }
+        })
         setAlerts(alertsData)
         setLoading(false)
+        console.log('🔍 AlertContext: Set alerts state with', alertsData.length, 'alerts')
       },
       (error) => {
-        console.error('Error listening to alerts:', error)
+        console.error('❌ AlertContext: Error listening to alerts:', error)
         setLoading(false)
       }
     )
@@ -109,8 +116,13 @@ export function AlertProvider({ children }) {
 
       // If we still don't have organization info, we can't send phone notifications
       if (!organizationId) {
+        console.error('❌ No organization ID found for alert creation')
+        console.error('❌ User profile:', userProfile)
+        console.error('❌ Current user:', currentUser)
         throw new Error('You must be an organization administrator to create alerts that send phone notifications. Please check your profile to ensure you have admin access.')
       }
+      
+      console.log('✅ Organization info found:', { organizationId, organizationName })
 
       // Create alert in the mobile app structure for cloud function compatibility
       const alertPayload = {
@@ -147,6 +159,7 @@ export function AlertProvider({ children }) {
       // Also store in the main alerts collection (for web app display)
       const webAlertRef = await addDoc(collection(db, 'organizationAlerts'), alertPayload)
       console.log('✅ Alert created in web app structure:', webAlertRef.id)
+      console.log('✅ Alert payload for web app:', alertPayload)
 
       // Send push notification for web app users
       try {

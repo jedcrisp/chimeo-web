@@ -15,6 +15,9 @@ class NotificationService {
   async initialize() {
     try {
       console.log('🔧 Starting notification service initialization...')
+      console.log('🔧 Current user agent:', navigator.userAgent)
+      console.log('🔧 Current URL:', window.location.href)
+      console.log('🔧 Is secure context:', window.isSecureContext)
       
       // Check if FCM is supported
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
