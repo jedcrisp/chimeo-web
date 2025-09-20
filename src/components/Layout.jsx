@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Users, User, LogOut, Menu, X, Building, Home, Bell, Calendar } from 'lucide-react'
+import { useOrganizations } from '../contexts/OrganizationsContext'
 import { useState } from 'react'
 
 // Custom Bell Icon component
@@ -21,6 +22,7 @@ function BellIcon({ className }) {
 
 export default function Layout() {
   const { currentUser, userProfile, logout } = useAuth()
+  const { organizations } = useOrganizations()
   const location = useLocation()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -150,7 +152,10 @@ export default function Layout() {
                     </span>
                   </div>
                   <span className="text-sm font-medium text-gray-900">
-                    {userProfile.displayName || userProfile.email}
+                    {userProfile.organizations?.[0] 
+                      ? organizations.find(org => org.id === userProfile.organizations[0])?.name || userProfile.displayName || userProfile.email
+                      : userProfile.displayName || userProfile.email
+                    }
                   </span>
                 </div>
               )}
