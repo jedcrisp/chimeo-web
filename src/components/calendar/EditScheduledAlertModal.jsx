@@ -124,11 +124,6 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
       setError('Target group is required')
       return
     }
-    
-    if (!formData.organizationId) {
-      setError('Organization is required')
-      return
-    }
 
     setIsLoading(true)
     setError('')
@@ -325,52 +320,26 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
               </div>
             </div>
 
-            {/* Organization and Group */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Organization *
-                </label>
-                <select
-                  value={formData.organizationId}
-                  onChange={(e) => {
-                    const selectedOrg = organizations.find(org => org.id === e.target.value)
-                    handleInputChange('organizationId', e.target.value)
-                    handleInputChange('organizationName', selectedOrg?.name || '')
-                    if (selectedOrg) {
-                      loadGroupsForOrganization(selectedOrg.id)
-                    }
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                  required
-                >
-                  <option value="">Select Organization</option>
-                  {organizations.map(org => (
-                    <option key={org.id} value={org.id}>{org.name}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Target Group *
-                </label>
-                <select
-                  value={formData.groupId}
-                  onChange={(e) => {
-                    const selectedGroup = availableGroups.find(g => g.id === e.target.value)
-                    handleInputChange('groupId', e.target.value)
-                    handleInputChange('groupName', selectedGroup?.name || '')
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                  required
-                >
-                  <option value="">Select Group</option>
-                  {availableGroups.map(group => (
-                    <option key={group.id} value={group.id}>{group.name}</option>
-                  ))}
-                </select>
-              </div>
+            {/* Target Group */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Target Group *
+              </label>
+              <select
+                value={formData.groupId}
+                onChange={(e) => {
+                  const selectedGroup = availableGroups.find(g => g.id === e.target.value)
+                  handleInputChange('groupId', e.target.value)
+                  handleInputChange('groupName', selectedGroup?.name || '')
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                required
+              >
+                <option value="">Select Group</option>
+                {availableGroups.map(group => (
+                  <option key={group.id} value={group.id}>{group.name}</option>
+                ))}
+              </select>
             </div>
 
             {/* Recurrence */}
