@@ -1,13 +1,15 @@
 import { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
-import { AlertProvider } from './contexts/AlertContext'
 import { OrganizationsProvider } from './contexts/OrganizationsContext'
+import { AlertProvider } from './contexts/AlertContext'
+import { CalendarProvider } from './contexts/CalendarContext'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Alerts from './pages/Alerts'
 import Organizations from './pages/Organizations'
+import Calendar from './pages/Calendar'
 import Map from './components/Map'
 import Profile from './pages/Profile'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -44,20 +46,23 @@ function App() {
     <AuthProvider>
       <OrganizationsProvider>
         <AlertProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<Dashboard />} />
-              <Route path="alerts" element={<Alerts />} />
-              <Route path="organizations" element={<Organizations />} />
-              <Route path="map" element={<Map />} />
-              <Route path="profile" element={<Profile />} />
-            </Route>
-          </Routes>
+          <CalendarProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Layout />
+                </ProtectedRoute>
+              }>
+                <Route index element={<Dashboard />} />
+                <Route path="alerts" element={<Alerts />} />
+                <Route path="organizations" element={<Organizations />} />
+                <Route path="calendar" element={<Calendar />} />
+                <Route path="map" element={<Map />} />
+                <Route path="profile" element={<Profile />} />
+              </Route>
+            </Routes>
+          </CalendarProvider>
         </AlertProvider>
       </OrganizationsProvider>
     </AuthProvider>

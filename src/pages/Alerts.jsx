@@ -73,7 +73,7 @@ export default function Alerts() {
         </div>
         <button 
           onClick={() => setShowNewAlertModal(true)}
-          className="btn-primary flex items-center space-x-2"
+          className="bg-slate-900 hover:bg-slate-800 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
           <span>New Alert</span>
@@ -82,14 +82,21 @@ export default function Alerts() {
 
       {/* New Alert Modal */}
       {showNewAlertModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-4">
+        <div 
+          className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowNewAlertModal(false)
+            }
+          }}
+        >
+          <div className="relative w-full max-w-md mx-auto bg-white rounded-lg shadow-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-medium text-gray-900">Create New Alert</h3>
                 <button
                   onClick={() => setShowNewAlertModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -105,7 +112,7 @@ export default function Alerts() {
                     required
                     value={newAlert.title}
                     onChange={(e) => setNewAlert({ ...newAlert, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200"
                     placeholder="Alert title"
                   />
                 </div>
@@ -119,7 +126,7 @@ export default function Alerts() {
                     rows={3}
                     value={newAlert.message}
                     onChange={(e) => setNewAlert({ ...newAlert, message: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200"
                     placeholder="Alert message"
                   />
                 </div>
@@ -163,7 +170,7 @@ export default function Alerts() {
                     type="text"
                     value={newAlert.location}
                     onChange={(e) => setNewAlert({ ...newAlert, location: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200"
                     placeholder="Location (optional)"
                   />
                 </div>
@@ -202,13 +209,13 @@ export default function Alerts() {
                   <button
                     type="button"
                     onClick={() => setShowNewAlertModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors duration-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-primary-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-primary-700"
+                    className="flex-1 px-4 py-2 bg-slate-900 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-slate-800 transition-colors duration-200"
                   >
                     Create Alert
                   </button>
@@ -229,10 +236,10 @@ export default function Alerts() {
           </p>
           <button
             onClick={() => setShowNewAlertModal(true)}
-            className="btn-primary"
+            className="bg-slate-900 hover:bg-slate-800 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center space-x-2 mx-auto"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Alert
+            <Plus className="h-4 w-4" />
+            <span>Create Alert</span>
           </button>
         </div>
       ) : (

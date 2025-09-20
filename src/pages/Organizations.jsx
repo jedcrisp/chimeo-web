@@ -92,41 +92,30 @@ export default function Organizations() {
   const fetchFollowers = async (orgId) => {
     setFollowersLoading(true)
     try {
-      console.log('🔍 Fetching followers for organization:', orgId)
-      
       // Try the subcollection structure first (organizations/{orgId}/followers)
       let followersData = []
       
       try {
         const followersQuery = query(collection(db, 'organizations', orgId, 'followers'))
         const followersSnapshot = await getDocs(followersQuery)
-        console.log('🔍 Subcollection followers snapshot size:', followersSnapshot.size)
         
         if (!followersSnapshot.empty) {
-          console.log('🔍 Found followers in subcollection:', followersSnapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })))
-          
           for (const doc of followersSnapshot.docs) {
             const followerData = doc.data()
-            console.log('🔍 Processing follower doc:', { id: doc.id, data: followerData })
-            console.log('🔍 Follower document fields:', Object.keys(followerData))
             
             // Use adminId field to get the user ID
             let userId = followerData.adminId
-            console.log('🔍 Using adminId as userId:', userId)
             
             // Get user profile for each follower using the adminId as document ID
             try {
               const userDoc = await getDoc(doc(db, 'users', userId))
               if (userDoc.exists()) {
                 const userData = userDoc.data()
-                console.log('🔍 Found user profile:', { userId: userId, userData })
                 followersData.push({
                   id: doc.id,
                   ...followerData,
                   userProfile: userData
                 })
-              } else {
-                console.log('⚠️ User profile not found for adminId:', userId)
               }
             } catch (error) {
               console.error('Error fetching user profile:', error)
@@ -134,45 +123,35 @@ export default function Organizations() {
           }
         }
       } catch (error) {
-        console.log('⚠️ Subcollection approach failed, trying separate collection:', error)
+        // Subcollection approach failed, try separate collection
       }
       
       // If no followers found in subcollection, try the separate collection structure
       if (followersData.length === 0) {
         try {
-          console.log('🔍 Trying separate organizationFollowers collection...')
           const followersQuery = query(
             collection(db, 'organizationFollowers'),
             where('organizationId', '==', orgId)
           )
           const followersSnapshot = await getDocs(followersQuery)
-          console.log('🔍 Separate collection followers snapshot size:', followersSnapshot.size)
           
           if (!followersSnapshot.empty) {
-            console.log('🔍 Found followers in separate collection:', followersSnapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })))
-            
             for (const doc of followersSnapshot.docs) {
               const followerData = doc.data()
-              console.log('🔍 Processing follower doc:', { id: doc.id, data: followerData })
-              console.log('🔍 Follower document fields:', Object.keys(followerData))
               
               // Use adminId field to get the user ID
               let userId = followerData.adminId
-              console.log('🔍 Using adminId as userId:', userId)
               
               // Get user profile for each follower
               try {
                 const userDoc = await getDoc(doc(db, 'users', userId))
                 if (userDoc.exists()) {
                   const userData = userDoc.data()
-                  console.log('🔍 Found user profile:', { userId: userId, userData })
                   followersData.push({
                     id: doc.id,
                     ...followerData,
                     userProfile: userData
                   })
-                } else {
-                  console.log('⚠️ User profile not found for adminId:', userId)
                 }
               } catch (error) {
                 console.error('Error fetching user profile:', error)
@@ -180,13 +159,11 @@ export default function Organizations() {
             }
           }
         } catch (error) {
-          console.log('⚠️ Separate collection approach also failed:', error)
+          // Separate collection approach also failed
         }
       }
       
       setFollowers(followersData)
-      console.log('✅ Final followers data:', followersData.length, 'followers for organization:', orgId)
-      console.log('✅ Final followers data:', followersData)
       
     } catch (error) {
       console.error('Error fetching followers:', error)
@@ -217,58 +194,6 @@ export default function Organizations() {
     }
   }
 
-  // Function to manually check follower count for debugging
-  const debugFollowerCount = async (orgId) => {
-    try {
-      console.log('🔍 Debug: Checking follower count for organization:', orgId)
-      
-      // Check subcollection
-      const subcollectionQuery = query(collection(db, 'organizations', orgId, 'followers'))
-      const subcollectionSnapshot = await getDocs(subcollectionQuery)
-      console.log('🔍 Debug: Subcollection followers count:', subcollectionSnapshot.size)
-      console.log('🔍 Debug: Subcollection follower docs:', subcollectionSnapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })))
-      
-      // Check separate collection
-      const separateQuery = query(
-        collection(db, 'organizationFollowers'),
-        where('organizationId', '==', orgId)
-      )
-      const separateSnapshot = await getDocs(separateQuery)
-      console.log('🔍 Debug: Separate collection followers count:', separateSnapshot.size)
-      console.log('🔍 Debug: Separate collection follower docs:', separateSnapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })))
-      
-      // Check current state
-      const currentOrg = organizations.find(org => org.id === orgId)
-      console.log('🔍 Debug: Current organization state:', currentOrg)
-      console.log('🔍 Debug: Current follower count in state:', currentOrg?.followerCount)
-      
-      return {
-        subcollectionCount: subcollectionSnapshot.size,
-        separateCount: separateSnapshot.size,
-        stateCount: currentOrg?.followerCount || 0
-      }
-    } catch (error) {
-      console.error('❌ Error debugging follower count:', error)
-      return null
-    }
-  }
-
-  // Function to manually refresh follower count for a specific organization
-  const refreshOrgFollowerCount = async (orgId) => {
-    try {
-      console.log('🔧 Refreshing follower count for organization:', orgId)
-      const newCount = await refreshFollowerCount(orgId)
-      console.log('✅ New follower count:', newCount)
-      
-      // Also refresh the organizations list to update the display
-      await fetchOrganizations()
-      
-      toast.success(`Follower count refreshed: ${newCount}`)
-    } catch (error) {
-      console.error('❌ Error refreshing follower count:', error)
-      toast.error('Failed to refresh follower count')
-    }
-  }
 
   if (loading) {
     return (
@@ -280,18 +205,6 @@ export default function Organizations() {
 
   return (
     <div className="space-y-6">
-      {/* Debug Section - Remove this in production */}
-      <div className="card bg-gray-50 border-dashed">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">Debug Info - Admin Status (Remove in Production)</h3>
-        <div className="text-xs text-gray-600 space-y-1">
-          <div>Current User ID: {currentUser?.uid || 'None'}</div>
-          <div>Current User Email: {currentUser?.email || 'None'}</div>
-          <div>Has Admin Access: {hasAdminAccess ? 'Yes' : 'No'}</div>
-          <div>Admin Organizations Count: {adminOrgs.length}</div>
-          <div>Total Organizations: {organizations.length}</div>
-          <div>Admin Orgs: {adminOrgs.map(org => org.name).join(', ') || 'None'}</div>
-        </div>
-      </div>
 
       <div>
         <div className="flex justify-between items-center">
@@ -373,13 +286,6 @@ export default function Organizations() {
                           >
                             <Eye className="h-3 w-3 mr-1" />
                             View Followers
-                          </button>
-                          <button 
-                            className="btn-secondary text-sm px-3 py-1 flex items-center"
-                            onClick={() => debugFollowerCount(org.id)}
-                            title="Debug follower count"
-                          >
-                            🔍 Debug
                           </button>
                           {isAdminOfOrganization(org.id) && (
                             <button className="btn-primary text-sm px-3 py-1 flex items-center">
@@ -485,13 +391,6 @@ export default function Organizations() {
                             <Eye className="h-3 w-3 mr-1" />
                             View Followers
                           </button>
-                          <button 
-                            className="btn-secondary text-sm px-3 py-1 flex items-center"
-                            onClick={() => debugFollowerCount(org.id)}
-                            title="Debug follower count"
-                          >
-                            🔍 Debug
-                          </button>
                           {isAdminOfOrganization(org.id) && (
                             <button className="btn-primary text-sm px-3 py-1 flex items-center">
                               <Settings className="h-3 w-3 mr-1" />
@@ -549,29 +448,6 @@ export default function Organizations() {
               </div>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {/* Debug info */}
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs">
-                  <p><strong>Debug Info:</strong></p>
-                  <p>Total followers found: {followers.length}</p>
-                  <p>Raw follower data:</p>
-                  <pre className="text-xs overflow-auto max-h-20">
-                    {JSON.stringify(followers, null, 2)}
-                  </pre>
-                  <div className="mt-2">
-                    <button 
-                      onClick={() => refreshOrgFollowerCount(selectedOrg.id)}
-                      className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
-                    >
-                      🔄 Refresh Count
-                    </button>
-                    <button 
-                      onClick={() => debugFollowerCount(selectedOrg.id)}
-                      className="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
-                    >
-                      🔍 Debug Count
-                    </button>
-                  </div>
-                </div>
                 
                 {followers.map((follower) => (
                   <div key={follower.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">

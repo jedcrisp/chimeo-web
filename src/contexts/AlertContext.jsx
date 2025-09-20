@@ -174,7 +174,55 @@ export function AlertProvider({ children }) {
 
   const deleteAlert = async (alertId) => {
     try {
-      await deleteDoc(doc(db, 'organizationAlerts', alertId))
+      console.log('🗑️ Deleting alert:', alertId)
+      
+      // Get the alert data first to find the organization ID
+      const alertDoc = await getDoc(doc(db, 'organizationAlerts', alertId))
+      if (!alertDoc.exists()) {
+        throw new Error('Alert not found')
+      }
+      
+      const alertData = alertDoc.data()
+      const organizationId = alertData.organizationId
+      
+      console.log('🗑️ Alert data:', alertData)
+      console.log('🗑️ Organization ID:', organizationId)
+      
+      // Delete from both collections
+      const deletePromises = [
+        deleteDoc(doc(db, 'organizationAlerts', alertId))
+      ]
+      
+      // If we have organization ID, also delete from the mobile app structure
+      if (organizationId) {
+        // Find the corresponding alert in the mobile app structure
+        const mobileAlertsQuery = query(
+          collection(db, 'organizations', organizationId, 'alerts'),
+          orderBy('createdAt', 'desc')
+        )
+        const mobileAlertsSnapshot = await getDocs(mobileAlertsQuery)
+        
+        // Find the alert with matching data (title, description, postedBy, etc.)
+        const matchingAlert = mobileAlertsSnapshot.docs.find(doc => {
+          const data = doc.data()
+          return data.title === alertData.title && 
+                 data.description === alertData.description &&
+                 data.postedByUserId === alertData.postedByUserId &&
+                 Math.abs(data.createdAt.toDate().getTime() - alertData.createdAt.toDate().getTime()) < 5000 // Within 5 seconds
+        })
+        
+        if (matchingAlert) {
+          console.log('🗑️ Found matching alert in mobile structure:', matchingAlert.id)
+          deletePromises.push(deleteDoc(doc(db, 'organizations', organizationId, 'alerts', matchingAlert.id)))
+        } else {
+          console.log('⚠️ No matching alert found in mobile structure')
+        }
+      }
+      
+      // Execute all deletions
+      await Promise.all(deletePromises)
+      
+      console.log('✅ Alert deleted successfully from all collections')
       toast.success('Alert deleted successfully!')
     } catch (error) {
       console.error('Error deleting alert:', error)

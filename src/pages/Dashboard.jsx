@@ -1,7 +1,20 @@
 import { useAuth } from '../contexts/AuthContext'
 import { useOrganizations } from '../contexts/OrganizationsContext'
 import { useAlerts } from '../contexts/AlertContext'
-import { Users, MapPin, Crown, Plus, AlertTriangle, Building } from 'lucide-react'
+import { 
+  Users, 
+  MapPin, 
+  Crown, 
+  Plus, 
+  AlertTriangle, 
+  Building, 
+  Bell,
+  TrendingUp,
+  Shield,
+  Activity,
+  ArrowRight,
+  Clock
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 import adminService from '../services/adminService'
 import { useState, useEffect } from 'react'
@@ -44,144 +57,205 @@ export default function Dashboard() {
   const totalAlerts = alerts.length
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Welcome back, {userProfile?.displayName || currentUser?.email}
-        </p>
-      </div>
-
-      {/* Admin Status Banner */}
-      {hasAdminAccess && (
-        <div className="card bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-yellow-100">
-                <Crown className="h-5 w-5 text-yellow-600" />
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-yellow-800">Organization Administrator</p>
-              <p className="text-sm text-yellow-700">
-                You have admin access to {adminOrgs.length} organization{adminOrgs.length !== 1 ? 's' : ''}
+    <div className="min-h-screen bg-slate-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+              <p className="text-slate-600 mt-1">
+                Welcome back, {userProfile?.displayName || currentUser?.email}
               </p>
             </div>
+            <div className="flex items-center space-x-4">
+              <div className="text-right">
+                <p className="text-xs text-slate-500 uppercase tracking-wide">Last updated</p>
+                <p className="text-sm font-medium text-slate-900">{new Date().toLocaleDateString()}</p>
+              </div>
+              <div className="h-10 w-10 bg-slate-900 rounded-full flex items-center justify-center">
+                <span className="text-white font-medium text-sm">
+                  {(userProfile?.displayName || currentUser?.email || 'U').charAt(0).toUpperCase()}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-      )}
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Link
-          to="/alerts"
-          className="card hover:shadow-md transition-shadow cursor-pointer group"
-        >
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary-100 group-hover:bg-primary-200">
-                <BellIcon className="h-5 w-5 text-primary-600" />
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-900">View Alerts</p>
-              <p className="text-sm text-gray-500">{totalAlerts} total alerts</p>
-            </div>
-          </div>
-        </Link>
-
-        <Link
-          to="/organizations"
-          className="card hover:shadow-md transition-shadow cursor-pointer group"
-        >
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-100 group-hover:bg-blue-200">
-                <Users className="h-5 w-5 text-blue-600" />
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-900">Organizations</p>
-              <p className="text-sm text-gray-500">{totalOrganizations} total</p>
-            </div>
-          </div>
-        </Link>
-
-        <Link
-          to="/map"
-          className="card hover:shadow-md transition-shadow cursor-pointer group"
-        >
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-green-100 group-hover:bg-green-200">
-                <MapPin className="h-5 w-5 text-green-600" />
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-900">Map View</p>
-              <p className="text-sm text-gray-500">See locations</p>
-            </div>
-          </div>
-        </Link>
-
-        {hasAdminAccess && (
-          <Link
-            to="/alerts"
-            className="card hover:shadow-md transition-shadow cursor-pointer group bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200"
-          >
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-yellow-100 group-hover:bg-yellow-200">
-                  <Plus className="h-5 w-5 text-yellow-600" />
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-yellow-800">New Alert</p>
-                <p className="text-sm text-yellow-700">Post to your orgs</p>
-              </div>
-            </div>
-          </Link>
-        )}
       </div>
 
-      {/* Recent Alerts */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-gray-900">Recent Alerts</h2>
-          <Link
-            to="/alerts"
-            className="text-sm text-primary-600 hover:text-primary-500"
-          >
-            View all
-          </Link>
-        </div>
-        
-        {recentAlerts.length === 0 ? (
-          <div className="text-center py-8">
-            <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No alerts yet</p>
-            <p className="text-sm text-gray-400 mt-1">Alerts will appear here when they're posted</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {recentAlerts.map((alert) => (
-              <div key={alert.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                <div className="flex-shrink-0">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100">
-                    <BellIcon className="h-3 w-3 text-primary-600" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{alert.title}</p>
-                  <p className="text-sm text-gray-500">{alert.message}</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {alert.createdAt?.toDate?.()?.toLocaleDateString() || 'Recently'}
-                  </p>
-                </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Admin Banner */}
+        {hasAdminAccess && (
+          <div className="mb-8 bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <Crown className="h-5 w-5 text-amber-600 mr-3" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">Organization Administrator</p>
+                <p className="text-sm text-amber-700">
+                  You have admin access to {adminOrgs.length} organization{adminOrgs.length !== 1 ? 's' : ''}
+                </p>
               </div>
-            ))}
+            </div>
           </div>
         )}
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200 min-h-[100px]">
+            <div className="flex items-center h-full">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                  <Bell className="h-6 w-6 text-red-600" />
+                </div>
+              </div>
+              <div className="ml-4 flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-600 truncate">Total Alerts</p>
+                <p className="text-2xl font-bold text-slate-900">{totalAlerts}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200 min-h-[100px]">
+            <div className="flex items-center h-full">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Building className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+              <div className="ml-4 flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-600 truncate">Organizations</p>
+                <p className="text-2xl font-bold text-slate-900">{totalOrganizations}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200 min-h-[100px]">
+            <div className="flex items-center h-full">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Activity className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+              <div className="ml-4 flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-600 truncate">Status</p>
+                <p className="text-2xl font-bold text-green-600">Online</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link
+              to="/alerts"
+              className="group bg-white rounded-lg p-4 shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all duration-200 min-h-[80px]"
+            >
+              <div className="flex items-center h-full">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-slate-100 group-hover:bg-slate-200 rounded-lg flex items-center justify-center transition-colors">
+                    <BellIcon className="h-5 w-5 text-slate-600" />
+                  </div>
+                </div>
+                <div className="ml-3 flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900 truncate">View Alerts</p>
+                  <p className="text-xs text-slate-500 truncate">{totalAlerts} total</p>
+                </div>
+                <div className="flex-shrink-0 ml-2">
+                  <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              to="/organizations"
+              className="group bg-white rounded-lg p-4 shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all duration-200 min-h-[80px]"
+            >
+              <div className="flex items-center h-full">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-slate-100 group-hover:bg-slate-200 rounded-lg flex items-center justify-center transition-colors">
+                    <Users className="h-5 w-5 text-slate-600" />
+                  </div>
+                </div>
+                <div className="ml-3 flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900 truncate">Organizations</p>
+                  <p className="text-xs text-slate-500 truncate">{totalOrganizations} total</p>
+                </div>
+                <div className="flex-shrink-0 ml-2">
+                  <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
+                </div>
+              </div>
+            </Link>
+
+            <Link
+              to="/map"
+              className="group bg-white rounded-lg p-4 shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all duration-200 min-h-[80px]"
+            >
+              <div className="flex items-center h-full">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-slate-100 group-hover:bg-slate-200 rounded-lg flex items-center justify-center transition-colors">
+                    <MapPin className="h-5 w-5 text-slate-600" />
+                  </div>
+                </div>
+                <div className="ml-3 flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900 truncate">Map View</p>
+                  <p className="text-xs text-slate-500 truncate">See locations</p>
+                </div>
+                <div className="flex-shrink-0 ml-2">
+                  <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
+                </div>
+              </div>
+            </Link>
+
+          </div>
+        </div>
+
+        {/* Recent Alerts */}
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+          <div className="px-6 py-4 border-b border-slate-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900">Recent Alerts</h2>
+              <Link
+                to="/alerts"
+                className="text-sm text-slate-600 hover:text-slate-900 transition-colors"
+              >
+                View all →
+              </Link>
+            </div>
+          </div>
+          
+          <div className="p-6">
+            {recentAlerts.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle className="h-6 w-6 text-slate-400" />
+                </div>
+                <h3 className="text-sm font-medium text-slate-900 mb-1">No alerts yet</h3>
+                <p className="text-sm text-slate-500">
+                  Alerts will appear here when they're posted
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentAlerts.map((alert) => (
+                  <div key={alert.id} className="flex items-start space-x-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                    <div className="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <BellIcon className="h-4 w-4 text-slate-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900">{alert.title}</p>
+                      <p className="text-sm text-slate-600 mt-1">{alert.message}</p>
+                      <p className="text-xs text-slate-400 mt-2">
+                        {alert.createdAt?.toDate?.()?.toLocaleDateString() || 'Recently'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
