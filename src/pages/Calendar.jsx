@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useCalendar } from '../contexts/CalendarContext'
-import globalScheduledAlertProcessor from '../services/globalScheduledAlertProcessor'
 import { CalendarViewMode, CalendarViewModeLabels } from '../models/calendarModels'
-import { Calendar, Plus, Filter, ChevronLeft, ChevronRight, Clock } from 'lucide-react'
+import { Calendar, Plus, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
 import MonthCalendarView from '../components/calendar/MonthCalendarView'
 import WeekCalendarView from '../components/calendar/WeekCalendarView'
 import DayCalendarView from '../components/calendar/DayCalendarView'
@@ -26,8 +25,6 @@ export default function CalendarPage() {
 
   const [showCreateAlert, setShowCreateAlert] = useState(false)
   const [showFilter, setShowFilter] = useState(false)
-  const [isProcessingAlerts, setIsProcessingAlerts] = useState(false)
-  const [autoProcessorStatus, setAutoProcessorStatus] = useState({ isRunning: false })
 
   // Safety mechanism: Clear loading if it gets stuck for too long
   useEffect(() => {
@@ -76,16 +73,6 @@ export default function CalendarPage() {
   }, [])
 
   // Check auto-processor status
-  useEffect(() => {
-    const checkStatus = () => {
-      setAutoProcessorStatus(globalScheduledAlertProcessor.getStatus())
-    }
-
-    checkStatus()
-    const interval = setInterval(checkStatus, 5000) // Check every 5 seconds
-
-    return () => clearInterval(interval)
-  }, [])
 
   const handlePreviousPeriod = () => {
     const newDate = new Date(selectedDate)
@@ -129,22 +116,6 @@ export default function CalendarPage() {
     setSelectedDate(new Date())
   }
 
-  const handleProcessScheduledAlerts = async () => {
-    setIsProcessingAlerts(true)
-    try {
-      const processedAlerts = await processScheduledAlerts()
-      if (processedAlerts.length > 0) {
-        alert(`Processed ${processedAlerts.length} scheduled alerts: ${processedAlerts.join(', ')}`)
-      } else {
-        alert('No scheduled alerts were due for processing.')
-      }
-    } catch (error) {
-      console.error('Error processing scheduled alerts:', error)
-      alert('Error processing scheduled alerts. Check console for details.')
-    } finally {
-      setIsProcessingAlerts(false)
-    }
-  }
 
   const formatDateTitle = () => {
     const options = { 
@@ -217,20 +188,6 @@ export default function CalendarPage() {
             Filter
           </button>
           
-          <button
-            onClick={handleProcessScheduledAlerts}
-            disabled={isProcessingAlerts}
-            className="flex items-center px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Clock className="h-4 w-4 mr-2" />
-            {isProcessingAlerts ? 'Processing...' : 'Process Alerts'}
-          </button>
-
-          {/* Auto-processor status indicator */}
-          <div className="flex items-center px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-md">
-            <div className={`w-2 h-2 rounded-full mr-2 ${autoProcessorStatus.isRunning ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            Auto: {autoProcessorStatus.isRunning ? 'ON' : 'OFF'}
-          </div>
           
           <div className="relative">
             <button
