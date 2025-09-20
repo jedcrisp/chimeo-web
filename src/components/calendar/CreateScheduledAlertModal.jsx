@@ -12,7 +12,7 @@ import {
   RecurrenceFrequency, 
   RecurrenceFrequencyLabels 
 } from '../../models/calendarModels'
-import { X, Bell, Clock, MapPin, Building, Users } from 'lucide-react'
+import { X, Bell, Clock, MapPin, Building, Users, Calendar } from 'lucide-react'
 
 export default function CreateScheduledAlertModal({ isOpen, onClose }) {
   const { createScheduledAlert } = useCalendar()
@@ -40,6 +40,9 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [availableGroups, setAvailableGroups] = useState([])
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
+  const [selectedDates, setSelectedDates] = useState([])
+  const [isDuplicating, setIsDuplicating] = useState(false)
 
   // Auto-set user's organization and fetch groups when modal opens
   useEffect(() => {
@@ -122,7 +125,9 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
       }
 
       await createScheduledAlert(alertData)
-      onClose()
+      
+      // Show duplicate modal after creating the first alert
+      setShowDuplicateModal(true)
     } catch (err) {
       console.error('Error creating scheduled alert:', err)
       setError(err.message || 'Failed to create scheduled alert')
@@ -134,6 +139,66 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     if (error) setError('')
+  }
+
+  const handleDuplicateAlert = async () => {
+    if (selectedDates.length === 0) {
+      setError('Please select at least one date to duplicate the alert to')
+      return
+    }
+
+    setIsDuplicating(true)
+    setError('')
+
+    try {
+      for (const date of selectedDates) {
+        const alertData = {
+          title: formData.title,
+          description: formData.description,
+          organizationId: formData.organizationId,
+          organizationName: formData.organizationName,
+          groupId: formData.groupId || null,
+          groupName: formData.groupName || null,
+          type: formData.type,
+          severity: formData.severity,
+          location: null,
+          scheduledDate: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 
+            formData.scheduledDate.getHours(), formData.scheduledDate.getMinutes()),
+          isRecurring: formData.isRecurring,
+          recurrencePattern: formData.isRecurring ? {
+            frequency: formData.recurrenceFrequency,
+            interval: formData.recurrenceInterval,
+            endDate: formData.recurrenceEndDate
+          } : null,
+          postedBy: currentUser?.displayName || currentUser?.email || 'Unknown',
+          postedByUserId: currentUser?.uid || 'unknown',
+          expiresAt: formData.hasExpiration ? formData.expiresAt : null
+        }
+
+        await createScheduledAlert(alertData)
+      }
+
+      alert(`Successfully created ${selectedDates.length + 1} alerts (1 original + ${selectedDates.length} duplicates)`)
+      setShowDuplicateModal(false)
+      setSelectedDates([])
+      onClose()
+    } catch (err) {
+      console.error('Error duplicating alert:', err)
+      setError(err.message || 'Failed to duplicate alert')
+    } finally {
+      setIsDuplicating(false)
+    }
+  }
+
+  const toggleDateSelection = (date) => {
+    const dateString = date.toDateString()
+    setSelectedDates(prev => {
+      if (prev.some(d => d.toDateString() === dateString)) {
+        return prev.filter(d => d.toDateString() !== dateString)
+      } else {
+        return [...prev, new Date(date)]
+      }
+    })
   }
 
 
@@ -449,6 +514,113 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
           </form>
         </div>
       </div>
+
+      {/* Duplicate Modal */}
+      {showDuplicateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Calendar className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Duplicate Alert to Multiple Days</h2>
+                    <p className="text-sm text-gray-500">Alert created! Select additional dates to duplicate this alert to</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDuplicateModal(false)
+                    onClose()
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              )}
+
+              {/* Date Selection */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Select Additional Dates (Click to toggle selection)
+                </label>
+                <div className="grid grid-cols-7 gap-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-4">
+                  {(() => {
+                    const dates = []
+                    const today = new Date()
+                    for (let i = 0; i < 30; i++) {
+                      const date = new Date(today)
+                      date.setDate(today.getDate() + i)
+                      dates.push(date)
+                    }
+                    return dates.map((date, index) => {
+                      const isSelected = selectedDates.some(d => d.toDateString() === date.toDateString())
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => toggleDateSelection(date)}
+                          className={`p-2 text-sm rounded-md border transition-colors ${
+                            isSelected
+                              ? 'bg-blue-100 border-blue-500 text-blue-700'
+                              : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          <div className="text-xs font-medium">
+                            {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                          </div>
+                          <div className="text-sm font-semibold">
+                            {date.getDate()}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {date.toLocaleDateString('en-US', { month: 'short' })}
+                          </div>
+                        </button>
+                      )
+                    })
+                  })()}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Selected {selectedDates.length} additional date{selectedDates.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDuplicateModal(false)
+                    onClose()
+                  }}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                >
+                  Skip (Alert Created)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDuplicateAlert}
+                  disabled={isDuplicating || selectedDates.length === 0}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isDuplicating ? 'Duplicating...' : `Duplicate to ${selectedDates.length} Additional Date${selectedDates.length !== 1 ? 's' : ''}`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
