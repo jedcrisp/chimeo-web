@@ -226,6 +226,10 @@ export function CalendarProvider({ children }) {
     dispatch({ type: CALENDAR_ACTIONS.SET_VIEW_MODE, payload: mode })
   }
 
+  const clearLoading = () => {
+    dispatch({ type: CALENDAR_ACTIONS.SET_LOADING, payload: false })
+  }
+
   // Helper functions
   const getEventsForDate = (date) => {
     return calendarService.getEventsForDate(date)
@@ -262,6 +266,7 @@ export function CalendarProvider({ children }) {
     setFilter,
     setSelectedDate,
     setViewMode,
+    clearLoading,
     
     // Helper functions
     getEventsForDate,

@@ -62,33 +62,48 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
         expiresAt: alert.expiresAt ? new Date(alert.expiresAt) : null,
         hasExpiration: !!alert.expiresAt
       })
+      
+      // Load groups for the alert's organization
+      if (alert.organizationId) {
+        loadGroupsForOrganization(alert.organizationId)
+      }
     }
   }, [alert])
 
   // Auto-set user's organization and fetch groups when modal opens
   useEffect(() => {
-    if (isOpen && userProfile?.isOrganizationAdmin && userProfile?.organizations?.length > 0) {
-      const userOrgId = userProfile.organizations[0]
-      const userOrg = organizations.find(org => org.id === userOrgId)
-      
-      if (userOrg) {
-        setFormData(prev => ({
-          ...prev,
-          organizationId: userOrgId,
-          organizationName: userOrg.name
-        }))
+    if (isOpen) {
+      // If editing an existing alert, use its organization
+      if (alert?.organizationId) {
+        loadGroupsForOrganization(alert.organizationId)
+      } 
+      // If creating new alert and user is admin, use their organization
+      else if (userProfile?.isOrganizationAdmin && userProfile?.organizations?.length > 0) {
+        const userOrgId = userProfile.organizations[0]
+        const userOrg = organizations.find(org => org.id === userOrgId)
         
-        loadGroupsForOrganization(userOrgId)
+        if (userOrg) {
+          setFormData(prev => ({
+            ...prev,
+            organizationId: userOrgId,
+            organizationName: userOrg.name
+          }))
+          
+          loadGroupsForOrganization(userOrgId)
+        }
       }
     }
-  }, [isOpen, userProfile, organizations])
+  }, [isOpen, alert, userProfile, organizations])
 
   const loadGroupsForOrganization = async (orgId) => {
     try {
-      const groups = await groupService.getOrganizationGroups(orgId)
+      console.log('Loading groups for organization:', orgId)
+      const groups = await groupService.getGroupsForOrganization(orgId)
+      console.log('Loaded groups:', groups)
       setAvailableGroups(groups)
     } catch (error) {
       console.error('Error loading groups:', error)
+      setAvailableGroups([])
     }
   }
 

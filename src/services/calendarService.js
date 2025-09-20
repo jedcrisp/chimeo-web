@@ -414,6 +414,7 @@ class CalendarService {
         this.fetchScheduledAlerts(dateRange, organizationId)
       ])
       
+      this.isLoading = false
       console.log('✅ Calendar data fetched successfully')
     } catch (error) {
       console.error('❌ Error fetching calendar data:', error)

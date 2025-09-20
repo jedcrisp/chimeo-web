@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useCalendar } from '../../contexts/CalendarContext'
 import { CalendarEventColors, IncidentSeverityColors } from '../../models/calendarModels'
+import { Trash2 } from 'lucide-react'
+import EditScheduledAlertModal from './EditScheduledAlertModal'
 
 export default function MonthCalendarView() {
-  const { selectedDate, events, scheduledAlerts, filter, getEventsForDate, getScheduledAlertsForDate, setSelectedDate } = useCalendar()
+  const { selectedDate, events, scheduledAlerts, filter, getEventsForDate, getScheduledAlertsForDate, setSelectedDate, deleteScheduledAlert } = useCalendar()
   const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [selectedAlert, setSelectedAlert] = useState(null)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   // Update current month when selectedDate changes
   useEffect(() => {
@@ -96,6 +100,27 @@ export default function MonthCalendarView() {
     setSelectedDate(today)
   }
 
+  const handleDeleteScheduledAlert = async (alertId) => {
+    if (window.confirm('Are you sure you want to delete this scheduled alert?')) {
+      try {
+        await deleteScheduledAlert(alertId)
+      } catch (error) {
+        console.error('Error deleting scheduled alert:', error)
+        alert('Failed to delete scheduled alert. Please try again.')
+      }
+    }
+  }
+
+  const handleAlertClick = (alert) => {
+    setSelectedAlert(alert)
+    setShowEditModal(true)
+  }
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false)
+    setSelectedAlert(null)
+  }
+
   const calendarDays = getCalendarDays()
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   const monthNames = [
@@ -166,15 +191,32 @@ export default function MonthCalendarView() {
                   {dayAlerts.slice(0, 2 - dayEvents.length).map((alert, alertIndex) => (
                     <div
                       key={`alert-${alertIndex}`}
-                      className="flex items-center space-x-1 text-xs"
+                      className="flex items-center space-x-1 text-xs group"
                     >
                       <div
                         className="w-2 h-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: IncidentSeverityColors[alert.severity] }}
                       />
-                      <span className="text-gray-700 truncate">
+                      <span 
+                        className="text-gray-700 truncate cursor-pointer hover:text-blue-600 flex-1"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleAlertClick(alert)
+                        }}
+                        title="Click to edit alert"
+                      >
                         {alert.title}
                       </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteScheduledAlert(alert.id)
+                        }}
+                        className="text-red-600 hover:text-red-800 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-red-200 flex-shrink-0"
+                        title="Delete scheduled alert"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
                     </div>
                   ))}
                   
@@ -206,6 +248,15 @@ export default function MonthCalendarView() {
           <span>Today</span>
         </div>
       </div>
+
+      {/* Edit Scheduled Alert Modal */}
+      {showEditModal && selectedAlert && (
+        <EditScheduledAlertModal
+          isOpen={showEditModal}
+          alert={selectedAlert}
+          onClose={handleCloseEditModal}
+        />
+      )}
     </div>
   )
 }

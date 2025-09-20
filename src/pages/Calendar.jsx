@@ -18,7 +18,8 @@ export default function CalendarPage() {
     setSelectedDate,
     setViewMode,
     setFilter,
-    loadCalendarData
+    loadCalendarData,
+    clearLoading
   } = useCalendar()
 
   const [showCreateAlert, setShowCreateAlert] = useState(false)
@@ -26,6 +27,16 @@ export default function CalendarPage() {
 
   useEffect(() => {
     loadCalendarData()
+    
+    // Safety mechanism: clear loading state if it gets stuck for more than 10 seconds
+    const timeout = setTimeout(() => {
+      if (isLoading) {
+        console.warn('Calendar loading timeout - clearing loading state')
+        clearLoading()
+      }
+    }, 10000)
+    
+    return () => clearTimeout(timeout)
   }, [])
 
   const handlePreviousPeriod = () => {
