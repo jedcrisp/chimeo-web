@@ -16,7 +16,7 @@ export default function Map() {
   const [zoom, setZoom] = useState(4)
   const [mapsLoaded, setMapsLoaded] = useState(false)
   const [mapError, setMapError] = useState(null)
-  const [useFallback, setUseFallback] = useState(false)
+  const [useFallback, setUseFallback] = useState(true) // Start with fallback by default
   
   const mapRef = useRef(null)
   const mapInstanceRef = useRef(null)
@@ -67,8 +67,15 @@ export default function Map() {
       console.log('🔑 Environment API Key:', import.meta.env.VITE_GOOGLE_MAPS_API_KEY)
       
       // Get API key from environment or use a fallback
-      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyC7vPqK8qK8qK8qK8qK8qK8qK8qK8qK8qK8'
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg'
       console.log('🔑 Using API Key:', apiKey ? 'Set' : 'Not set')
+      
+      // If no valid API key, skip map loading and go straight to fallback
+      if (!apiKey || apiKey === 'your_google_maps_api_key_here' || apiKey.includes('your_google_maps_api_key')) {
+        console.log('❌ No valid API key found, using fallback view')
+        setUseFallback(true)
+        return
+      }
       
       if (window.google && window.google.maps) {
         console.log('✅ Google Maps already loaded')
@@ -795,7 +802,17 @@ export default function Map() {
             <div className="text-center mb-6">
               <div className="text-4xl mb-2">🗺️</div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Map View Unavailable</h3>
-              <p className="text-sm text-gray-500">Showing organizations in list view</p>
+              <p className="text-sm text-gray-500 mb-4">Showing organizations in list view</p>
+              <button
+                onClick={() => {
+                  setUseFallback(false)
+                  setMapError(null)
+                  setMapsLoaded(false)
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+              >
+                Try Map View
+              </button>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
