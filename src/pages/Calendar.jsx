@@ -32,13 +32,13 @@ export default function CalendarPage() {
   useEffect(() => {
     loadCalendarData()
     
-    // Safety mechanism: clear loading state if it gets stuck for more than 3 seconds
+    // Safety mechanism: clear loading state if it gets stuck for more than 1.5 seconds
     const timeout = setTimeout(() => {
       if (isLoading) {
         console.warn('Calendar loading timeout - clearing loading state automatically')
         clearLoading()
       }
-    }, 3000) // Reduced to 3 seconds for faster automatic recovery
+    }, 1500) // Reduced to 1.5 seconds for much faster automatic recovery
     
     return () => clearTimeout(timeout)
   }, [])
@@ -262,7 +262,7 @@ export default function CalendarPage() {
             <div className="flex flex-col items-center justify-center h-64 space-y-4">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <div className="text-gray-600">Loading calendar...</div>
-              <div className="text-sm text-gray-500">This will load automatically in a few seconds</div>
+              <div className="text-sm text-gray-500">Loading automatically...</div>
             </div>
           ) : (
             renderCalendarContent()

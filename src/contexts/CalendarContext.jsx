@@ -149,7 +149,7 @@ export function CalendarProvider({ children }) {
       
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Calendar data fetch timeout')), 5000) // 5 second timeout
+        setTimeout(() => reject(new Error('Calendar data fetch timeout')), 2000) // 2 second timeout
       })
       
       const fetchPromise = calendarService.fetchCalendarData(dateRange, organizationId)
