@@ -90,11 +90,6 @@ export default function Dashboard() {
                 <p className="text-xs text-slate-500 uppercase tracking-wide">Last updated</p>
                 <p className="text-sm font-medium text-slate-900">{new Date().toLocaleDateString()}</p>
               </div>
-              <div className="h-10 w-10 bg-slate-900 rounded-full flex items-center justify-center">
-                <span className="text-white font-medium text-sm">
-                  {(userProfile?.displayName || currentUser?.email || 'U').charAt(0).toUpperCase()}
-                </span>
-              </div>
             </div>
           </div>
         </div>
