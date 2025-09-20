@@ -502,21 +502,19 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col gap-4 pt-4 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-gray-200">
               {/* Duplicate Button */}
-              <div className="flex justify-start">
-                <button
-                  type="button"
-                  onClick={() => setShowDuplicateModal(true)}
-                  className="flex items-center justify-center space-x-2 px-3 py-2 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:text-blue-800 hover:bg-blue-100 hover:border-blue-300 transition-all duration-200 shadow-sm whitespace-nowrap"
-                >
-                  <Calendar className="h-3 w-3 flex-shrink-0" />
-                  <span>Duplicate to Multiple Days</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowDuplicateModal(true)}
+                className="flex items-center justify-center space-x-2 px-3 py-2 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:text-blue-800 hover:bg-blue-100 hover:border-blue-300 transition-all duration-200 shadow-sm whitespace-nowrap"
+              >
+                <Calendar className="h-3 w-3 flex-shrink-0" />
+                <span>Duplicate to Multiple Days</span>
+              </button>
               
               {/* Form Actions */}
-              <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={onClose}

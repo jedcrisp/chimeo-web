@@ -467,7 +467,7 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col gap-4 mt-8 pt-6 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-8 pt-6 border-t border-gray-200">
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3">
               <button
@@ -490,7 +490,7 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
             </div>
             
             {/* Form Actions */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
                 onClick={onClose}
