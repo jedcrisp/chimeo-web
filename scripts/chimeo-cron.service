@@ -1,0 +1,21 @@
+[Unit]
+Description=Chimeo Scheduled Alert Processing Cron Job
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/path/to/chimeo-web
+ExecStart=/usr/bin/node /path/to/chimeo-web/scripts/cron-job.js
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=chimeo-cron
+
+# Environment variables
+Environment=NODE_ENV=production
+Environment=BACKUP_URL=https://your-backup-server.com/process-alerts
+
+[Install]
+WantedBy=multi-user.target
