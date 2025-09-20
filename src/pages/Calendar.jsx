@@ -29,19 +29,50 @@ export default function CalendarPage() {
   const [isProcessingAlerts, setIsProcessingAlerts] = useState(false)
   const [autoProcessorStatus, setAutoProcessorStatus] = useState({ isRunning: false })
 
+  // Safety mechanism: Clear loading if it gets stuck for too long
+  useEffect(() => {
+    if (isLoading) {
+      const safetyTimeout = setTimeout(() => {
+        console.warn('🚨 Calendar: Safety timeout - clearing stuck loading state')
+        clearLoading()
+      }, 3000) // 3 seconds safety net
+      
+      return () => clearTimeout(safetyTimeout)
+    }
+  }, [isLoading])
+
   useEffect(() => {
     console.log('🔄 Calendar: Starting loadCalendarData, isLoading:', isLoading)
+    
+    // Immediately clear any existing loading state
+    clearLoading()
     
     // Start loading data
     loadCalendarData()
     
-    // Force clear loading after 1 second regardless of what happens
-    const forceTimeout = setTimeout(() => {
-      console.warn('⏰ Calendar loading force timeout - forcing loading to stop')
+    // Multiple aggressive timeouts to ensure loading stops
+    const timeout1 = setTimeout(() => {
+      console.warn('⏰ Calendar timeout 1 - forcing loading to stop')
       clearLoading()
-    }, 1000)
+    }, 500) // 0.5 seconds
     
-    return () => clearTimeout(forceTimeout)
+    const timeout2 = setTimeout(() => {
+      console.warn('⏰ Calendar timeout 2 - forcing loading to stop')
+      clearLoading()
+    }, 1000) // 1 second
+    
+    const timeout3 = setTimeout(() => {
+      console.warn('⏰ Calendar timeout 3 - forcing loading to stop')
+      clearLoading()
+    }, 2000) // 2 seconds
+    
+    return () => {
+      clearTimeout(timeout1)
+      clearTimeout(timeout2)
+      clearTimeout(timeout3)
+      // Clear loading when component unmounts
+      clearLoading()
+    }
   }, [])
 
   // Check auto-processor status
@@ -263,7 +294,16 @@ export default function CalendarPage() {
             <div className="flex flex-col items-center justify-center h-64 space-y-4">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <div className="text-gray-600">Loading calendar...</div>
-              <div className="text-sm text-gray-500">Loading automatically...</div>
+              <div className="text-sm text-gray-500">This should load automatically...</div>
+              <button
+                onClick={() => {
+                  console.warn('🚨 Manual loading clear triggered')
+                  clearLoading()
+                }}
+                className="px-4 py-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors"
+              >
+                Force Stop Loading
+              </button>
             </div>
           ) : (
             renderCalendarContent()
