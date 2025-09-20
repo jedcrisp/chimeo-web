@@ -147,7 +147,14 @@ export function CalendarProvider({ children }) {
       // Get organization ID from user profile
       const organizationId = userProfile?.organizations?.[0] || null
       
-      await calendarService.fetchCalendarData(dateRange, organizationId)
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Calendar data fetch timeout')), 8000) // 8 second timeout
+      })
+      
+      const fetchPromise = calendarService.fetchCalendarData(dateRange, organizationId)
+      
+      await Promise.race([fetchPromise, timeoutPromise])
       
       console.log('📅 Calendar data loaded:', {
         events: calendarService.events.length,
@@ -157,8 +164,11 @@ export function CalendarProvider({ children }) {
       
       dispatch({ type: CALENDAR_ACTIONS.SET_EVENTS, payload: calendarService.events })
       dispatch({ type: CALENDAR_ACTIONS.SET_SCHEDULED_ALERTS, payload: calendarService.scheduledAlerts })
+      dispatch({ type: CALENDAR_ACTIONS.SET_LOADING, payload: false })
     } catch (error) {
+      console.error('CalendarContext: Error loading calendar data:', error)
       dispatch({ type: CALENDAR_ACTIONS.SET_ERROR, payload: error.message })
+      dispatch({ type: CALENDAR_ACTIONS.SET_LOADING, payload: false })
     }
   }
 

@@ -203,8 +203,8 @@ class NotificationService {
         navigator.serviceWorker.ready.then(registration => {
           registration.showNotification(title || 'New Alert', {
             body: body || 'You have a new emergency alert',
-            icon: icon || '/favicon.ico',
-            badge: '/favicon.ico',
+            icon: icon || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjMzM2N0Y3Ii8+Cjwvc3ZnPgo=',
+            badge: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjMzM2N0Y3Ii8+Cjwvc3ZnPgo=',
             tag: 'alert-notification',
             requireInteraction: true,
             actions: [
@@ -223,7 +223,7 @@ class NotificationService {
         // Fallback to native notifications if service worker not available
         new Notification(title || 'New Alert', {
           body: body || 'You have a new emergency alert',
-          icon: icon || '/favicon.ico'
+          icon: icon || '/logo192.png'
         })
       }
     } catch (error) {
@@ -265,7 +265,7 @@ class NotificationService {
           notification: {
             title: 'New Alert Created',
             body: `${alertData.title}: ${alertData.message}`,
-            icon: '/favicon.ico'
+            icon: '/logo192.png'
           }
         })
         console.log('✅ Local notification shown successfully')
@@ -280,7 +280,7 @@ class NotificationService {
         if ('Notification' in window && Notification.permission === 'granted') {
           new Notification('New Alert Created', {
             body: `${alertData.title}: ${alertData.message}`,
-            icon: '/favicon.ico'
+            icon: '/logo192.png'
           })
           console.log('✅ Fallback notification shown')
         } else {
