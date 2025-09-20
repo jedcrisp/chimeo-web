@@ -148,6 +148,21 @@ export function AlertProvider({ children }) {
       const webAlertRef = await addDoc(collection(db, 'organizationAlerts'), alertPayload)
       console.log('✅ Alert created in web app structure:', webAlertRef.id)
 
+      // Send push notification for web app users
+      try {
+        const notificationService = (await import('../services/notificationService')).default
+        await notificationService.sendAlertNotification({
+          id: webAlertRef.id,
+          title: alertData.title,
+          message: alertData.message,
+          organizationId: organizationId
+        })
+        console.log('✅ Push notification sent for web app users')
+      } catch (notificationError) {
+        console.warn('⚠️ Failed to send push notification:', notificationError)
+        // Don't fail the alert creation if notification fails
+      }
+
       toast.success('Alert created successfully! Phone notifications will be sent to followers.')
       console.log('🎉 Alert creation complete! Check Firebase Functions logs for cloud function execution.')
       return webAlertRef

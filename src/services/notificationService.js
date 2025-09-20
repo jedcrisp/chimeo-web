@@ -231,6 +231,8 @@ class NotificationService {
   // Send notification to all users when alert is created
   async sendAlertNotification(alertData) {
     try {
+      console.log('🔔 sendAlertNotification: Starting notification process for alert:', alertData.title)
+      
       // Create a notification record in Firestore
       const notificationData = {
         type: 'alert_created',
@@ -244,16 +246,44 @@ class NotificationService {
 
       // Add to notifications collection
       await addDoc(collection(db, 'notifications'), notificationData)
+      console.log('✅ Notification record saved to Firestore')
 
-      // For now, just show a local notification instead of calling cloud function
-      // TODO: Implement Firebase Cloud Function for push notifications later
-      await this.showLocalNotification({
-        notification: {
-          title: 'New Alert Created',
-          body: `${alertData.title}: ${alertData.message}`,
-          icon: '/favicon.ico'
-        }
+      // Check if notification service is initialized and messaging is available
+      console.log('🔍 Notification service status:', {
+        initialized: this.initialized,
+        messaging: !!this.messaging,
+        isSupported: this.isSupported
       })
+      
+      if (this.initialized && this.messaging) {
+        console.log('🔔 Notification service is initialized, showing local notification')
+        // Show a local notification using the messaging service
+        await this.showLocalNotification({
+          notification: {
+            title: 'New Alert Created',
+            body: `${alertData.title}: ${alertData.message}`,
+            icon: '/favicon.ico'
+          }
+        })
+        console.log('✅ Local notification shown successfully')
+      } else {
+        console.log('⚠️ Notification service not initialized, showing fallback notification')
+        console.log('🔍 Fallback notification status:', {
+          hasNotification: 'Notification' in window,
+          permission: Notification.permission
+        })
+        
+        // Fallback: Show a simple browser notification if available
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('New Alert Created', {
+            body: `${alertData.title}: ${alertData.message}`,
+            icon: '/favicon.ico'
+          })
+          console.log('✅ Fallback notification shown')
+        } else {
+          console.log('⚠️ Browser notifications not available, skipping notification display')
+        }
+      }
 
       console.log('✅ Alert notification sent successfully')
       toast.success('Alert posted and notifications sent!')
