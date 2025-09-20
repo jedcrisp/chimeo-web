@@ -196,8 +196,8 @@ class NotificationService {
         navigator.serviceWorker.ready.then(registration => {
           registration.showNotification(title || 'New Alert', {
             body: body || 'You have a new emergency alert',
-            icon: icon || '/bell-icon.png',
-            badge: '/badge-icon.png',
+            icon: icon || '/favicon.ico',
+            badge: '/favicon.ico',
             tag: 'alert-notification',
             requireInteraction: true,
             actions: [
@@ -216,7 +216,7 @@ class NotificationService {
         // Fallback to native notifications if service worker not available
         new Notification(title || 'New Alert', {
           body: body || 'You have a new emergency alert',
-          icon: icon || '/bell-icon.png'
+          icon: icon || '/favicon.ico'
         })
       }
     } catch (error) {
@@ -247,7 +247,7 @@ class NotificationService {
         notification: {
           title: 'New Alert Created',
           body: `${alertData.title}: ${alertData.message}`,
-          icon: '/bell-icon.png'
+          icon: '/favicon.ico'
         }
       })
 

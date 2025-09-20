@@ -27,8 +27,8 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification?.title || 'New Alert'
   const notificationOptions = {
     body: payload.notification?.body || 'You have a new emergency alert',
-    icon: '/bell-icon.png',
-    badge: '/badge-icon.png',
+    icon: '/favicon.ico',
+    badge: '/favicon.ico',
     tag: 'alert-notification',
     requireInteraction: true,
     actions: [
