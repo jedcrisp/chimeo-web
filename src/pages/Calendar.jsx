@@ -30,17 +30,18 @@ export default function CalendarPage() {
   const [autoProcessorStatus, setAutoProcessorStatus] = useState({ isRunning: false })
 
   useEffect(() => {
+    console.log('🔄 Calendar: Starting loadCalendarData, isLoading:', isLoading)
+    
+    // Start loading data
     loadCalendarData()
     
-    // Safety mechanism: clear loading state if it gets stuck for more than 1.5 seconds
-    const timeout = setTimeout(() => {
-      if (isLoading) {
-        console.warn('Calendar loading timeout - clearing loading state automatically')
-        clearLoading()
-      }
-    }, 1500) // Reduced to 1.5 seconds for much faster automatic recovery
+    // Force clear loading after 1 second regardless of what happens
+    const forceTimeout = setTimeout(() => {
+      console.warn('⏰ Calendar loading force timeout - forcing loading to stop')
+      clearLoading()
+    }, 1000)
     
-    return () => clearTimeout(timeout)
+    return () => clearTimeout(forceTimeout)
   }, [])
 
   // Check auto-processor status
