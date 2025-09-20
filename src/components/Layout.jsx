@@ -28,7 +28,7 @@ export default function Layout() {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Alerts', href: '/alerts', icon: Bell },
-    { name: 'Organizations', href: '/organizations', icon: Building },
+    // { name: 'Organizations', href: '/organizations', icon: Building },
     { name: 'Calendar', href: '/calendar', icon: Calendar },
     { name: 'Map', href: '/map', icon: MapPin },
     { name: 'Profile', href: '/profile', icon: User },

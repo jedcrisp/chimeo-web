@@ -69,7 +69,7 @@ function App() {
               }>
                 <Route index element={<Dashboard />} />
                 <Route path="alerts" element={<Alerts />} />
-                <Route path="organizations" element={<Organizations />} />
+                {/* <Route path="organizations" element={<Organizations />} /> */}
                 <Route path="calendar" element={<Calendar />} />
                 <Route path="map" element={<Map />} />
                 <Route path="profile" element={<Profile />} />
