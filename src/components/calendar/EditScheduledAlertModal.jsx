@@ -185,16 +185,6 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
     if (error) setError('')
   }
 
-  const formatDateTimeForInput = (date) => {
-    if (!date) return ''
-    const d = new Date(date)
-    const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    const hours = String(d.getHours()).padStart(2, '0')
-    const minutes = String(d.getMinutes()).padStart(2, '0')
-    return `${year}-${month}-${day}T${hours}:${minutes}`
-  }
 
   if (!isOpen || !alert) return null
 
@@ -297,17 +287,42 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
             </div>
 
             {/* Schedule */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Scheduled Date & Time
-              </label>
-              <input
-                type="datetime-local"
-                value={formatDateTimeForInput(formData.scheduledDate)}
-                onChange={(e) => handleInputChange('scheduledDate', new Date(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                required
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Scheduled Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.scheduledDate.toISOString().slice(0, 10)}
+                  onChange={(e) => {
+                    const newDate = new Date(formData.scheduledDate)
+                    const [year, month, day] = e.target.value.split('-')
+                    newDate.setFullYear(parseInt(year), parseInt(month) - 1, parseInt(day))
+                    handleInputChange('scheduledDate', newDate)
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Scheduled Time
+                </label>
+                <input
+                  type="time"
+                  value={formData.scheduledDate.toTimeString().slice(0, 5)}
+                  onChange={(e) => {
+                    const newDate = new Date(formData.scheduledDate)
+                    const [hours, minutes] = e.target.value.split(':')
+                    newDate.setHours(parseInt(hours), parseInt(minutes))
+                    handleInputChange('scheduledDate', newDate)
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  required
+                />
+              </div>
             </div>
 
             {/* Organization and Group */}

@@ -131,30 +131,84 @@ export default function CreateEventModal({ isOpen, onClose }) {
             </div>
 
             {/* Date & Time */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              {/* Start Date & Time */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Start Date & Time
                 </label>
-                <input
-                  type="datetime-local"
-                  value={formData.startDate.toISOString().slice(0, 16)}
-                  onChange={(e) => handleInputChange('startDate', new Date(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Date</label>
+                    <input
+                      type="date"
+                      value={formData.startDate.toISOString().slice(0, 10)}
+                      onChange={(e) => {
+                        const newDate = new Date(formData.startDate)
+                        const [year, month, day] = e.target.value.split('-')
+                        newDate.setFullYear(parseInt(year), parseInt(month) - 1, parseInt(day))
+                        handleInputChange('startDate', newDate)
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Time</label>
+                    <input
+                      type="time"
+                      value={formData.startDate.toTimeString().slice(0, 5)}
+                      onChange={(e) => {
+                        const newDate = new Date(formData.startDate)
+                        const [hours, minutes] = e.target.value.split(':')
+                        newDate.setHours(parseInt(hours), parseInt(minutes))
+                        handleInputChange('startDate', newDate)
+                      }}
+                      disabled={formData.isAllDay}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                    />
+                  </div>
+                </div>
               </div>
               
+              {/* End Date & Time */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   End Date & Time
                 </label>
-                <input
-                  type="datetime-local"
-                  value={formData.endDate.toISOString().slice(0, 16)}
-                  onChange={(e) => handleInputChange('endDate', new Date(e.target.value))}
-                  disabled={formData.isAllDay}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Date</label>
+                    <input
+                      type="date"
+                      value={formData.endDate.toISOString().slice(0, 10)}
+                      onChange={(e) => {
+                        const newDate = new Date(formData.endDate)
+                        const [year, month, day] = e.target.value.split('-')
+                        newDate.setFullYear(parseInt(year), parseInt(month) - 1, parseInt(day))
+                        handleInputChange('endDate', newDate)
+                      }}
+                      disabled={formData.isAllDay}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Time</label>
+                    <input
+                      type="time"
+                      value={formData.endDate.toTimeString().slice(0, 5)}
+                      onChange={(e) => {
+                        const newDate = new Date(formData.endDate)
+                        const [hours, minutes] = e.target.value.split(':')
+                        newDate.setHours(parseInt(hours), parseInt(minutes))
+                        handleInputChange('endDate', newDate)
+                      }}
+                      disabled={formData.isAllDay}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

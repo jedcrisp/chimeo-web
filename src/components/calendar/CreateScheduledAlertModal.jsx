@@ -136,16 +136,6 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
     if (error) setError('')
   }
 
-  // Format date for datetime-local input (handles timezone properly)
-  const formatDateTimeForInput = (date) => {
-    const d = new Date(date)
-    const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    const hours = String(d.getHours()).padStart(2, '0')
-    const minutes = String(d.getMinutes()).padStart(2, '0')
-    return `${year}-${month}-${day}T${hours}:${minutes}`
-  }
 
 
   if (!isOpen) return null
@@ -245,17 +235,42 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
             </div>
 
             {/* Schedule */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Scheduled Date & Time
-              </label>
-              <input
-                type="datetime-local"
-                value={formatDateTimeForInput(formData.scheduledDate)}
-                onChange={(e) => handleInputChange('scheduledDate', new Date(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                required
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Scheduled Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.scheduledDate.toISOString().slice(0, 10)}
+                  onChange={(e) => {
+                    const newDate = new Date(formData.scheduledDate)
+                    const [year, month, day] = e.target.value.split('-')
+                    newDate.setFullYear(parseInt(year), parseInt(month) - 1, parseInt(day))
+                    handleInputChange('scheduledDate', newDate)
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Scheduled Time
+                </label>
+                <input
+                  type="time"
+                  value={formData.scheduledDate.toTimeString().slice(0, 5)}
+                  onChange={(e) => {
+                    const newDate = new Date(formData.scheduledDate)
+                    const [hours, minutes] = e.target.value.split(':')
+                    newDate.setHours(parseInt(hours), parseInt(minutes))
+                    handleInputChange('scheduledDate', newDate)
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  required
+                />
+              </div>
             </div>
 
             {/* Target Group */}
@@ -372,16 +387,44 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
               </div>
 
               {formData.hasExpiration && (
-                <div className="pl-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Expires At
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={formData.expiresAt ? formatDateTimeForInput(formData.expiresAt) : ''}
-                    onChange={(e) => handleInputChange('expiresAt', new Date(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                  />
+                <div className="pl-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Expiration Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.expiresAt ? formData.expiresAt.toISOString().slice(0, 10) : ''}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          const newDate = new Date(formData.expiresAt || new Date())
+                          const [year, month, day] = e.target.value.split('-')
+                          newDate.setFullYear(parseInt(year), parseInt(month) - 1, parseInt(day))
+                          handleInputChange('expiresAt', newDate)
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Expiration Time
+                    </label>
+                    <input
+                      type="time"
+                      value={formData.expiresAt ? formData.expiresAt.toTimeString().slice(0, 5) : ''}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          const newDate = new Date(formData.expiresAt || new Date())
+                          const [hours, minutes] = e.target.value.split(':')
+                          newDate.setHours(parseInt(hours), parseInt(minutes))
+                          handleInputChange('expiresAt', newDate)
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
                 </div>
               )}
             </div>
