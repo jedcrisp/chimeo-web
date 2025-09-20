@@ -82,10 +82,7 @@ export default function Dashboard() {
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
               <p className="text-slate-600 mt-1">
-                Welcome back, {userProfile?.isOrganizationAdmin && userProfile?.organizations?.[0] 
-                  ? organizations.find(org => org.id === userProfile.organizations[0])?.name || userProfile?.displayName || currentUser?.email
-                  : userProfile?.displayName || currentUser?.email
-                }
+                Welcome back, {userProfile?.displayName || currentUser?.email}
               </p>
             </div>
             <div className="flex items-center space-x-4">

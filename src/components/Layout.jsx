@@ -147,10 +147,7 @@ export default function Layout() {
               {userProfile && (
                 <div className="flex items-center gap-x-2">
                   <span className="text-sm font-medium text-gray-900">
-                    {userProfile.isOrganizationAdmin && userProfile.organizations?.[0] 
-                      ? organizations.find(org => org.id === userProfile.organizations[0])?.name || userProfile.displayName || userProfile.email
-                      : userProfile.displayName || userProfile.email
-                    }
+                    {userProfile.displayName || userProfile.email}
                   </span>
                 </div>
               )}
