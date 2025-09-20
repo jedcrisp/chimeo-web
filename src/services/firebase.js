@@ -70,6 +70,13 @@ export const getMessagingInstance = async () => {
         console.log('❌ getMessagingInstance: Not in secure context (HTTPS required)')
         return null
       }
+
+      // Check if we're on localhost (allowed for development)
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      if (!isLocalhost && !window.isSecureContext) {
+        console.log('❌ getMessagingInstance: HTTPS required for production')
+        return null
+      }
       
       // Create messaging instance
       console.log('🔧 getMessagingInstance: Creating messaging instance...')

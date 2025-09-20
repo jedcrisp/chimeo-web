@@ -39,11 +39,10 @@ class ScheduledAlertProcessor {
         const orgData = orgDoc.data()
         
         // Get scheduled alerts for this organization that are due
+        // Use a simpler query to avoid index requirements
         const scheduledAlertsQuery = query(
           collection(db, 'organizations', orgId, 'scheduledAlerts'),
-          where('scheduledDate', '<=', now),
-          where('isActive', '==', true),
-          orderBy('scheduledDate', 'asc')
+          where('isActive', '==', true)
         )
 
         const scheduledAlertsSnapshot = await getDocs(scheduledAlertsQuery)
@@ -51,14 +50,18 @@ class ScheduledAlertProcessor {
         for (const alertDoc of scheduledAlertsSnapshot.docs) {
           const alertData = alertDoc.data()
           
-          try {
-            // Convert scheduled alert to active alert
-            await this.convertScheduledAlertToActiveAlert(orgId, orgData.name, alertData, alertDoc.id)
-            processedAlerts.push(alertData.title)
-            
-            console.log(`✅ Processed scheduled alert: ${alertData.title}`)
-          } catch (error) {
-            console.error(`❌ Error processing alert ${alertData.title}:`, error)
+          // Check if alert is due (filter in JavaScript to avoid index requirements)
+          const scheduledDate = alertData.scheduledDate?.toDate() || new Date()
+          if (scheduledDate <= now) {
+            try {
+              // Convert scheduled alert to active alert
+              await this.convertScheduledAlertToActiveAlert(orgId, orgData.name, alertData, alertDoc.id)
+              processedAlerts.push(alertData.title)
+              
+              console.log(`✅ Processed scheduled alert: ${alertData.title}`)
+            } catch (error) {
+              console.error(`❌ Error processing alert ${alertData.title}:`, error)
+            }
           }
         }
       }
@@ -153,11 +156,10 @@ class ScheduledAlertProcessor {
       const orgData = orgDoc.docs[0].data()
 
       // Get scheduled alerts for this organization that are due
+      // Use a simpler query to avoid index requirements
       const scheduledAlertsQuery = query(
         collection(db, 'organizations', organizationId, 'scheduledAlerts'),
-        where('scheduledDate', '<=', now),
-        where('isActive', '==', true),
-        orderBy('scheduledDate', 'asc')
+        where('isActive', '==', true)
       )
 
       const scheduledAlertsSnapshot = await getDocs(scheduledAlertsQuery)
@@ -165,11 +167,15 @@ class ScheduledAlertProcessor {
       for (const alertDoc of scheduledAlertsSnapshot.docs) {
         const alertData = alertDoc.data()
         
-        try {
-          await this.convertScheduledAlertToActiveAlert(organizationId, orgData.name, alertData, alertDoc.id)
-          processedAlerts.push(alertData.title)
-        } catch (error) {
-          console.error(`❌ Error processing alert ${alertData.title}:`, error)
+        // Check if alert is due (filter in JavaScript to avoid index requirements)
+        const scheduledDate = alertData.scheduledDate?.toDate() || new Date()
+        if (scheduledDate <= now) {
+          try {
+            await this.convertScheduledAlertToActiveAlert(organizationId, orgData.name, alertData, alertDoc.id)
+            processedAlerts.push(alertData.title)
+          } catch (error) {
+            console.error(`❌ Error processing alert ${alertData.title}:`, error)
+          }
         }
       }
 
@@ -191,18 +197,22 @@ class ScheduledAlertProcessor {
         // Get alerts for specific organization
         const scheduledAlertsQuery = query(
           collection(db, 'organizations', organizationId, 'scheduledAlerts'),
-          where('scheduledDate', '<=', now),
-          where('isActive', '==', true),
-          orderBy('scheduledDate', 'asc')
+          where('isActive', '==', true)
         )
 
         const snapshot = await getDocs(scheduledAlertsQuery)
         snapshot.forEach(doc => {
-          dueAlerts.push({
-            id: doc.id,
-            ...doc.data(),
-            scheduledDate: doc.data().scheduledDate?.toDate() || new Date()
-          })
+          const alertData = doc.data()
+          const scheduledDate = alertData.scheduledDate?.toDate() || new Date()
+          
+          // Only include alerts that are due
+          if (scheduledDate <= now) {
+            dueAlerts.push({
+              id: doc.id,
+              ...alertData,
+              scheduledDate: scheduledDate
+            })
+          }
         })
       } else {
         // Get alerts for all organizations
@@ -212,19 +222,23 @@ class ScheduledAlertProcessor {
           const orgId = orgDoc.id
           const scheduledAlertsQuery = query(
             collection(db, 'organizations', orgId, 'scheduledAlerts'),
-            where('scheduledDate', '<=', now),
-            where('isActive', '==', true),
-            orderBy('scheduledDate', 'asc')
+            where('isActive', '==', true)
           )
 
           const snapshot = await getDocs(scheduledAlertsQuery)
           snapshot.forEach(doc => {
-            dueAlerts.push({
-              id: doc.id,
-              ...doc.data(),
-              scheduledDate: doc.data().scheduledDate?.toDate() || new Date(),
-              organizationId: orgId
-            })
+            const alertData = doc.data()
+            const scheduledDate = alertData.scheduledDate?.toDate() || new Date()
+            
+            // Only include alerts that are due
+            if (scheduledDate <= now) {
+              dueAlerts.push({
+                id: doc.id,
+                ...alertData,
+                scheduledDate: scheduledDate,
+                organizationId: orgId
+              })
+            }
           })
         }
       }
