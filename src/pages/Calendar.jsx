@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useCalendar } from '../contexts/CalendarContext'
+import globalScheduledAlertProcessor from '../services/globalScheduledAlertProcessor'
 import { CalendarViewMode, CalendarViewModeLabels } from '../models/calendarModels'
 import { Calendar, Plus, Filter, ChevronLeft, ChevronRight, Clock } from 'lucide-react'
 import MonthCalendarView from '../components/calendar/MonthCalendarView'
@@ -26,6 +27,7 @@ export default function CalendarPage() {
   const [showCreateAlert, setShowCreateAlert] = useState(false)
   const [showFilter, setShowFilter] = useState(false)
   const [isProcessingAlerts, setIsProcessingAlerts] = useState(false)
+  const [autoProcessorStatus, setAutoProcessorStatus] = useState({ isRunning: false })
 
   useEffect(() => {
     loadCalendarData()
@@ -39,6 +41,18 @@ export default function CalendarPage() {
     }, 10000)
     
     return () => clearTimeout(timeout)
+  }, [])
+
+  // Check auto-processor status
+  useEffect(() => {
+    const checkStatus = () => {
+      setAutoProcessorStatus(globalScheduledAlertProcessor.getStatus())
+    }
+
+    checkStatus()
+    const interval = setInterval(checkStatus, 5000) // Check every 5 seconds
+
+    return () => clearInterval(interval)
   }, [])
 
   const handlePreviousPeriod = () => {
@@ -179,6 +193,12 @@ export default function CalendarPage() {
             <Clock className="h-4 w-4 mr-2" />
             {isProcessingAlerts ? 'Processing...' : 'Process Alerts'}
           </button>
+
+          {/* Auto-processor status indicator */}
+          <div className="flex items-center px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-md">
+            <div className={`w-2 h-2 rounded-full mr-2 ${autoProcessorStatus.isRunning ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            Auto: {autoProcessorStatus.isRunning ? 'ON' : 'OFF'}
+          </div>
           
           <div className="relative">
             <button

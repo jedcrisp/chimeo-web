@@ -14,6 +14,7 @@ import Map from './components/Map'
 import Profile from './pages/Profile'
 import ProtectedRoute from './components/ProtectedRoute'
 import notificationService from './services/notificationService'
+import globalScheduledAlertProcessor from './services/globalScheduledAlertProcessor'
 
 function App() {
   useEffect(() => {
@@ -37,9 +38,17 @@ function App() {
     // Wait longer for Firebase to fully initialize
     const timer = setTimeout(() => {
       initNotifications()
+      
+      // Start global scheduled alert processor
+      console.log('🚀 Starting global scheduled alert processor...')
+      globalScheduledAlertProcessor.start()
     }, 3000) // Increased from 1000ms to 3000ms
 
-    return () => clearTimeout(timer)
+    // Cleanup function
+    return () => {
+      clearTimeout(timer)
+      globalScheduledAlertProcessor.stop()
+    }
   }, [])
 
   return (

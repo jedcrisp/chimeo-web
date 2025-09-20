@@ -116,6 +116,25 @@ export function CalendarProvider({ children }) {
     }
   }, [userProfile])
 
+  // Listen for globally processed alerts and refresh calendar data
+  useEffect(() => {
+    const handleScheduledAlertsProcessed = async (event) => {
+      console.log('📅 Calendar: Received scheduled alerts processed event:', event.detail)
+      // Refresh calendar data when alerts are processed globally
+      try {
+        await loadCalendarData()
+      } catch (error) {
+        console.error('Error refreshing calendar data after alert processing:', error)
+      }
+    }
+
+    window.addEventListener('scheduledAlertsProcessed', handleScheduledAlertsProcessed)
+
+    return () => {
+      window.removeEventListener('scheduledAlertsProcessed', handleScheduledAlertsProcessed)
+    }
+  }, [])
+
   const loadCalendarData = async (dateRange = null) => {
     try {
       dispatch({ type: CALENDAR_ACTIONS.SET_LOADING, payload: true })
