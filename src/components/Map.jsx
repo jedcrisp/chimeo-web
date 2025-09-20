@@ -23,6 +23,43 @@ export default function Map() {
   const markersRef = useRef([])
   const infoWindowRef = useRef(null)
 
+  // Add test organizations with location data for demonstration
+  const [testOrganizations] = useState([
+    {
+      id: 'test-1',
+      name: 'Test Organization 1',
+      description: 'This is a test organization for map display',
+      location: { latitude: 40.7128, longitude: -74.0060 }, // New York
+      contact: '+1-555-0123',
+      email: 'test1@example.com',
+      memberCount: 5,
+      followerCount: 3
+    },
+    {
+      id: 'test-2',
+      name: 'Test Organization 2',
+      description: 'Another test organization for map display',
+      location: { latitude: 34.0522, longitude: -118.2437 }, // Los Angeles
+      contact: '+1-555-0456',
+      email: 'test2@example.com',
+      memberCount: 8,
+      followerCount: 12
+    },
+    {
+      id: 'test-3',
+      name: 'Test Organization 3',
+      description: 'Third test organization for map display',
+      location: { latitude: 41.8781, longitude: -87.6298 }, // Chicago
+      contact: '+1-555-0789',
+      email: 'test3@example.com',
+      memberCount: 15,
+      followerCount: 7
+    }
+  ])
+
+  // Combine real organizations with test organizations
+  const allOrganizations = [...organizations, ...testOrganizations]
+
   // Load Google Maps script dynamically
   useEffect(() => {
     const loadGoogleMaps = () => {
@@ -689,43 +726,6 @@ export default function Map() {
       console.log('🔍 Sample organization structure:', organizations[0])
     }
   }, [organizations])
-
-  // Add test organizations with location data for demonstration
-  const [testOrganizations] = useState([
-    {
-      id: 'test-1',
-      name: 'Test Organization 1',
-      description: 'This is a test organization for map display',
-      location: { latitude: 40.7128, longitude: -74.0060 }, // New York
-      contact: '+1-555-0123',
-      email: 'test1@example.com',
-      memberCount: 5,
-      followerCount: 3
-    },
-    {
-      id: 'test-2',
-      name: 'Test Organization 2',
-      description: 'Another test organization for map display',
-      location: { latitude: 34.0522, longitude: -118.2437 }, // Los Angeles
-      contact: '+1-555-0456',
-      email: 'test2@example.com',
-      memberCount: 8,
-      followerCount: 12
-    },
-    {
-      id: 'test-3',
-      name: 'Test Organization 3',
-      description: 'Third test organization for map display',
-      location: { latitude: 41.8781, longitude: -87.6298 }, // Chicago
-      contact: '+1-555-0789',
-      email: 'test3@example.com',
-      memberCount: 15,
-      followerCount: 7
-    }
-  ])
-
-  // Combine real organizations with test organizations
-  const allOrganizations = [...organizations, ...testOrganizations]
 
   // Debug: Log component mount and map container
   useEffect(() => {
