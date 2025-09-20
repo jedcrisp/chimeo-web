@@ -27,9 +27,9 @@ export default function Map() {
       console.log('🗺️ Loading Google Maps script...')
       console.log('🔑 Environment API Key:', import.meta.env.VITE_GOOGLE_MAPS_API_KEY)
       
-      // Temporary hardcoded API key for testing
+      // Get API key from environment or use a fallback
       const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyA96jGLzCUMVe9FHHS1lQ8vdbi8DFhAs6o'
-      console.log('🔑 Using API Key:', apiKey)
+      console.log('🔑 Using API Key:', apiKey ? 'Set' : 'Not set')
       
       if (window.google && window.google.maps) {
         console.log('✅ Google Maps already loaded')
@@ -95,13 +95,20 @@ export default function Map() {
     } : 'No ref')
     
     if (!window.google || !window.google.maps) {
-      console.log('❌ Google Maps not loaded yet, retrying...')
-      setTimeout(initMap, 1000)
+      console.log('❌ Google Maps not loaded yet, retrying in 2 seconds...')
+      setTimeout(initMap, 2000)
       return
     }
 
     if (!mapRef.current) {
-      console.log('❌ Map container not ready, retrying...')
+      console.log('❌ Map container not ready, retrying in 1 second...')
+      setTimeout(initMap, 1000)
+      return
+    }
+
+    // Check if container has dimensions
+    if (mapRef.current.offsetWidth === 0 || mapRef.current.offsetHeight === 0) {
+      console.log('❌ Map container has no dimensions, retrying in 1 second...')
       setTimeout(initMap, 1000)
       return
     }
@@ -179,6 +186,19 @@ export default function Map() {
   const initMapWithRegularMarkers = useCallback(() => {
     console.log('🗺️ Initializing Google Maps with regular markers...')
     
+    if (!mapRef.current) {
+      console.log('❌ Map container not ready for regular markers, retrying...')
+      setTimeout(initMapWithRegularMarkers, 1000)
+      return
+    }
+
+    // Check if container has dimensions
+    if (mapRef.current.offsetWidth === 0 || mapRef.current.offsetHeight === 0) {
+      console.log('❌ Map container has no dimensions for regular markers, retrying...')
+      setTimeout(initMapWithRegularMarkers, 1000)
+      return
+    }
+    
     try {
       console.log('📍 Creating map instance with regular markers...')
       console.log('📍 Map container:', mapRef.current)
@@ -247,12 +267,12 @@ export default function Map() {
       return
     }
     
-    if (!organizations.length) {
+    if (!allOrganizations.length) {
       console.log('❌ No organizations to display')
       return
     }
 
-    console.log('🗺️ Map instance ready, organizations count:', organizations.length)
+    console.log('🗺️ Map instance ready, organizations count:', allOrganizations.length)
 
     // Clear existing markers
     markersRef.current.forEach(marker => marker.map = null)
@@ -343,7 +363,7 @@ export default function Map() {
     })
 
     console.log(`✅ Added ${markersRef.current.length} markers to map`)
-  }, [organizations, adminOrgs, followingStatus])
+  }, [allOrganizations, adminOrgs, followingStatus])
 
   // Add organization markers to the map with regular markers
   const addOrganizationMarkersWithRegularMarkers = useCallback(() => {
@@ -354,12 +374,12 @@ export default function Map() {
       return
     }
     
-    if (!organizations.length) {
+    if (!allOrganizations.length) {
       console.log('❌ No organizations to display')
       return
     }
 
-    console.log('🗺️ Map instance ready, organizations count:', organizations.length)
+    console.log('🗺️ Map instance ready, organizations count:', allOrganizations.length)
 
     // Clear existing markers
     markersRef.current.forEach(marker => marker.setMap(null))
@@ -453,7 +473,7 @@ export default function Map() {
     })
 
     console.log(`✅ Added ${markersRef.current.length} regular markers to map`)
-  }, [organizations, adminOrgs, followingStatus])
+  }, [allOrganizations, adminOrgs, followingStatus])
 
   // Get user's current location
   const getUserLocation = () => {
@@ -483,7 +503,7 @@ export default function Map() {
   // Check following status for all organizations
   const checkFollowingStatus = async () => {
     const status = {}
-    for (const org of organizations) {
+    for (const org of allOrganizations) {
       try {
         const isFollowing = await adminService.isFollowingOrganization(org.id)
         status[org.id] = isFollowing
@@ -568,9 +588,9 @@ export default function Map() {
   // Filter organizations that have valid coordinates
   const getMappableOrganizations = () => {
     console.log('🗺️ Filtering organizations for map display...')
-    console.log('📊 Total organizations:', organizations.length)
+    console.log('📊 Total organizations:', allOrganizations.length)
     
-    const mappable = organizations.filter(org => {
+    const mappable = allOrganizations.filter(org => {
       console.log(`🔍 Checking organization: ${org.name}`)
       console.log(`📍 Location data:`, org.location)
       
@@ -624,7 +644,7 @@ export default function Map() {
   }
 
   // Filter organizations by search query
-  const filteredOrganizations = organizations.filter(org => {
+  const filteredOrganizations = allOrganizations.filter(org => {
     if (!searchQuery) return true
     return org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
            (org.description && org.description.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -633,7 +653,7 @@ export default function Map() {
   // Add global function for info window buttons
   useEffect(() => {
     window.selectOrganization = (orgId) => {
-      const org = organizations.find(o => o.id === orgId)
+      const org = allOrganizations.find(o => o.id === orgId)
       if (org) {
         handleOrgSelect(org)
         infoWindowRef.current?.close()
@@ -643,7 +663,7 @@ export default function Map() {
     return () => {
       delete window.selectOrganization
     }
-  }, [organizations])
+  }, [allOrganizations])
 
   // Debug: Log organizations data when it changes
   useEffect(() => {
@@ -654,57 +674,42 @@ export default function Map() {
     }
   }, [organizations])
 
-  // Debug: Add test organizations with location data if none exist
-  useEffect(() => {
-    if (organizations.length > 0 && !organizations.some(org => org.location)) {
-      console.log('🧪 No organizations with location data found, adding test data...')
-      
-      // Add test organizations with location data
-      const testOrgs = [
-        {
-          id: 'test-1',
-          name: 'Test Organization 1',
-          description: 'This is a test organization for map display',
-          location: { latitude: 40.7128, longitude: -74.0060 }, // New York
-          contact: '+1-555-0123',
-          email: 'test1@example.com',
-          memberCount: 5,
-          followerCount: 3
-        },
-        {
-          id: 'test-2',
-          name: 'Test Organization 2',
-          description: 'Another test organization for map display',
-          location: { latitude: 34.0522, longitude: -118.2437 }, // Los Angeles
-          contact: '+1-555-0456',
-          email: 'test2@example.com',
-          memberCount: 8,
-          followerCount: 12
-        },
-        {
-          id: 'test-3',
-          name: 'Test Organization 3',
-          description: 'Third test organization for map display',
-          location: { latitude: 41.8781, longitude: -87.6298 }, // Chicago
-          contact: '+1-555-0789',
-          email: 'test3@example.com',
-          memberCount: 15,
-          followerCount: 7
-        }
-      ]
-      
-      console.log('🧪 Test organizations added:', testOrgs)
-      
-      // Temporarily add test organizations to the organizations array
-      // This is just for testing - in production, organizations should come from the database
-      const allOrgs = [...organizations, ...testOrgs]
-      
-      // Force re-render with test data
-      setTimeout(() => {
-        console.log('🧪 Map should now display test organizations')
-      }, 1000)
+  // Add test organizations with location data for demonstration
+  const [testOrganizations] = useState([
+    {
+      id: 'test-1',
+      name: 'Test Organization 1',
+      description: 'This is a test organization for map display',
+      location: { latitude: 40.7128, longitude: -74.0060 }, // New York
+      contact: '+1-555-0123',
+      email: 'test1@example.com',
+      memberCount: 5,
+      followerCount: 3
+    },
+    {
+      id: 'test-2',
+      name: 'Test Organization 2',
+      description: 'Another test organization for map display',
+      location: { latitude: 34.0522, longitude: -118.2437 }, // Los Angeles
+      contact: '+1-555-0456',
+      email: 'test2@example.com',
+      memberCount: 8,
+      followerCount: 12
+    },
+    {
+      id: 'test-3',
+      name: 'Test Organization 3',
+      description: 'Third test organization for map display',
+      location: { latitude: 41.8781, longitude: -87.6298 }, // Chicago
+      contact: '+1-555-0789',
+      email: 'test3@example.com',
+      memberCount: 15,
+      followerCount: 7
     }
-  }, [organizations])
+  ])
+
+  // Combine real organizations with test organizations
+  const allOrganizations = [...organizations, ...testOrganizations]
 
   // Debug: Log component mount and map container
   useEffect(() => {
