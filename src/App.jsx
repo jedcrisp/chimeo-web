@@ -28,6 +28,10 @@ function App() {
           console.log('✅ Push notifications initialized successfully')
         } else {
           console.log('⚠️ Push notifications not available - continuing without them')
+          console.log('💡 This is normal if:')
+          console.log('  - Running on HTTP instead of HTTPS (in production)')
+          console.log('  - Browser doesn\'t support push notifications')
+          console.log('  - User denied notification permissions')
         }
       } catch (error) {
         console.error('❌ Failed to initialize push notifications:', error)

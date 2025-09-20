@@ -52,7 +52,11 @@ class NotificationService {
       this.messaging = await getMessagingInstance()
       
       if (!this.messaging) {
-        console.log('❌ Failed to get messaging instance')
+        console.log('❌ Failed to get messaging instance - messaging may not be supported in this environment')
+        console.log('🔍 This could be due to:')
+        console.log('  - Not running on HTTPS (required for production)')
+        console.log('  - Browser not supporting push notifications')
+        console.log('  - Firebase messaging service not available')
         return false
       }
       console.log('✅ Got messaging instance')

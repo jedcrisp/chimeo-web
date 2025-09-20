@@ -83,6 +83,12 @@ export const getMessagingInstance = async () => {
       console.log('🔧 getMessagingInstance: Firebase app:', app)
       console.log('🔧 getMessagingInstance: Firebase config:', firebaseConfig)
       
+      // Check if messaging is available in the current context
+      if (typeof getMessaging !== 'function') {
+        console.log('❌ getMessagingInstance: getMessaging function not available')
+        return null
+      }
+      
       messaging = getMessaging(app)
       messagingInitialized = true
       console.log('✅ getMessagingInstance: Messaging initialized successfully')
