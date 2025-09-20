@@ -473,18 +473,18 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
               <button
                 type="button"
                 onClick={handleDelete}
-                className="flex items-center justify-center space-x-2 px-4 py-2 text-red-600 bg-red-50 border border-red-200 hover:text-red-800 hover:bg-red-100 hover:border-red-300 rounded-lg transition-all duration-200 shadow-sm whitespace-nowrap"
+                className="flex items-center justify-center space-x-2 px-3 py-2 text-sm text-red-600 bg-red-50 border border-red-200 hover:text-red-800 hover:bg-red-100 hover:border-red-300 rounded-lg transition-all duration-200 shadow-sm whitespace-nowrap"
               >
-                <Trash2 className="h-4 w-4 flex-shrink-0" />
+                <Trash2 className="h-3 w-3 flex-shrink-0" />
                 <span>Delete Alert</span>
               </button>
               
               <button
                 type="button"
                 onClick={() => setShowDuplicateModal(true)}
-                className="flex items-center justify-center space-x-2 px-4 py-2 text-blue-600 bg-blue-50 border border-blue-200 hover:text-blue-800 hover:bg-blue-100 hover:border-blue-300 rounded-lg transition-all duration-200 shadow-sm whitespace-nowrap"
+                className="flex items-center justify-center space-x-2 px-3 py-2 text-sm text-blue-600 bg-blue-50 border border-blue-200 hover:text-blue-800 hover:bg-blue-100 hover:border-blue-300 rounded-lg transition-all duration-200 shadow-sm whitespace-nowrap"
               >
-                <Calendar className="h-4 w-4 flex-shrink-0" />
+                <Calendar className="h-3 w-3 flex-shrink-0" />
                 <span>Duplicate to Multiple Days</span>
               </button>
             </div>
@@ -494,14 +494,14 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-6 py-2 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors whitespace-nowrap"
+                className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors whitespace-nowrap"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
               >
                 {isLoading ? 'Updating...' : 'Update Alert'}
               </button>
