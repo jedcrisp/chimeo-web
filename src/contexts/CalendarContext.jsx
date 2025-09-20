@@ -94,6 +94,7 @@ function calendarReducer(state, action) {
       return { ...state, filter: action.payload }
     
     case CALENDAR_ACTIONS.SET_SELECTED_DATE:
+      console.log('📅 CalendarContext: SET_SELECTED_DATE reducer called with:', action.payload.toDateString())
       return { ...state, selectedDate: action.payload }
     
     case CALENDAR_ACTIONS.SET_VIEW_MODE:
@@ -259,6 +260,7 @@ export function CalendarProvider({ children }) {
   }
 
   const setSelectedDate = (date) => {
+    console.log('📅 CalendarContext: setSelectedDate called with:', date.toDateString())
     dispatch({ type: CALENDAR_ACTIONS.SET_SELECTED_DATE, payload: date })
   }
 

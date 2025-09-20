@@ -85,6 +85,9 @@ export default function MonthCalendarView() {
   }
 
   const handleDateClick = (date) => {
+    console.log('📅 MonthCalendarView: Date clicked:', date.toDateString())
+    console.log('📅 MonthCalendarView: Current selectedDate:', selectedDate.toDateString())
+    console.log('📅 MonthCalendarView: Setting selectedDate to:', date.toDateString())
     setSelectedDate(date)
   }
 
