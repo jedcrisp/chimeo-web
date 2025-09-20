@@ -125,9 +125,7 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
       }
 
       await createScheduledAlert(alertData)
-      
-      // Show duplicate modal after creating the first alert
-      setShowDuplicateModal(true)
+      onClose()
     } catch (err) {
       console.error('Error creating scheduled alert:', err)
       setError(err.message || 'Failed to create scheduled alert')
@@ -151,28 +149,37 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
     setError('')
 
     try {
+      // First create the original alert
+      const originalAlertData = {
+        title: formData.title,
+        description: formData.description,
+        organizationId: formData.organizationId,
+        organizationName: formData.organizationName,
+        groupId: formData.groupId || null,
+        groupName: formData.groupName || null,
+        type: formData.type,
+        severity: formData.severity,
+        location: null,
+        scheduledDate: formData.scheduledDate,
+        isRecurring: formData.isRecurring,
+        recurrencePattern: formData.isRecurring ? {
+          frequency: formData.recurrenceFrequency,
+          interval: formData.recurrenceInterval,
+          endDate: formData.recurrenceEndDate
+        } : null,
+        postedBy: currentUser?.displayName || currentUser?.email || 'Unknown',
+        postedByUserId: currentUser?.uid || 'unknown',
+        expiresAt: formData.hasExpiration ? formData.expiresAt : null
+      }
+
+      await createScheduledAlert(originalAlertData)
+
+      // Then create duplicates for selected dates
       for (const date of selectedDates) {
         const alertData = {
-          title: formData.title,
-          description: formData.description,
-          organizationId: formData.organizationId,
-          organizationName: formData.organizationName,
-          groupId: formData.groupId || null,
-          groupName: formData.groupName || null,
-          type: formData.type,
-          severity: formData.severity,
-          location: null,
+          ...originalAlertData,
           scheduledDate: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 
-            formData.scheduledDate.getHours(), formData.scheduledDate.getMinutes()),
-          isRecurring: formData.isRecurring,
-          recurrencePattern: formData.isRecurring ? {
-            frequency: formData.recurrenceFrequency,
-            interval: formData.recurrenceInterval,
-            endDate: formData.recurrenceEndDate
-          } : null,
-          postedBy: currentUser?.displayName || currentUser?.email || 'Unknown',
-          postedByUserId: currentUser?.uid || 'unknown',
-          expiresAt: formData.hasExpiration ? formData.expiresAt : null
+            formData.scheduledDate.getHours(), formData.scheduledDate.getMinutes())
         }
 
         await createScheduledAlert(alertData)
@@ -495,21 +502,32 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
               <button
                 type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                onClick={() => setShowDuplicateModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100"
               >
-                Cancel
+                <Calendar className="h-4 w-4" />
+                <span>Duplicate to Multiple Days</span>
               </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
-              >
-                {isLoading ? 'Scheduling...' : 'Schedule Alert'}
-              </button>
+              
+              <div className="flex space-x-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
+                >
+                  {isLoading ? 'Scheduling...' : 'Schedule Alert'}
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -527,8 +545,8 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
                     <Calendar className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">Duplicate Alert to Multiple Days</h2>
-                    <p className="text-sm text-gray-500">Alert created! Select additional dates to duplicate this alert to</p>
+                    <h2 className="text-xl font-semibold text-gray-900">Create Alert for Multiple Days</h2>
+                    <p className="text-sm text-gray-500">Select dates to create this alert for multiple days</p>
                   </div>
                 </div>
                 <button
@@ -553,7 +571,7 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
               {/* Date Selection */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Select Additional Dates (Click to toggle selection)
+                  Select Dates (Click to toggle selection)
                 </label>
                 <div className="grid grid-cols-7 gap-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-4">
                   {(() => {
@@ -592,7 +610,7 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
                   })()}
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  Selected {selectedDates.length} additional date{selectedDates.length !== 1 ? 's' : ''}
+                  Selected {selectedDates.length} date{selectedDates.length !== 1 ? 's' : ''}
                 </p>
               </div>
 
@@ -606,7 +624,7 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
                   }}
                   className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
                 >
-                  Skip (Alert Created)
+                  Cancel
                 </button>
                 <button
                   type="button"
@@ -614,7 +632,7 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
                   disabled={isDuplicating || selectedDates.length === 0}
                   className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {isDuplicating ? 'Duplicating...' : `Duplicate to ${selectedDates.length} Additional Date${selectedDates.length !== 1 ? 's' : ''}`}
+                  {isDuplicating ? 'Creating...' : `Create ${selectedDates.length + 1} Alert${selectedDates.length !== 0 ? 's' : ''}`}
                 </button>
               </div>
             </div>
