@@ -120,11 +120,16 @@ export function CalendarProvider({ children }) {
   useEffect(() => {
     const handleScheduledAlertsProcessed = async (event) => {
       console.log('📅 Calendar: Received scheduled alerts processed event:', event.detail)
-      // Refresh calendar data when alerts are processed globally
-      try {
-        await loadCalendarData()
-      } catch (error) {
-        console.error('Error refreshing calendar data after alert processing:', error)
+      // Only refresh if alerts were actually processed (not just created)
+      if (event.detail?.processedAlerts?.length > 0) {
+        console.log('📅 Calendar: Refreshing calendar data due to processed alerts')
+        try {
+          await loadCalendarData()
+        } catch (error) {
+          console.error('Error refreshing calendar data after alert processing:', error)
+        }
+      } else {
+        console.log('📅 Calendar: No alerts were processed, skipping refresh')
       }
     }
 
@@ -197,8 +202,9 @@ export function CalendarProvider({ children }) {
     try {
       dispatch({ type: CALENDAR_ACTIONS.SET_LOADING, payload: true })
       const alert = await calendarService.createScheduledAlert(alertData)
-      // Don't automatically add to calendar state - let user manually refresh if needed
-      // dispatch({ type: CALENDAR_ACTIONS.ADD_SCHEDULED_ALERT, payload: alert })
+      // Add the new scheduled alert to calendar state immediately
+      dispatch({ type: CALENDAR_ACTIONS.ADD_SCHEDULED_ALERT, payload: alert })
+      console.log('✅ CalendarContext: Added scheduled alert to calendar state:', alert.title)
       return alert
     } catch (error) {
       console.error('CalendarContext: Error creating scheduled alert:', error)
