@@ -15,6 +15,7 @@ export default function Map() {
   const [searchQuery, setSearchQuery] = useState('')
   const [zoom, setZoom] = useState(4)
   const [mapsLoaded, setMapsLoaded] = useState(false)
+  const [mapError, setMapError] = useState(null)
   
   const mapRef = useRef(null)
   const mapInstanceRef = useRef(null)
@@ -28,7 +29,7 @@ export default function Map() {
       console.log('🔑 Environment API Key:', import.meta.env.VITE_GOOGLE_MAPS_API_KEY)
       
       // Get API key from environment or use a fallback
-      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyA96jGLzCUMVe9FHHS1lQ8vdbi8DFhAs6o'
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg'
       console.log('🔑 Using API Key:', apiKey ? 'Set' : 'Not set')
       
       if (window.google && window.google.maps) {
@@ -49,6 +50,7 @@ export default function Map() {
       }
       script.onerror = (error) => {
         console.error('❌ Failed to load Google Maps script:', error)
+        setMapError('Failed to load Google Maps. Please check your internet connection and try again.')
       }
       document.head.appendChild(script)
     }
@@ -79,6 +81,17 @@ export default function Map() {
       getUserLocation()
     }
   }, [mapsLoaded])
+
+  // Add timeout to detect if map is taking too long to load
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!mapsLoaded && !mapError) {
+        setMapError('Map is taking too long to load. Please check your internet connection.')
+      }
+    }, 10000) // 10 second timeout
+
+    return () => clearTimeout(timeout)
+  }, [mapsLoaded, mapError])
 
   // Initialize Google Maps
   const initMap = useCallback(() => {
@@ -791,11 +804,33 @@ export default function Map() {
           </div>
           
           {/* Map Loading Overlay */}
-          {!mapInstanceRef.current && (
+          {!mapInstanceRef.current && !mapError && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
                 <p className="text-sm text-gray-500">Loading map...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Map Error Overlay */}
+          {mapError && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+              <div className="text-center p-6">
+                <div className="text-red-500 text-4xl mb-4">🗺️</div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Map Unavailable</h3>
+                <p className="text-sm text-gray-500 mb-4">{mapError}</p>
+                <button
+                  onClick={() => {
+                    setMapError(null)
+                    setMapsLoaded(false)
+                    // Reload the page to retry
+                    window.location.reload()
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Retry
+                </button>
               </div>
             </div>
           )}
