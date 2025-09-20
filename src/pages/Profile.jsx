@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useOrganizations } from '../contexts/OrganizationsContext'
-import { User, Mail, Calendar, Shield, Edit, Save, X, Crown, Building, Lock, LogOut } from 'lucide-react'
+import { User, Mail, Calendar, Shield, Edit, Save, X, Crown, Building, Lock, LogOut, TestTube } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import adminService from '../services/adminService'
+import notificationService from '../services/notificationService'
 
 export default function Profile() {
   const { userProfile, currentUser, loading } = useAuth()
@@ -79,6 +80,45 @@ export default function Profile() {
       
     } catch (error) {
       console.error('❌ Error updating isOrganizationAdmin status:', error)
+    }
+  }
+
+  // Test FCM token functionality
+  const testFCMToken = async () => {
+    try {
+      console.log('🧪 Testing FCM token functionality...')
+      
+      // Initialize notification service
+      const success = await notificationService.initialize()
+      if (!success) {
+        toast.error('Failed to initialize notification service')
+        return
+      }
+      
+      // Get FCM token
+      const token = await notificationService.getToken()
+      if (token) {
+        console.log('✅ FCM Token obtained:', token)
+        toast.success(`FCM Token: ${token.substring(0, 20)}...`)
+        
+        // Check if token was saved to user profile
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid))
+        if (userDoc.exists()) {
+          const userData = userDoc.data()
+          if (userData.fcmToken) {
+            console.log('✅ FCM Token saved to user profile')
+            toast.success('FCM Token saved successfully!')
+          } else {
+            console.log('❌ FCM Token not found in user profile')
+            toast.error('FCM Token not saved to profile')
+          }
+        }
+      } else {
+        toast.error('Failed to get FCM token')
+      }
+    } catch (error) {
+      console.error('❌ Error testing FCM token:', error)
+      toast.error('FCM token test failed')
     }
   }
 
@@ -403,6 +443,13 @@ export default function Profile() {
           <div className="card">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Account Actions</h3>
             <div className="space-y-3">
+              <button 
+                onClick={testFCMToken}
+                className="w-full btn-secondary text-left flex items-center"
+              >
+                <TestTube className="h-4 w-4 mr-2" />
+                Test Push Notifications
+              </button>
               <button className="w-full btn-secondary text-left">
                 Change Password
               </button>

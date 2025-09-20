@@ -141,7 +141,8 @@ export function CalendarProvider({ children }) {
     try {
       dispatch({ type: CALENDAR_ACTIONS.SET_LOADING, payload: true })
       const event = await calendarService.createEvent(eventData)
-      dispatch({ type: CALENDAR_ACTIONS.ADD_EVENT, payload: event })
+      // Don't automatically add to calendar state - let user manually refresh if needed
+      // dispatch({ type: CALENDAR_ACTIONS.ADD_EVENT, payload: event })
       return event
     } catch (error) {
       dispatch({ type: CALENDAR_ACTIONS.SET_ERROR, payload: error.message })
@@ -176,7 +177,8 @@ export function CalendarProvider({ children }) {
     try {
       dispatch({ type: CALENDAR_ACTIONS.SET_LOADING, payload: true })
       const alert = await calendarService.createScheduledAlert(alertData)
-      dispatch({ type: CALENDAR_ACTIONS.ADD_SCHEDULED_ALERT, payload: alert })
+      // Don't automatically add to calendar state - let user manually refresh if needed
+      // dispatch({ type: CALENDAR_ACTIONS.ADD_SCHEDULED_ALERT, payload: alert })
       return alert
     } catch (error) {
       console.error('CalendarContext: Error creating scheduled alert:', error)

@@ -133,6 +133,21 @@ export function AuthProvider({ children }) {
         
         console.log('🔧 AuthContext: Fetching user profile...')
         await fetchUserProfile(result.user.uid)
+        
+        // Initialize push notifications after successful login
+        console.log('🔧 AuthContext: Initializing push notifications...')
+        try {
+          const notificationService = (await import('../services/notificationService')).default
+          const success = await notificationService.initialize()
+          if (success) {
+            console.log('✅ Push notifications initialized successfully')
+          } else {
+            console.log('⚠️ Push notifications not available')
+          }
+        } catch (error) {
+          console.error('❌ Failed to initialize push notifications:', error)
+        }
+        
         console.log('🔧 AuthContext: Setting loading to false...')
         setLoading(false)
         console.log('🔧 AuthContext: Force updating context...')
@@ -354,6 +369,20 @@ export function AuthProvider({ children }) {
       if (user) {
         console.log('🔧 AuthProvider: User authenticated, fetching profile...')
         await fetchUserProfile(user.uid)
+        
+        // Initialize push notifications after successful authentication
+        console.log('🔧 AuthProvider: Initializing push notifications...')
+        try {
+          const notificationService = (await import('../services/notificationService')).default
+          const success = await notificationService.initialize()
+          if (success) {
+            console.log('✅ Push notifications initialized successfully')
+          } else {
+            console.log('⚠️ Push notifications not available')
+          }
+        } catch (error) {
+          console.error('❌ Failed to initialize push notifications:', error)
+        }
       } else {
         console.log('🔧 AuthProvider: No user, clearing profile...')
         setUserProfile(null)

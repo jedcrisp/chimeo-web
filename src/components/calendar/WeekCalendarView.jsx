@@ -1,8 +1,13 @@
+import { useState } from 'react'
 import { useCalendar } from '../../contexts/CalendarContext'
 import { IncidentSeverityColors } from '../../models/calendarModels'
+import { Trash2 } from 'lucide-react'
+import EditScheduledAlertModal from './EditScheduledAlertModal'
 
 export default function WeekCalendarView() {
-  const { selectedDate, getEventsForDate, getScheduledAlertsForDate, filter } = useCalendar()
+  const { selectedDate, getEventsForDate, getScheduledAlertsForDate, filter, deleteScheduledAlert } = useCalendar()
+  const [selectedAlert, setSelectedAlert] = useState(null)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   const getWeekDays = () => {
     const startOfWeek = new Date(selectedDate)
@@ -40,6 +45,27 @@ export default function WeekCalendarView() {
       minute: '2-digit',
       hour12: true 
     })
+  }
+
+  const handleDeleteScheduledAlert = async (alertId) => {
+    if (window.confirm('Are you sure you want to delete this scheduled alert?')) {
+      try {
+        await deleteScheduledAlert(alertId)
+      } catch (error) {
+        console.error('Error deleting scheduled alert:', error)
+        alert('Failed to delete scheduled alert. Please try again.')
+      }
+    }
+  }
+
+  const handleAlertClick = (alert) => {
+    setSelectedAlert(alert)
+    setShowEditModal(true)
+  }
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false)
+    setSelectedAlert(null)
   }
 
   const weekDays = getWeekDays()
@@ -121,7 +147,10 @@ export default function WeekCalendarView() {
                       className="w-3 h-3 rounded-full mt-1 flex-shrink-0"
                       style={{ backgroundColor: IncidentSeverityColors[alert.severity] }}
                     />
-                    <div className="flex-1 min-w-0">
+                    <div 
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => handleAlertClick(alert)}
+                    >
                       <p className="text-sm font-medium text-gray-900 truncate">
                         {alert.title}
                       </p>
@@ -143,6 +172,16 @@ export default function WeekCalendarView() {
                         </span>
                       </div>
                     </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteScheduledAlert(alert.id)
+                      }}
+                      className="text-red-600 hover:text-red-800 p-1 rounded-md hover:bg-red-200 flex-shrink-0"
+                      title="Delete scheduled alert"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -152,6 +191,13 @@ export default function WeekCalendarView() {
           </div>
         )
       })}
+
+      {/* Edit Modal */}
+      <EditScheduledAlertModal
+        isOpen={showEditModal}
+        onClose={handleCloseEditModal}
+        alert={selectedAlert}
+      />
     </div>
   )
 }

@@ -12,10 +12,10 @@ import {
   RecurrenceFrequency, 
   RecurrenceFrequencyLabels 
 } from '../../models/calendarModels'
-import { X, Bell, Clock, MapPin, Building, Users } from 'lucide-react'
+import { X, Bell, Clock, MapPin, Building, Users, Trash2 } from 'lucide-react'
 
-export default function CreateScheduledAlertModal({ isOpen, onClose }) {
-  const { createScheduledAlert } = useCalendar()
+export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
+  const { updateScheduledAlert, deleteScheduledAlert } = useCalendar()
   const { currentUser, userProfile } = useAuth()
   const { organizations } = useOrganizations()
   
@@ -24,7 +24,7 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
     description: '',
     type: '',
     severity: '',
-    scheduledDate: new Date(Date.now() + 60 * 60 * 1000), // 1 hour later
+    scheduledDate: new Date(),
     organizationId: '',
     organizationName: '',
     groupId: '',
@@ -32,7 +32,7 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
     isRecurring: false,
     recurrenceFrequency: RecurrenceFrequency.WEEKLY,
     recurrenceInterval: 1,
-    recurrenceEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days later
+    recurrenceEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     expiresAt: null,
     hasExpiration: false
   })
@@ -40,31 +40,55 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [availableGroups, setAvailableGroups] = useState([])
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  // Initialize form data when alert changes
+  useEffect(() => {
+    if (alert) {
+      setFormData({
+        title: alert.title || '',
+        description: alert.description || '',
+        type: alert.type || '',
+        severity: alert.severity || '',
+        scheduledDate: alert.scheduledDate ? new Date(alert.scheduledDate) : new Date(),
+        organizationId: alert.organizationId || '',
+        organizationName: alert.organizationName || '',
+        groupId: alert.groupId || '',
+        groupName: alert.groupName || '',
+        isRecurring: alert.isRecurring || false,
+        recurrenceFrequency: alert.recurrencePattern?.frequency || RecurrenceFrequency.WEEKLY,
+        recurrenceInterval: alert.recurrencePattern?.interval || 1,
+        recurrenceEndDate: alert.recurrencePattern?.endDate ? new Date(alert.recurrencePattern.endDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        expiresAt: alert.expiresAt ? new Date(alert.expiresAt) : null,
+        hasExpiration: !!alert.expiresAt
+      })
+    }
+  }, [alert])
 
   // Auto-set user's organization and fetch groups when modal opens
   useEffect(() => {
     if (isOpen && userProfile?.isOrganizationAdmin && userProfile?.organizations?.length > 0) {
-      const organizationId = userProfile.organizations[0] // Use first organization
+      const userOrgId = userProfile.organizations[0]
+      const userOrg = organizations.find(org => org.id === userOrgId)
       
-      setFormData(prev => ({
-        ...prev,
-        organizationId: organizationId,
-        organizationName: organizationId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) // Convert ID to readable name
-      }))
-      
-      // Fetch groups for the user's organization
-      fetchGroupsForOrganization(organizationId)
+      if (userOrg) {
+        setFormData(prev => ({
+          ...prev,
+          organizationId: userOrgId,
+          organizationName: userOrg.name
+        }))
+        
+        loadGroupsForOrganization(userOrgId)
+      }
     }
-  }, [isOpen, userProfile])
+  }, [isOpen, userProfile, organizations])
 
-  // Fetch groups for a specific organization
-  const fetchGroupsForOrganization = async (organizationId) => {
+  const loadGroupsForOrganization = async (orgId) => {
     try {
-      const groups = await groupService.getGroupsForOrganization(organizationId)
+      const groups = await groupService.getOrganizationGroups(orgId)
       setAvailableGroups(groups)
     } catch (error) {
-      console.error('Error fetching groups:', error)
-      setAvailableGroups([])
+      console.error('Error loading groups:', error)
     }
   }
 
@@ -80,8 +104,6 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
       setError('Description is required')
       return
     }
-    
-    
     
     if (!formData.groupId) {
       setError('Target group is required')
@@ -121,13 +143,25 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
         expiresAt: formData.hasExpiration ? formData.expiresAt : null
       }
 
-      await createScheduledAlert(alertData)
+      await updateScheduledAlert(alert.id, alertData)
       onClose()
     } catch (err) {
-      console.error('Error creating scheduled alert:', err)
-      setError(err.message || 'Failed to create scheduled alert')
+      console.error('Error updating scheduled alert:', err)
+      setError(err.message || 'Failed to update scheduled alert')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (window.confirm('Are you sure you want to delete this scheduled alert? This action cannot be undone.')) {
+      try {
+        await deleteScheduledAlert(alert.id)
+        onClose()
+      } catch (err) {
+        console.error('Error deleting scheduled alert:', err)
+        setError(err.message || 'Failed to delete scheduled alert')
+      }
     }
   }
 
@@ -136,8 +170,8 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
     if (error) setError('')
   }
 
-  // Format date for datetime-local input (handles timezone properly)
   const formatDateTimeForInput = (date) => {
+    if (!date) return ''
     const d = new Date(date)
     const year = d.getFullYear()
     const month = String(d.getMonth() + 1).padStart(2, '0')
@@ -147,22 +181,25 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
     return `${year}-${month}-${day}T${hours}:${minutes}`
   }
 
-
-  if (!isOpen) return null
+  if (!isOpen || !alert) return null
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75" onClick={onClose} />
-        
-        <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <div className="flex items-center space-x-2">
-              <Bell className="h-6 w-6 text-red-600" />
-              <h2 className="text-xl font-semibold text-gray-900">Schedule Alert</h2>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Bell className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Edit Scheduled Alert</h2>
+                <p className="text-sm text-gray-500">Modify alert details and schedule</p>
+              </div>
             </div>
             <button
+              type="button"
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600"
             >
@@ -170,14 +207,14 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
             </button>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                <p className="text-sm text-red-600">{error}</p>
-              </div>
-            )}
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
 
+          <div className="space-y-6">
             {/* Title and Description */}
             <div className="grid grid-cols-1 gap-4">
               <div>
@@ -258,46 +295,57 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
               />
             </div>
 
-            {/* Target Group */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Target Group *
-              </label>
-              <select
-                value={formData.groupId}
-                onChange={(e) => {
-                  const selectedGroup = availableGroups.find(g => g.id === e.target.value)
-                  setFormData(prev => ({
-                    ...prev,
-                    groupId: e.target.value,
-                    groupName: selectedGroup?.name || ''
-                  }))
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                required
-              >
-                <option value="">-</option>
-                {availableGroups.map(group => (
-                  <option key={group.id} value={group.id}>{group.name}</option>
-                ))}
-              </select>
-              <p className="text-xs text-gray-500 mt-1">
-                {availableGroups.length > 0 
-                  ? `Select a group to send the alert to (${availableGroups.length} groups available)`
-                  : 'No groups available for this organization'
-                }
-              </p>
-              {availableGroups.length > 0 && (
-                <div className="text-xs text-gray-400 mt-1">
-                  Available groups: {availableGroups.map(g => g.name).join(', ')}
-                </div>
-              )}
+            {/* Organization and Group */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Organization *
+                </label>
+                <select
+                  value={formData.organizationId}
+                  onChange={(e) => {
+                    const selectedOrg = organizations.find(org => org.id === e.target.value)
+                    handleInputChange('organizationId', e.target.value)
+                    handleInputChange('organizationName', selectedOrg?.name || '')
+                    if (selectedOrg) {
+                      loadGroupsForOrganization(selectedOrg.id)
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  required
+                >
+                  <option value="">Select Organization</option>
+                  {organizations.map(org => (
+                    <option key={org.id} value={org.id}>{org.name}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Target Group *
+                </label>
+                <select
+                  value={formData.groupId}
+                  onChange={(e) => {
+                    const selectedGroup = availableGroups.find(g => g.id === e.target.value)
+                    handleInputChange('groupId', e.target.value)
+                    handleInputChange('groupName', selectedGroup?.name || '')
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  required
+                >
+                  <option value="">Select Group</option>
+                  {availableGroups.map(group => (
+                    <option key={group.id} value={group.id}>{group.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-
             {/* Recurrence */}
-            <div className="space-y-4">
-              <div className="flex items-center">
+            <div className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2 mb-4">
                 <input
                   type="checkbox"
                   id="isRecurring"
@@ -305,13 +353,13 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
                   onChange={(e) => handleInputChange('isRecurring', e.target.checked)}
                   className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
                 />
-                <label htmlFor="isRecurring" className="ml-2 text-sm text-gray-700">
-                  Repeat Alert
+                <label htmlFor="isRecurring" className="text-sm font-medium text-gray-700">
+                  Make this a recurring alert
                 </label>
               </div>
-
+              
               {formData.isRecurring && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Frequency
@@ -334,7 +382,6 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
                     <input
                       type="number"
                       min="1"
-                      max="99"
                       value={formData.recurrenceInterval}
                       onChange={(e) => handleInputChange('recurrenceInterval', parseInt(e.target.value))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -347,7 +394,7 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
                     </label>
                     <input
                       type="date"
-                      value={formData.recurrenceEndDate.toISOString().slice(0, 10)}
+                      value={formData.recurrenceEndDate ? formData.recurrenceEndDate.toISOString().split('T')[0] : ''}
                       onChange={(e) => handleInputChange('recurrenceEndDate', new Date(e.target.value))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
                     />
@@ -355,56 +402,37 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Expiration */}
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="hasExpiration"
-                  checked={formData.hasExpiration}
-                  onChange={(e) => handleInputChange('hasExpiration', e.target.checked)}
-                  className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-                />
-                <label htmlFor="hasExpiration" className="ml-2 text-sm text-gray-700">
-                  Set Expiration
-                </label>
-              </div>
-
-              {formData.hasExpiration && (
-                <div className="pl-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Expires At
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={formData.expiresAt ? formatDateTimeForInput(formData.expiresAt) : ''}
-                    onChange={(e) => handleInputChange('expiresAt', new Date(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+          {/* Actions */}
+          <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="flex items-center space-x-2 px-4 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Delete Alert</span>
+            </button>
+            
+            <div className="flex space-x-3">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
+                className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {isLoading ? 'Scheduling...' : 'Schedule Alert'}
+                {isLoading ? 'Updating...' : 'Update Alert'}
               </button>
             </div>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
     </div>
   )

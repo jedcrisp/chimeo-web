@@ -1,8 +1,13 @@
+import { useState } from 'react'
 import { useCalendar } from '../../contexts/CalendarContext'
 import { IncidentSeverityColors } from '../../models/calendarModels'
+import { Trash2 } from 'lucide-react'
+import EditScheduledAlertModal from './EditScheduledAlertModal'
 
 export default function AgendaView() {
-  const { events, scheduledAlerts, filter, getUpcomingAlerts } = useCalendar()
+  const { events, scheduledAlerts, filter, getUpcomingAlerts, deleteScheduledAlert } = useCalendar()
+  const [selectedAlert, setSelectedAlert] = useState(null)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   const getUpcomingItems = () => {
     const upcomingEvents = events
@@ -51,6 +56,27 @@ export default function AgendaView() {
       minute: '2-digit',
       hour12: true 
     })
+  }
+
+  const handleDeleteScheduledAlert = async (alertId) => {
+    if (window.confirm('Are you sure you want to delete this scheduled alert?')) {
+      try {
+        await deleteScheduledAlert(alertId)
+      } catch (error) {
+        console.error('Error deleting scheduled alert:', error)
+        alert('Failed to delete scheduled alert. Please try again.')
+      }
+    }
+  }
+
+  const handleAlertClick = (alert) => {
+    setSelectedAlert(alert)
+    setShowEditModal(true)
+  }
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false)
+    setSelectedAlert(null)
   }
 
   const groupItemsByDate = (items) => {
@@ -121,7 +147,10 @@ export default function AgendaView() {
                     />
 
                     {/* Content */}
-                    <div className="flex-1 min-w-0">
+                    <div 
+                      className={`flex-1 min-w-0 ${!isEvent ? 'cursor-pointer' : ''}`}
+                      onClick={!isEvent ? () => handleAlertClick(item) : undefined}
+                    >
                       <h4 className="text-base font-medium text-gray-900">
                         {item.title}
                       </h4>
@@ -159,6 +188,22 @@ export default function AgendaView() {
                         )}
                       </div>
                     </div>
+
+                    {/* Actions */}
+                    {!isEvent && (
+                      <div className="flex-shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteScheduledAlert(item.id)
+                          }}
+                          className="text-red-600 hover:text-red-800 p-1 rounded-md hover:bg-red-100"
+                          title="Delete scheduled alert"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -178,6 +223,13 @@ export default function AgendaView() {
           </p>
         </div>
       )}
+
+      {/* Edit Modal */}
+      <EditScheduledAlertModal
+        isOpen={showEditModal}
+        onClose={handleCloseEditModal}
+        alert={selectedAlert}
+      />
     </div>
   )
 }

@@ -15,6 +15,9 @@ const firebaseConfig = {
   measurementId: "G-GCSQ5KSTF0"
 }
 
+// VAPID key for push notifications
+export const VAPID_KEY = "BKj330egH_Do8wrOuLBqR8QqN00tMzJOTxU2XgqpPw2iH8cIvl-m73gYlkDMOwUiyCzr1puqZ_Gza8uEI3uxh9Q"
+
 // Initialize Firebase
 console.log('🔧 Firebase: Initializing app...')
 const app = initializeApp(firebaseConfig)
@@ -56,14 +59,31 @@ export const getMessagingInstance = async () => {
         return null
       }
       
+      // Check if messaging is supported
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.log('❌ getMessagingInstance: Push messaging not supported')
+        return null
+      }
+      
+      // Check if we're in a secure context (required for messaging)
+      if (!window.isSecureContext) {
+        console.log('❌ getMessagingInstance: Not in secure context (HTTPS required)')
+        return null
+      }
+      
       // Create messaging instance
       console.log('🔧 getMessagingInstance: Creating messaging instance...')
+      console.log('🔧 getMessagingInstance: Firebase app:', app)
+      console.log('🔧 getMessagingInstance: Firebase config:', firebaseConfig)
+      
       messaging = getMessaging(app)
       messagingInitialized = true
       console.log('✅ getMessagingInstance: Messaging initialized successfully')
       
     } catch (error) {
       console.log('❌ getMessagingInstance: Error initializing messaging:', error)
+      console.log('❌ getMessagingInstance: Error details:', error.message)
+      console.log('❌ getMessagingInstance: Error stack:', error.stack)
       messagingInitialized = false
       return null
     }

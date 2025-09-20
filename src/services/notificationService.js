@@ -1,6 +1,6 @@
 import { getToken, onMessage, isSupported } from 'firebase/messaging'
 import { doc, addDoc, collection, serverTimestamp } from 'firebase/firestore'
-import { db, getMessagingInstance } from './firebase'
+import { db, getMessagingInstance, VAPID_KEY } from './firebase'
 import toast from 'react-hot-toast'
 
 class NotificationService {
@@ -100,9 +100,10 @@ class NotificationService {
       }
 
       console.log('🔧 Getting FCM token...')
+      console.log('🔧 Using VAPID key:', VAPID_KEY)
       // Get the registration token
       this.currentToken = await getToken(this.messaging, {
-        vapidKey: 'BKj330egH_Do8wrOuLBqR8QqN00tMzJOTxU2XgqpPw2iH8cIvl-m73gYlkDMOwUiyCzr1puqZ_Gza8uEI3uxh9Q'
+        vapidKey: VAPID_KEY
       })
 
       if (this.currentToken) {
@@ -125,9 +126,30 @@ class NotificationService {
   // Save FCM token to user's profile
   async saveTokenToUser(token) {
     try {
-      // This will be called when user is authenticated
-      // You'll need to implement this based on your user structure
+      // Get current user from auth
+      const { getAuth } = await import('firebase/auth')
+      const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore')
+      const { db } = await import('./firebase')
+      
+      const auth = getAuth()
+      const currentUser = auth.currentUser
+      
+      if (!currentUser) {
+        console.log('❌ No authenticated user to save FCM token')
+        return
+      }
+      
       console.log('💾 Saving FCM token to user profile:', token)
+      console.log('💾 User ID:', currentUser.uid)
+      
+      // Update user document with FCM token
+      const userRef = doc(db, 'users', currentUser.uid)
+      await updateDoc(userRef, {
+        fcmToken: token,
+        fcmTokenUpdatedAt: serverTimestamp()
+      })
+      
+      console.log('✅ FCM token saved to user profile successfully')
     } catch (error) {
       console.error('❌ Error saving FCM token:', error)
     }
