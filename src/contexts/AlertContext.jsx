@@ -149,14 +149,9 @@ export function AlertProvider({ children }) {
         alertPayload
       })
 
-      // Store in the mobile app structure to trigger cloud function for phone notifications
-      console.log('🔧 AlertContext: About to create alert in mobile app structure at path: organizations/' + organizationId + '/alerts')
-      const mobileAlertRef = await addDoc(collection(db, 'organizations', organizationId, 'alerts'), alertPayload)
-      console.log('✅ Alert created in mobile app structure:', mobileAlertRef.id)
-      console.log('✅ Full path:', 'organizations/' + organizationId + '/alerts/' + mobileAlertRef.id)
-      console.log('✅ This should trigger the cloud function: sendAlertNotifications')
-      
-      // Also store in the main alerts collection (for web app display)
+      // Store in the main alerts collection (for web app display)
+      // Note: We only create in organizationAlerts since that's what the web app reads from
+      // The mobile app structure is only needed for scheduled alerts processed by cloud functions
       const webAlertRef = await addDoc(collection(db, 'organizationAlerts'), alertPayload)
       console.log('✅ Alert created in web app structure:', webAlertRef.id)
       console.log('✅ Alert payload for web app:', alertPayload)
@@ -176,8 +171,8 @@ export function AlertProvider({ children }) {
         // Don't fail the alert creation if notification fails
       }
 
-      toast.success('Alert created successfully! Phone notifications will be sent to followers.')
-      console.log('🎉 Alert creation complete! Check Firebase Functions logs for cloud function execution.')
+      toast.success('Alert created successfully! Push notifications sent to web users.')
+      console.log('🎉 Alert creation complete!')
       return webAlertRef
     } catch (error) {
       console.error('Error creating alert:', error)
