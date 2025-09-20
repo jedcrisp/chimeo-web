@@ -146,13 +146,8 @@ export default function Layout() {
             <div className="flex items-center gap-x-4 lg:gap-x-6">
               {userProfile && (
                 <div className="flex items-center gap-x-2">
-                  <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center">
-                    <span className="text-sm font-medium text-white">
-                      {userProfile.displayName?.charAt(0) || userProfile.email?.charAt(0)}
-                    </span>
-                  </div>
                   <span className="text-sm font-medium text-gray-900">
-                    {userProfile.organizations?.[0] 
+                    {userProfile.isOrganizationAdmin && userProfile.organizations?.[0] 
                       ? organizations.find(org => org.id === userProfile.organizations[0])?.name || userProfile.displayName || userProfile.email
                       : userProfile.displayName || userProfile.email
                     }
