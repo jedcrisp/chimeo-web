@@ -472,7 +472,7 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
               <button
                 type="button"
                 onClick={handleDelete}
-                className="flex items-center justify-center space-x-2 px-4 py-2 text-red-600 bg-red-50 border border-red-200 hover:text-red-800 hover:bg-red-100 hover:border-red-300 rounded-lg transition-all duration-200 shadow-sm whitespace-nowrap"
+                className="flex items-center justify-center space-x-2 px-6 py-2 text-red-600 bg-red-50 border border-red-200 hover:text-red-800 hover:bg-red-100 hover:border-red-300 rounded-lg transition-all duration-200 shadow-sm whitespace-nowrap min-w-[160px]"
               >
                 <Trash2 className="h-4 w-4 flex-shrink-0" />
                 <span>Delete Alert</span>
@@ -481,7 +481,7 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
               <button
                 type="button"
                 onClick={() => setShowDuplicateModal(true)}
-                className="flex items-center justify-center space-x-2 px-4 py-2 text-blue-600 bg-blue-50 border border-blue-200 hover:text-blue-800 hover:bg-blue-100 hover:border-blue-300 rounded-lg transition-all duration-200 shadow-sm whitespace-nowrap"
+                className="flex items-center justify-center space-x-2 px-6 py-2 text-blue-600 bg-blue-50 border border-blue-200 hover:text-blue-800 hover:bg-blue-100 hover:border-blue-300 rounded-lg transition-all duration-200 shadow-sm whitespace-nowrap min-w-[160px]"
               >
                 <Calendar className="h-4 w-4 flex-shrink-0" />
                 <span>Duplicate to Multiple Days</span>
