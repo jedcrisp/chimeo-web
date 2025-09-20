@@ -10,7 +10,6 @@ import Dashboard from './pages/Dashboard'
 import Alerts from './pages/Alerts'
 import Organizations from './pages/Organizations'
 import Calendar from './pages/Calendar'
-import Map from './components/Map'
 import Profile from './pages/Profile'
 import ProtectedRoute from './components/ProtectedRoute'
 import notificationService from './services/notificationService'
@@ -71,7 +70,6 @@ function App() {
                 <Route path="alerts" element={<Alerts />} />
                 {/* <Route path="organizations" element={<Organizations />} /> */}
                 <Route path="calendar" element={<Calendar />} />
-                <Route path="map" element={<Map />} />
                 <Route path="profile" element={<Profile />} />
               </Route>
             </Routes>

@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { MapPin, Users, User, LogOut, Menu, X, Building, Home, Bell, Calendar } from 'lucide-react'
+import { Users, User, LogOut, Menu, X, Building, Home, Bell, Calendar } from 'lucide-react'
 import { useState } from 'react'
 
 // Custom Bell Icon component
@@ -30,7 +30,6 @@ export default function Layout() {
     { name: 'Alerts', href: '/alerts', icon: Bell },
     // { name: 'Organizations', href: '/organizations', icon: Building },
     { name: 'Calendar', href: '/calendar', icon: Calendar },
-    { name: 'Map', href: '/map', icon: MapPin },
     { name: 'Profile', href: '/profile', icon: User },
   ]
 
