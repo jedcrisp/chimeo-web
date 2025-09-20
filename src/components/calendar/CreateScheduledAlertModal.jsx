@@ -506,7 +506,7 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
               <button
                 type="button"
                 onClick={() => setShowDuplicateModal(true)}
-                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100"
+                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:text-blue-800 hover:bg-blue-100 hover:border-blue-300 transition-all duration-200 shadow-sm"
               >
                 <Calendar className="h-4 w-4" />
                 <span>Duplicate to Multiple Days</span>
