@@ -2,8 +2,6 @@ import { useAuth } from '../contexts/AuthContext'
 import { useOrganizations } from '../contexts/OrganizationsContext'
 import { useAlerts } from '../contexts/AlertContext'
 import { 
-  Users, 
-  MapPin, 
   Crown, 
   Plus, 
   AlertTriangle, 
@@ -12,7 +10,6 @@ import {
   TrendingUp,
   Shield,
   Activity,
-  ArrowRight,
   Clock
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -130,72 +127,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link
-              to="/alerts"
-              className="group bg-white rounded-lg p-4 shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all duration-200 min-h-[80px]"
-            >
-              <div className="flex items-center h-full">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 bg-slate-100 group-hover:bg-slate-200 rounded-lg flex items-center justify-center transition-colors">
-                    <BellIcon className="h-5 w-5 text-slate-600" />
-                  </div>
-                </div>
-                <div className="ml-3 flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate">View Alerts</p>
-                  <p className="text-xs text-slate-500 truncate">{totalAlerts} total</p>
-                </div>
-                <div className="flex-shrink-0 ml-2">
-                  <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
-                </div>
-              </div>
-            </Link>
-
-            <Link
-              to="/organizations"
-              className="group bg-white rounded-lg p-4 shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all duration-200 min-h-[80px]"
-            >
-              <div className="flex items-center h-full">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 bg-slate-100 group-hover:bg-slate-200 rounded-lg flex items-center justify-center transition-colors">
-                    <Users className="h-5 w-5 text-slate-600" />
-                  </div>
-                </div>
-                <div className="ml-3 flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate">Organizations</p>
-                  <p className="text-xs text-slate-500 truncate">{totalOrganizations} total</p>
-                </div>
-                <div className="flex-shrink-0 ml-2">
-                  <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
-                </div>
-              </div>
-            </Link>
-
-            <Link
-              to="/map"
-              className="group bg-white rounded-lg p-4 shadow-sm border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all duration-200 min-h-[80px]"
-            >
-              <div className="flex items-center h-full">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 bg-slate-100 group-hover:bg-slate-200 rounded-lg flex items-center justify-center transition-colors">
-                    <MapPin className="h-5 w-5 text-slate-600" />
-                  </div>
-                </div>
-                <div className="ml-3 flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate">Map View</p>
-                  <p className="text-xs text-slate-500 truncate">See locations</p>
-                </div>
-                <div className="flex-shrink-0 ml-2">
-                  <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
-                </div>
-              </div>
-            </Link>
-
-          </div>
-        </div>
 
         {/* Recent Alerts */}
         <div className="bg-white rounded-lg shadow-sm border border-slate-200">
