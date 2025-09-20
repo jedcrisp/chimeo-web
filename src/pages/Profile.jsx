@@ -132,6 +132,7 @@ export default function Profile() {
       console.log('🔍 Profile: Determining user role...')
       console.log('🔍 Profile: Admin service current user:', adminService.currentUser?.uid)
       console.log('🔍 Profile: Current user:', currentUser.uid)
+      console.log('🔍 Profile: UserProfile:', userProfile)
       
       // First, check if userProfile has isOrganizationAdmin field (like mobile app)
       if (userProfile?.isOrganizationAdmin === true) {
@@ -158,6 +159,7 @@ export default function Profile() {
       
       // Get admin organizations
       const adminOrgs = await adminService.getAdminOrganizations()
+      console.log('🔍 Profile: Admin organizations:', adminOrgs)
       setAdminOrganizations(adminOrgs)
       
       // Set role based on admin status
@@ -175,6 +177,12 @@ export default function Profile() {
         hasOrgAdminAccess,
         adminOrgsCount: adminOrgs.length,
         adminOrgs: adminOrgs.map(org => org.name)
+      })
+      
+      console.log('🔍 Profile: Final state:', {
+        userRole,
+        isOrgAdmin,
+        adminOrganizations: adminOrganizations.length
       })
       
     } catch (error) {
@@ -350,7 +358,7 @@ export default function Profile() {
                 ) : (
                   <p className="mt-1 text-sm text-gray-900 flex items-center">
                     <User className="h-4 w-4 mr-2 text-gray-400" />
-                    {userProfile?.displayName || 'Not set'}
+                    {formData.displayName || 'Not set'}
                   </p>
                 )}
               </div>
