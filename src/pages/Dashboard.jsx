@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import adminService from '../services/adminService'
+import groupService from '../services/groupService'
 import { useState, useEffect } from 'react'
 
 // Custom Bell Icon component
@@ -38,6 +39,7 @@ export default function Dashboard() {
   const { alerts } = useAlerts()
   const [hasAdminAccess, setHasAdminAccess] = useState(false)
   const [adminOrgs, setAdminOrgs] = useState([])
+  const [totalGroups, setTotalGroups] = useState(0)
 
   useEffect(() => {
     if (currentUser && organizations.length > 0) {
@@ -48,6 +50,24 @@ export default function Dashboard() {
       })
     }
   }, [currentUser, organizations])
+
+  // Fetch groups for user's organization
+  useEffect(() => {
+    const fetchGroups = async () => {
+      if (userProfile?.organizations?.length > 0) {
+        try {
+          const organizationId = userProfile.organizations[0]
+          const groups = await groupService.getGroupsForOrganization(organizationId)
+          setTotalGroups(groups.length)
+        } catch (error) {
+          console.error('Error fetching groups:', error)
+          setTotalGroups(0)
+        }
+      }
+    }
+
+    fetchGroups()
+  }, [userProfile])
 
   const recentAlerts = alerts.slice(0, 5)
   const totalOrganizations = organizations.length
@@ -101,13 +121,13 @@ export default function Dashboard() {
           <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200 min-h-[100px]">
             <div className="flex items-center h-full">
               <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Building className="h-6 w-6 text-blue-600" />
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Users className="h-6 w-6 text-purple-600" />
                 </div>
               </div>
               <div className="ml-4 flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-600 truncate">Organizations</p>
-                <p className="text-2xl font-bold text-slate-900">{totalOrganizations}</p>
+                <p className="text-sm font-medium text-slate-600 truncate">Groups</p>
+                <p className="text-2xl font-bold text-slate-900">{totalGroups}</p>
               </div>
             </div>
           </div>
