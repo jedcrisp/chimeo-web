@@ -21,7 +21,7 @@ class ScheduledAlertProcessor {
   async processScheduledAlerts() {
     if (this.isProcessing) {
       console.log('⏰ Scheduled alert processor already running, skipping...')
-      return
+      return []
     }
 
     this.isProcessing = true

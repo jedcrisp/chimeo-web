@@ -78,7 +78,7 @@ class GlobalScheduledAlertProcessor {
     try {
       const processedAlerts = await scheduledAlertProcessor.processScheduledAlerts()
       
-      if (processedAlerts.length > 0) {
+      if (processedAlerts && processedAlerts.length > 0) {
         console.log(`✅ Global processor: Processed ${processedAlerts.length} scheduled alerts:`, processedAlerts)
         
         // Dispatch a custom event to notify other parts of the app

@@ -292,6 +292,7 @@ class CalendarService {
 
   async fetchScheduledAlerts(dateRange = null, organizationId = null) {
     console.log('⏰ Fetching scheduled alerts...')
+    console.log('🔍 CalendarService: organizationId type:', typeof organizationId, 'value:', organizationId)
     
     this.isLoading = true
     this.errorMessage = null
@@ -299,7 +300,7 @@ class CalendarService {
     try {
       let alerts = []
       
-      if (organizationId) {
+      if (organizationId && typeof organizationId === 'string') {
         // Fetch scheduled alerts for specific organization
         let q = query(collection(db, 'organizations', organizationId, 'scheduledAlerts'), orderBy('scheduledDate', 'asc'))
         

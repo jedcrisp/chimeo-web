@@ -16,16 +16,29 @@ export function AlertProvider({ children }) {
   const { currentUser, userProfile } = useAuth()
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser || !userProfile) {
       setAlerts([])
       setLoading(false)
       return
     }
 
-    // Listen to alerts from all organizations the user follows
-    console.log('🔍 AlertContext: Setting up alert listener for collection: organizationAlerts')
+    // Get organization ID with fallback logic
+    let orgId = userProfile?.organizationId
+    if (!orgId && userProfile?.organizations && userProfile.organizations.length > 0) {
+      orgId = userProfile.organizations[0] // organizations is array of strings
+    }
+
+    if (!orgId) {
+      console.log('🔍 AlertContext: No organization ID found, setting empty alerts')
+      setAlerts([])
+      setLoading(false)
+      return
+    }
+
+    // Listen to alerts from the user's organization
+    console.log('🔍 AlertContext: Setting up alert listener for organization:', orgId)
     const unsubscribe = onSnapshot(
-      query(collection(db, 'organizationAlerts'), orderBy('createdAt', 'desc')),
+      query(collection(db, 'organizations', orgId, 'alerts'), orderBy('createdAt', 'desc')),
       (snapshot) => {
         console.log('🔍 AlertContext: Received alert snapshot with', snapshot.docs.length, 'alerts')
         const alertsData = snapshot.docs.map(doc => {
@@ -47,7 +60,7 @@ export function AlertProvider({ children }) {
     )
 
     return unsubscribe
-  }, [currentUser])
+  }, [currentUser, userProfile])
 
   const createAlert = async (alertData) => {
     try {
@@ -81,6 +94,11 @@ export function AlertProvider({ children }) {
       // Get user's organization info - we need to find which organization they're an admin of
       let organizationId = null
       let organizationName = null
+      
+      console.log('🔧 AlertContext: Full userProfile:', userProfile)
+      console.log('🔧 AlertContext: userProfile.isOrganizationAdmin:', userProfile.isOrganizationAdmin)
+      console.log('🔧 AlertContext: userProfile.organizationId:', userProfile.organizationId)
+      console.log('🔧 AlertContext: userProfile.organizationName:', userProfile.organizationName)
       
       // Check if user is an admin of any organization
       if (userProfile.isOrganizationAdmin) {
@@ -119,6 +137,7 @@ export function AlertProvider({ children }) {
         console.error('❌ No organization ID found for alert creation')
         console.error('❌ User profile:', userProfile)
         console.error('❌ Current user:', currentUser)
+        console.error('❌ Alert data:', alertData)
         throw new Error('You must be an organization administrator to create alerts that send phone notifications. Please check your profile to ensure you have admin access.')
       }
       
@@ -150,11 +169,9 @@ export function AlertProvider({ children }) {
         alertPayload
       })
 
-      // Store in the main alerts collection (for web app display)
-      // Note: We only create in organizationAlerts since that's what the web app reads from
-      // The mobile app structure is only needed for scheduled alerts processed by cloud functions
-      const webAlertRef = await addDoc(collection(db, 'organizationAlerts'), alertPayload)
-      console.log('✅ Alert created in web app structure:', webAlertRef.id)
+      // Store in the organization's alerts subcollection (for web app display)
+      const webAlertRef = await addDoc(collection(db, 'organizations', organizationId, 'alerts'), alertPayload)
+      console.log('✅ Alert created in organization alerts subcollection:', webAlertRef.id)
       console.log('✅ Alert payload for web app:', alertPayload)
 
       // Send push notification for web app users
@@ -191,7 +208,17 @@ export function AlertProvider({ children }) {
 
   const updateAlert = async (alertId, updates) => {
     try {
-      await updateDoc(doc(db, 'organizationAlerts', alertId), {
+      // Get organization ID with fallback logic
+      let orgId = userProfile?.organizationId
+      if (!orgId && userProfile?.organizations && userProfile.organizations.length > 0) {
+        orgId = userProfile.organizations[0] // organizations is array of strings
+      }
+
+      if (!orgId) {
+        throw new Error('No organization ID found for updating alert')
+      }
+
+      await updateDoc(doc(db, 'organizations', orgId, 'alerts', alertId), {
         ...updates,
         updatedAt: new Date()
       })
@@ -207,48 +234,22 @@ export function AlertProvider({ children }) {
     try {
       console.log('🗑️ Deleting alert:', alertId)
       
-      // Get the alert data first to find the organization ID
-      const alertDoc = await getDoc(doc(db, 'organizationAlerts', alertId))
-      if (!alertDoc.exists()) {
-        throw new Error('Alert not found')
+      // Get organization ID with fallback logic
+      let orgId = userProfile?.organizationId
+      if (!orgId && userProfile?.organizations && userProfile.organizations.length > 0) {
+        orgId = userProfile.organizations[0] // organizations is array of strings
+      }
+
+      if (!orgId) {
+        throw new Error('No organization ID found for deleting alert')
       }
       
-      const alertData = alertDoc.data()
-      const organizationId = alertData.organizationId
+      console.log('🗑️ Organization ID:', orgId)
       
-      console.log('🗑️ Alert data:', alertData)
-      console.log('🗑️ Organization ID:', organizationId)
-      
-      // Delete from both collections
+      // Delete from the organization's alerts subcollection
       const deletePromises = [
-        deleteDoc(doc(db, 'organizationAlerts', alertId))
+        deleteDoc(doc(db, 'organizations', orgId, 'alerts', alertId))
       ]
-      
-      // If we have organization ID, also delete from the mobile app structure
-      if (organizationId) {
-        // Find the corresponding alert in the mobile app structure
-        const mobileAlertsQuery = query(
-          collection(db, 'organizations', organizationId, 'alerts'),
-          orderBy('createdAt', 'desc')
-        )
-        const mobileAlertsSnapshot = await getDocs(mobileAlertsQuery)
-        
-        // Find the alert with matching data (title, description, postedBy, etc.)
-        const matchingAlert = mobileAlertsSnapshot.docs.find(doc => {
-          const data = doc.data()
-          return data.title === alertData.title && 
-                 data.description === alertData.description &&
-                 data.postedByUserId === alertData.postedByUserId &&
-                 Math.abs(data.createdAt.toDate().getTime() - alertData.createdAt.toDate().getTime()) < 5000 // Within 5 seconds
-        })
-        
-        if (matchingAlert) {
-          console.log('🗑️ Found matching alert in mobile structure:', matchingAlert.id)
-          deletePromises.push(deleteDoc(doc(db, 'organizations', organizationId, 'alerts', matchingAlert.id)))
-        } else {
-          console.log('⚠️ No matching alert found in mobile structure')
-        }
-      }
       
       // Execute all deletions
       await Promise.all(deletePromises)
