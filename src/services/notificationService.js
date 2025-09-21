@@ -470,6 +470,26 @@ class NotificationService {
     return await this.showFallbackNotification(title, body, 'general', icon)
   }
 
+  // Request notification permission
+  async requestPermission() {
+    try {
+      console.log('🔔 Requesting notification permission...')
+      const permission = await Notification.requestPermission()
+      console.log('🔔 Permission result:', permission)
+      
+      if (permission === 'granted') {
+        console.log('✅ Notification permission granted')
+        return true
+      } else {
+        console.log('❌ Notification permission denied')
+        return false
+      }
+    } catch (error) {
+      console.error('❌ Error requesting notification permission:', error)
+      return false
+    }
+  }
+
   // Trigger cloud function to send push notifications (commented out for now)
   // async triggerCloudFunction(alertData) {
   //   try {

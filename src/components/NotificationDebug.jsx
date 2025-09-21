@@ -141,6 +141,24 @@ export default function NotificationDebug() {
     }
   }
 
+  const requestNotificationPermission = async () => {
+    addLog('🔔 Requesting notification permission...')
+    
+    try {
+      const success = await notificationService.requestPermission()
+      
+      if (success) {
+        addLog('✅ Notification permission granted')
+        // Refresh the status after permission is granted
+        checkNotificationStatus()
+      } else {
+        addLog('❌ Notification permission denied')
+      }
+    } catch (error) {
+      addLog('❌ Error requesting permission: ' + error.message)
+    }
+  }
+
   const testFCMToken = async () => {
     addLog('🔧 Testing FCM token generation...')
     
@@ -290,9 +308,8 @@ export default function NotificationDebug() {
 
       <div className="flex space-x-2 mb-4">
         <button
-          onClick={requestPermission}
-          disabled={permission === 'granted'}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          onClick={requestNotificationPermission}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
           Request Permission
         </button>
