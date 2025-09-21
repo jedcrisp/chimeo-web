@@ -218,23 +218,33 @@ async function processSingleScheduledAlert(
 // Send push notification
 async function sendPushNotification(alertData: any): Promise<void> {
   try {
-    // Get all FCM tokens for the organization
-    const tokensSnapshot = await db
-      .collection('fcmTokens')
+    // Get all users in the organization
+    const usersSnapshot = await db
+      .collection('users')
       .where('organizationId', '==', alertData.organizationId)
       .get()
 
-    if (tokensSnapshot.empty) {
-      console.log('No FCM tokens found for organization:', alertData.organizationId)
+    if (usersSnapshot.empty) {
+      console.log('No users found for organization:', alertData.organizationId)
       return
     }
 
-    const tokens = tokensSnapshot.docs.map(doc => doc.data().token).filter(Boolean)
+    // Extract FCM tokens from user documents
+    const tokens = usersSnapshot.docs
+      .map(doc => {
+        const userData = doc.data()
+        console.log(`User ${doc.id} FCM token:`, userData.fcmToken ? 'Present' : 'Missing')
+        return userData.fcmToken
+      })
+      .filter(token => token && token.trim() !== '')
     
     if (tokens.length === 0) {
-      console.log('No valid FCM tokens found')
+      console.log('No valid FCM tokens found in user documents for organization:', alertData.organizationId)
+      console.log(`Checked ${usersSnapshot.docs.length} users`)
       return
     }
+
+    console.log(`Found ${tokens.length} FCM tokens for organization:`, alertData.organizationId)
 
     const message = {
       notification: {
