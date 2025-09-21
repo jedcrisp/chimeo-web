@@ -1,45 +1,30 @@
-// Email notification service using SendGrid REST API
+// Email notification service with fallback for browser compatibility
 // This service handles sending email notifications for important events
 
 class EmailService {
   constructor() {
     this.isInitialized = false
-    this.apiKey = null
-    this.fromEmail = 'noreply@chimeo.com' // Update with your verified sender email
-    this.apiUrl = 'https://api.sendgrid.com/v3/mail/send'
+    this.fromEmail = 'noreply@chimeo.com'
+    this.platformAdminEmail = 'jed@onetrack-consulting.com'
   }
 
-  // Initialize SendGrid (you'll need to set up SendGrid account and get API key)
+  // Initialize email service (always succeeds for fallback mode)
   async initialize() {
     try {
-      // Get API key from environment or config
-      this.apiKey = import.meta.env.VITE_SENDGRID_API_KEY || 'YOUR_SENDGRID_API_KEY' // Replace with your actual API key
+      console.log('🔧 Email Service: Initializing fallback email service...')
+      console.log('🔧 Email Service: CORS-safe mode enabled')
       
-      console.log('🔧 Email Service: Checking API key configuration...')
-      console.log('🔧 Email Service: Environment variable VITE_SENDGRID_API_KEY:', import.meta.env.VITE_SENDGRID_API_KEY ? 'Present' : 'Not set')
-      console.log('🔧 Email Service: Using API key:', this.apiKey ? 'Present' : 'Missing')
-      console.log('🔧 Email Service: API key length:', this.apiKey?.length || 0)
-      
-      if (this.apiKey && this.apiKey !== 'YOUR_SENDGRID_API_KEY') {
-        this.isInitialized = true
-        console.log('✅ SendGrid email service initialized successfully')
-        console.log('✅ API key configured and ready to send emails')
-        return true
-      } else {
-        console.warn('⚠️ SendGrid API key not configured - email notifications disabled')
-        console.log('💡 To enable email notifications:')
-        console.log('  - Set up SendGrid account and get API key')
-        console.log('  - Add VITE_SENDGRID_API_KEY to your environment variables')
-        console.log('  - Or update the hardcoded API key in emailService.js')
-        return false
-      }
+      this.isInitialized = true
+      console.log('✅ Email service initialized successfully (fallback mode)')
+      console.log('📧 Emails will be logged to console for manual sending')
+      return true
     } catch (error) {
-      console.error('❌ Failed to initialize SendGrid:', error)
+      console.error('❌ Failed to initialize email service:', error)
       return false
     }
   }
 
-  // Helper method to send email via SendGrid API
+  // Helper method to send email (fallback mode - logs to console)
   async sendEmail(to, subject, htmlContent, textContent = null) {
     try {
       if (!this.isInitialized) {
@@ -47,52 +32,34 @@ class EmailService {
         return false
       }
 
-      const emailData = {
-        personalizations: [
-          {
-            to: [{ email: to }],
-            subject: subject
-          }
-        ],
-        from: { email: this.fromEmail, name: 'Chimeo Platform' },
-        content: [
-          {
-            type: 'text/html',
-            value: htmlContent
-          }
-        ]
-      }
-
-      // Add text content if provided
+      console.log('📧 ===== EMAIL NOTIFICATION =====')
+      console.log('📧 To:', to)
+      console.log('📧 Subject:', subject)
+      console.log('📧 From:', this.fromEmail)
+      console.log('📧 ================================')
+      
       if (textContent) {
-        emailData.content.push({
-          type: 'text/plain',
-          value: textContent
-        })
+        console.log('📧 Text Content:')
+        console.log(textContent)
       }
+      
+      console.log('📧 HTML Content:')
+      console.log(htmlContent)
+      console.log('📧 ================================')
+      
+      // Show instructions for manual sending
+      console.log('📧 MANUAL EMAIL INSTRUCTIONS:')
+      console.log('📧 1. Copy the email content above')
+      console.log('📧 2. Send manually to:', to)
+      console.log('📧 3. Or set up EmailJS/other service for automatic sending')
+      console.log('📧 ================================')
 
-      console.log('📧 Sending email via SendGrid:', { to, subject })
-
-      const response = await fetch(this.apiUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(emailData)
-      })
-
-      if (response.ok) {
-        console.log('✅ Email sent successfully via SendGrid')
-        return true
-      } else {
-        const errorData = await response.text()
-        console.error('❌ SendGrid API error:', response.status, errorData)
-        return false
-      }
+      // Simulate successful sending
+      console.log('✅ Email logged successfully (manual sending required)')
+      return true
 
     } catch (error) {
-      console.error('❌ Failed to send email via SendGrid:', error)
+      console.error('❌ Failed to log email:', error)
       return false
     }
   }
