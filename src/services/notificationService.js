@@ -22,12 +22,14 @@ class NotificationService {
       // Check if FCM is supported
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         console.log('❌ Push notifications not supported in this browser')
+        this.initialized = true // Mark as initialized but not supported
         return false
       }
 
       // Check if Firebase messaging is available
       if (!getToken || !onMessage) {
         console.log('❌ Firebase messaging not available')
+        this.initialized = true // Mark as initialized but not supported
         return false
       }
 
@@ -44,10 +46,14 @@ class NotificationService {
             console.log('✅ Service worker registered successfully:', newRegistration)
           } catch (swError) {
             console.log('❌ Failed to register service worker:', swError)
+            this.initialized = true // Mark as initialized but not supported
+            return false
           }
         }
       } catch (error) {
         console.log('⚠️ Could not check service worker registration:', error)
+        this.initialized = true // Mark as initialized but not supported
+        return false
       }
 
       // Get the messaging instance first
@@ -60,6 +66,8 @@ class NotificationService {
         console.log('  - Not running on HTTPS (required for production)')
         console.log('  - Browser not supporting push notifications')
         console.log('  - Firebase messaging service not available')
+        console.log('  - Firebase Messaging not enabled in Firebase Console')
+        this.initialized = true // Mark as initialized but not supported
         return false
       }
       console.log('✅ Got messaging instance')
@@ -70,6 +78,7 @@ class NotificationService {
         const messagingSupported = await isSupported()
         if (!messagingSupported) {
           console.log('❌ Firebase messaging not supported in this environment')
+          this.initialized = true // Mark as initialized but not supported
           return false
         }
         console.log('✅ Messaging is supported')
@@ -94,6 +103,7 @@ class NotificationService {
       }
     } catch (error) {
       console.error('❌ Error initializing notifications:', error)
+      this.initialized = true // Mark as initialized but not supported
       return false
     }
   }
@@ -350,12 +360,28 @@ class NotificationService {
         })
         
         // Fallback: Show a simple browser notification if available
-        if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('New Alert Created', {
-            body: `${alertData.title}: ${alertData.message}`,
-            icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2MzY2RjEiLz4KPHRleHQgeD0iOTYiIHk9IjExMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkM8L3RleHQ+Cjwvc3ZnPgo='
-          })
-          console.log('✅ Fallback notification shown')
+        if ('Notification' in window) {
+          if (Notification.permission === 'granted') {
+            new Notification('New Alert Created', {
+              body: `${alertData.title}: ${alertData.message}`,
+              icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2MzY2RjEiLz4KPHRleHQgeD0iOTYiIHk9IjExMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkM8L3RleHQ+Cjwvc3ZnPgo='
+            })
+            console.log('✅ Fallback notification shown')
+          } else if (Notification.permission === 'default') {
+            // Request permission if not granted yet
+            const permission = await Notification.requestPermission()
+            if (permission === 'granted') {
+              new Notification('New Alert Created', {
+                body: `${alertData.title}: ${alertData.message}`,
+                icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2MzY2RjEiLz4KPHRleHQgeD0iOTYiIHk9IjExMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkM8L3RleHQ+Cjwvc3ZnPgo='
+              })
+              console.log('✅ Fallback notification shown after permission granted')
+            } else {
+              console.log('⚠️ Notification permission denied, skipping notification display')
+            }
+          } else {
+            console.log('⚠️ Notification permission denied, skipping notification display')
+          }
         } else {
           console.log('⚠️ Browser notifications not available, skipping notification display')
         }
@@ -367,6 +393,46 @@ class NotificationService {
     } catch (error) {
       console.error('❌ Error sending alert notification:', error)
       toast.error('Alert posted but notification failed')
+    }
+  }
+
+  // Simple fallback notification method that doesn't require Firebase Messaging
+  async showSimpleNotification(title, body, icon = null) {
+    try {
+      console.log('🔔 showSimpleNotification: Attempting to show notification:', { title, body })
+      
+      if (!('Notification' in window)) {
+        console.log('❌ Browser notifications not supported')
+        return false
+      }
+
+      if (Notification.permission === 'granted') {
+        const notification = new Notification(title, {
+          body: body,
+          icon: icon || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2MzY2RjEiLz4KPHRleHQgeD0iOTYiIHk9IjExMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkM8L3RleHQ+Cjwvc3ZnPgo='
+        })
+        console.log('✅ Simple notification shown successfully')
+        return true
+      } else if (Notification.permission === 'default') {
+        const permission = await Notification.requestPermission()
+        if (permission === 'granted') {
+          const notification = new Notification(title, {
+            body: body,
+            icon: icon || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2MzY2RjEiLz4KPHRleHQgeD0iOTYiIHk9IjExMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkM8L3RleHQ+Cjwvc3ZnPgo='
+          })
+          console.log('✅ Simple notification shown after permission granted')
+          return true
+        } else {
+          console.log('❌ Notification permission denied')
+          return false
+        }
+      } else {
+        console.log('❌ Notification permission denied')
+        return false
+      }
+    } catch (error) {
+      console.error('❌ Error showing simple notification:', error)
+      return false
     }
   }
 

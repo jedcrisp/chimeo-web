@@ -216,8 +216,23 @@ export function AlertProvider({ children }) {
         
         console.log('🔔 AlertContext: Sending notification with payload:', notificationPayload)
         
-        await notificationService.sendAlertNotification(notificationPayload)
-        console.log('✅ Push notification sent for web app users')
+        // Try to send notification via Firebase Messaging first
+        try {
+          await notificationService.sendAlertNotification(notificationPayload)
+          console.log('✅ Push notification sent for web app users')
+        } catch (firebaseError) {
+          console.warn('⚠️ Firebase notification failed, trying simple notification:', firebaseError)
+          // Fallback to simple browser notification
+          const simpleNotificationSuccess = await notificationService.showSimpleNotification(
+            'New Alert Created',
+            `${notificationPayload.title}: ${notificationPayload.message}`
+          )
+          if (simpleNotificationSuccess) {
+            console.log('✅ Simple notification sent successfully')
+          } else {
+            console.log('⚠️ Simple notification also failed')
+          }
+        }
       } catch (notificationError) {
         console.error('❌ Failed to send push notification:', notificationError)
         console.error('❌ Notification error details:', notificationError.message)
