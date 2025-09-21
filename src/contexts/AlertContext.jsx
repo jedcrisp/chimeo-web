@@ -186,7 +186,7 @@ export function AlertProvider({ children }) {
         title: alertData.title,
         message: alertData.message,
         organizationId: organizationId,
-        organizationName: organizationInfo?.name || 'Unknown Organization',
+        organizationName: organizationName || 'Unknown Organization',
         createdBy: currentUser?.displayName || currentUser?.email || 'Unknown User',
         groupName: alertData.groupName || 'All Groups',
         location: alertData.location || 'Not specified',
