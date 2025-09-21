@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Users, User, LogOut, Menu, X, Building, Home, Bell, Calendar, FileText } from 'lucide-react'
+import { Users, User, LogOut, Menu, X, Building, Home, Bell, Calendar, FileText, UserPlus } from 'lucide-react'
 import { useOrganizations } from '../contexts/OrganizationsContext'
 import { useState } from 'react'
 
@@ -34,6 +34,7 @@ export default function Layout() {
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Alerts', href: '/alerts', icon: Bell },
     // { name: 'Organizations', href: '/organizations', icon: Building },
+    { name: 'Groups', href: '/groups', icon: UserPlus },
     { name: 'Calendar', href: '/calendar', icon: Calendar },
     ...(isPlatformAdmin ? [{ name: 'Org Requests', href: '/org-requests', icon: FileText }] : []),
     { name: 'Profile', href: '/profile', icon: User },

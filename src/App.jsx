@@ -9,6 +9,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Alerts from './pages/Alerts'
 import Organizations from './pages/Organizations'
+import Groups from './pages/Groups'
 import Calendar from './pages/Calendar'
 import Profile from './pages/Profile'
 import OrganizationRequest from './pages/OrganizationRequest'
@@ -70,6 +71,7 @@ function App() {
                 <Route index element={<Dashboard />} />
                 <Route path="alerts" element={<Alerts />} />
                 {/* <Route path="organizations" element={<Organizations />} /> */}
+                <Route path="groups" element={<Groups />} />
                 <Route path="calendar" element={<Calendar />} />
                 <Route path="org-requests" element={<OrganizationRequest />} />
                 <Route path="profile" element={<Profile />} />
