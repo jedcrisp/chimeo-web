@@ -454,6 +454,10 @@ export default function OrganizationRequest() {
         followerCount: 0,
         isActive: true,
         status: 'active',
+        verified: true, // iOS app requires this field to display organization
+        isVerified: true, // Alternative verification field
+        verificationStatus: 'verified', // Verification status
+        verifiedAt: serverTimestamp(), // When it was verified
         // Additional web app compatibility fields
         isAdmin: true, // For the current user
         recentAlerts: [], // Empty array for now
@@ -476,6 +480,8 @@ export default function OrganizationRequest() {
         visibility: 'public',
         category: request.organizationType,
         tags: [request.organizationType.toLowerCase()],
+        // iOS app compatibility - verified field
+        verified: true,
         location: {
           address: request.address,
           city: request.city,
@@ -515,6 +521,7 @@ export default function OrganizationRequest() {
       console.log('✅ Organization created with name as ID:', sanitizedOrgName)
       console.log('✅ Organization data:', organizationData)
       console.log('✅ Organization document path:', `organizations/${sanitizedOrgName}`)
+      console.log('✅ Organization verified status:', organizationData.verified)
       
       // Verify the organization was created correctly
       const verifyDoc = await getDoc(orgDocRef)
