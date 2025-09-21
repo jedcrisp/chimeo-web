@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react'
 import { collection, query, orderBy, onSnapshot, addDoc, updateDoc, doc, deleteDoc, getDocs, getDoc } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import { useAuth } from './AuthContext'
+import emailService from '../services/emailService'
 import toast from 'react-hot-toast'
 
 const AlertContext = createContext()
@@ -199,6 +200,15 @@ export function AlertProvider({ children }) {
         console.error('❌ Failed to send push notification:', notificationError)
         console.error('❌ Notification error details:', notificationError.message)
         // Don't fail the alert creation if notification fails
+      }
+
+      // Send email notification to platform admin
+      try {
+        await emailService.sendAlertEmail(notificationPayload, 'jed@onetrack-consulting.com')
+        console.log('✅ Alert email notification sent to platform admin')
+      } catch (emailError) {
+        console.error('❌ Failed to send alert email notification:', emailError)
+        // Don't fail the alert creation if email fails
       }
 
       toast.success('Alert created successfully! Push notifications sent to web users.')

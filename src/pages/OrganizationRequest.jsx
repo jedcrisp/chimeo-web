@@ -6,6 +6,7 @@ import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 import { Building, MapPin, Phone, Mail, Users, Plus, CheckCircle, X, User, Lock, MessageSquare, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import notificationService from '../services/notificationService'
+import emailService from '../services/emailService'
 
 export default function OrganizationRequest() {
   const { currentUser, userProfile } = useAuth()
@@ -197,10 +198,42 @@ export default function OrganizationRequest() {
           ...requestData,
           id: sanitizedOrgName
         })
-        console.log('✅ Notification sent to platform admin')
+        console.log('✅ Push notification sent to platform admin')
       } catch (notificationError) {
-        console.error('❌ Failed to send notification:', notificationError)
+        console.error('❌ Failed to send push notification:', notificationError)
         // Don't fail the request if notification fails
+      }
+
+      // Send email notification to platform admin
+      try {
+        console.log('📧 Attempting to send organization request email...')
+        console.log('📧 Email service initialized:', emailService.isInitialized)
+        console.log('📧 Request data:', requestData)
+        
+        // Ensure email service is initialized before sending
+        if (!emailService.isInitialized) {
+          console.log('📧 Email service not initialized, attempting to initialize...')
+          await emailService.initialize()
+        }
+        
+        const emailResult = await emailService.sendOrganizationRequestEmail({
+          ...requestData,
+          id: sanitizedOrgName
+        })
+        console.log('📧 Email send result:', emailResult)
+        
+        if (emailResult) {
+          console.log('✅ Email notification sent to platform admin')
+        } else {
+          console.warn('⚠️ Email service returned false - email may not have been sent')
+        }
+      } catch (emailError) {
+        console.error('❌ Failed to send email notification:', emailError)
+        console.error('❌ Email error details:', {
+          message: emailError.message,
+          stack: emailError.stack
+        })
+        // Don't fail the request if email fails
       }
       
       toast.success('Organization request submitted successfully!')
@@ -290,7 +323,15 @@ export default function OrganizationRequest() {
           console.log('✅ Admin account creation completed')
         } catch (userCreationError) {
           console.error('❌ Failed to create admin user account:', userCreationError)
-          toast.error(`Failed to create admin account: ${userCreationError.message}`)
+          console.error('❌ Error details:', {
+            message: userCreationError.message,
+            code: userCreationError.code,
+            stack: userCreationError.stack
+          })
+          
+          // Show more specific error message
+          const errorMessage = userCreationError.message || 'Failed to create admin account'
+          toast.error(`Failed to create admin account: ${errorMessage}`)
           setActionLoading(false)
           return // Stop here if user creation fails
         }
@@ -451,13 +492,63 @@ export default function OrganizationRequest() {
         throw new Error('Firebase Auth is not properly configured - missing API key')
       }
       
+      // Check if email already exists by attempting to sign in first
+      console.log('🔧 Checking if email already exists:', request.adminEmail)
+      try {
+        const { signInWithEmailAndPassword } = await import('firebase/auth')
+        await signInWithEmailAndPassword(auth, request.adminEmail, 'dummy-password')
+        // If we get here, the email exists but password is wrong
+        throw new Error('An account with this email already exists. Please use a different email address.')
+      } catch (signInError) {
+        if (signInError.code === 'auth/user-not-found') {
+          console.log('✅ Email is available for registration')
+        } else if (signInError.code === 'auth/wrong-password') {
+          throw new Error('An account with this email already exists. Please use a different email address.')
+        } else if (signInError.code === 'auth/invalid-email') {
+          throw new Error('Invalid email address format.')
+        } else {
+          console.log('🔧 Email check completed, proceeding with registration')
+        }
+      }
+      
       // Check if user already exists by trying to create
       console.log('🔧 Attempting to create user with email:', request.adminEmail)
-      const userCredential = await createUserWithEmailAndPassword(
-        auth, 
-        request.adminEmail, 
-        request.adminPassword
-      )
+      console.log('🔧 Firebase Auth config check:', {
+        apiKey: auth.config?.apiKey ? 'Present' : 'Missing',
+        authDomain: auth.config?.authDomain,
+        projectId: auth.config?.projectId
+      })
+      
+      let userCredential
+      try {
+        userCredential = await createUserWithEmailAndPassword(
+          auth, 
+          request.adminEmail, 
+          request.adminPassword
+        )
+      } catch (authError) {
+        console.error('❌ Firebase Auth Error Details:', {
+          code: authError.code,
+          message: authError.message,
+          email: request.adminEmail,
+          authConfig: auth.config
+        })
+        
+        // Provide more specific error messages
+        if (authError.code === 'auth/email-already-in-use') {
+          throw new Error('An account with this email already exists. Please use a different email address.')
+        } else if (authError.code === 'auth/invalid-email') {
+          throw new Error('Invalid email address format.')
+        } else if (authError.code === 'auth/weak-password') {
+          throw new Error('Password is too weak. Please choose a stronger password.')
+        } else if (authError.code === 'auth/operation-not-allowed') {
+          throw new Error('Email/password accounts are not enabled. Please contact support.')
+        } else if (authError.code === 'auth/network-request-failed') {
+          throw new Error('Network error. Please check your internet connection and try again.')
+        } else {
+          throw new Error(`Authentication failed: ${authError.message} (Code: ${authError.code})`)
+        }
+      }
       
       const newUser = userCredential.user
       console.log('✅ Firebase Auth user created successfully:', newUser.uid)
@@ -715,6 +806,36 @@ export default function OrganizationRequest() {
         console.log('✅ Organization creation notifications sent')
       } catch (notificationError) {
         console.error('❌ Failed to send organization creation notifications:', notificationError)
+      }
+
+      // Send email notification to the new admin
+      try {
+        console.log('📧 Attempting to send organization approval email...')
+        console.log('📧 Email service initialized:', emailService.isInitialized)
+        console.log('📧 Admin email:', request.adminEmail)
+        console.log('📧 Organization data:', organizationData)
+        
+        // Ensure email service is initialized before sending
+        if (!emailService.isInitialized) {
+          console.log('📧 Email service not initialized, attempting to initialize...')
+          await emailService.initialize()
+        }
+        
+        const emailResult = await emailService.sendOrganizationApprovedEmail(organizationData, request.adminEmail)
+        console.log('📧 Email send result:', emailResult)
+        
+        if (emailResult) {
+          console.log('✅ Organization approval email sent to admin')
+        } else {
+          console.warn('⚠️ Email service returned false - email may not have been sent')
+        }
+      } catch (emailError) {
+        console.error('❌ Failed to send organization approval email:', emailError)
+        console.error('❌ Email error details:', {
+          message: emailError.message,
+          stack: emailError.stack
+        })
+        // Don't fail the process if email fails
       }
       
       // Refresh the organizations list to show the new organization

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, setDoc } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import notificationService from '../services/notificationService'
+import emailService from '../services/emailService'
 import { Building, CheckCircle, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -152,6 +153,7 @@ export default function Login() {
       const docRef = doc(db, 'organizationRequests', sanitizedOrgName)
       await setDoc(docRef, requestData)
       console.log('✅ Organization request submitted with ID:', sanitizedOrgName)
+      console.log('🔧 About to send notifications...')
       
       // Send notification to platform admin
       try {
@@ -163,6 +165,42 @@ export default function Login() {
       } catch (notificationError) {
         console.error('❌ Failed to send notification:', notificationError)
         // Don't fail the request if notification fails
+      }
+
+      console.log('🔧 About to send email notification...')
+      console.log('🔧 Email service object:', emailService)
+      console.log('🔧 Email service type:', typeof emailService)
+      
+      // Send email notification to platform admin
+      try {
+        console.log('📧 Attempting to send organization request email...')
+        console.log('📧 Email service initialized:', emailService.isInitialized)
+        console.log('📧 Request data:', requestData)
+        
+        // Ensure email service is initialized before sending
+        if (!emailService.isInitialized) {
+          console.log('📧 Email service not initialized, attempting to initialize...')
+          await emailService.initialize()
+        }
+        
+        const emailResult = await emailService.sendOrganizationRequestEmail({
+          ...requestData,
+          id: sanitizedOrgName
+        })
+        console.log('📧 Email send result:', emailResult)
+        
+        if (emailResult) {
+          console.log('✅ Email notification sent to platform admin')
+        } else {
+          console.warn('⚠️ Email service returned false - email may not have been sent')
+        }
+      } catch (emailError) {
+        console.error('❌ Failed to send email notification:', emailError)
+        console.error('❌ Email error details:', {
+          message: emailError.message,
+          stack: emailError.stack
+        })
+        // Don't fail the request if email fails
       }
       
       toast.success('Organization request submitted successfully! We will review your request and contact you soon.')

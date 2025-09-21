@@ -15,6 +15,7 @@ import {
 import { Link } from 'react-router-dom'
 import adminService from '../services/adminService'
 import groupService from '../services/groupService'
+import emailService from '../services/emailService'
 import { useState, useEffect } from 'react'
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore'
 import { db } from '../services/firebase'
@@ -80,6 +81,23 @@ export default function Dashboard() {
       setNotifications(notificationsData)
     } catch (error) {
       console.error('❌ Dashboard: Error fetching notifications:', error)
+    }
+  }
+
+  const handleTestEmail = async () => {
+    try {
+      console.log('📧 Dashboard: Sending test email...')
+      const success = await emailService.sendTestEmail()
+      if (success) {
+        console.log('✅ Dashboard: Test email sent successfully')
+        alert('Test email sent successfully! Check your inbox.')
+      } else {
+        console.log('❌ Dashboard: Test email failed')
+        alert('Test email failed. Check console for details.')
+      }
+    } catch (error) {
+      console.error('❌ Dashboard: Error sending test email:', error)
+      alert('Error sending test email: ' + error.message)
     }
   }
 
@@ -255,12 +273,20 @@ export default function Dashboard() {
                 <Bell className="h-5 w-5 mr-2 text-blue-600" />
                 Recent Notifications
               </h2>
-              <Link 
-                to="/org-requests" 
-                className="text-sm text-blue-600 hover:text-blue-500"
-              >
-                View All
-              </Link>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleTestEmail}
+                  className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
+                >
+                  Test Email
+                </button>
+                <Link 
+                  to="/org-requests" 
+                  className="text-sm text-blue-600 hover:text-blue-500"
+                >
+                  View All
+                </Link>
+              </div>
             </div>
             
             {notifications.length === 0 ? (
