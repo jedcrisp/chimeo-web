@@ -57,14 +57,22 @@ export default function Groups() {
     try {
       setLoading(true)
       
-      if (!currentUser || !userProfile?.organizationId) {
+      // Get organization ID with fallback logic
+      let orgId = userProfile?.organizationId
+      if (!orgId && userProfile?.organizations && userProfile.organizations.length > 0) {
+        orgId = userProfile.organizations[0] // organizations is array of strings
+      }
+      
+      if (!currentUser || !orgId) {
         setGroups([])
         return
       }
 
+      console.log('🔍 Groups: Fetching groups for organization:', orgId)
+
       // Get groups for the user's organization
       const groupsQuery = query(
-        collection(db, 'organizations', userProfile.organizationId, 'groups'),
+        collection(db, 'organizations', orgId, 'groups'),
         orderBy('createdAt', 'desc')
       )
       
@@ -75,7 +83,7 @@ export default function Groups() {
       }))
       
       setGroups(groupsData)
-      console.log('✅ Loaded', groupsData.length, 'groups')
+      console.log('✅ Loaded', groupsData.length, 'groups for organization:', orgId)
     } catch (error) {
       console.error('❌ Error fetching groups:', error)
       toast.error('Failed to load groups')
@@ -157,7 +165,9 @@ export default function Groups() {
                          group.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          group.category.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesOrganization = !selectedOrganization || group.organizationId === selectedOrganization
+    // For org admins, don't filter by organization since they only see their org's groups
+    const isOrgAdmin = userProfile?.organizationId || userProfile?.organizations?.length
+    const matchesOrganization = isOrgAdmin || !selectedOrganization || group.organizationId === selectedOrganization
     
     return matchesSearch && matchesOrganization
   })
@@ -234,16 +244,19 @@ export default function Groups() {
             />
           </div>
         </div>
-        <select
-          value={selectedOrganization}
-          onChange={(e) => setSelectedOrganization(e.target.value)}
-          className="rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-        >
-          <option value="">All Organizations</option>
-          {organizations.map(org => (
-            <option key={org.id} value={org.id}>{org.name}</option>
-          ))}
-        </select>
+        {/* Only show organization filter if user is not an org admin */}
+        {!userProfile?.organizationId && !userProfile?.organizations?.length && (
+          <select
+            value={selectedOrganization}
+            onChange={(e) => setSelectedOrganization(e.target.value)}
+            className="rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+          >
+            <option value="">All Organizations</option>
+            {organizations.map(org => (
+              <option key={org.id} value={org.id}>{org.name}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Groups List */}
@@ -252,12 +265,12 @@ export default function Groups() {
           <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No groups found</h3>
           <p className="text-gray-500 mb-4">
-            {searchTerm || selectedOrganization 
+            {searchTerm 
               ? 'No groups match your search criteria'
               : 'Get started by creating your first group'
             }
           </p>
-          {!searchTerm && !selectedOrganization && (
+          {!searchTerm && (
             <button
               onClick={handleOpenAddGroupModal}
               className="btn-primary"
