@@ -27,6 +27,11 @@ class NotificationService {
       }
 
       // Check if Firebase messaging is available
+      console.log('🔧 Checking Firebase messaging availability...')
+      console.log('🔧 getToken available:', typeof getToken)
+      console.log('🔧 onMessage available:', typeof onMessage)
+      console.log('🔧 isSupported available:', typeof isSupported)
+      
       if (!getToken || !onMessage) {
         console.log('❌ Firebase messaging not available')
         this.initialized = true // Mark as initialized but not supported
@@ -58,7 +63,14 @@ class NotificationService {
 
       // Get the messaging instance first
       console.log('🔧 Getting messaging instance...')
-      this.messaging = await getMessagingInstance()
+      try {
+        this.messaging = await getMessagingInstance()
+        console.log('🔧 Messaging instance result:', this.messaging)
+      } catch (error) {
+        console.log('❌ Error getting messaging instance:', error)
+        this.initialized = true // Mark as initialized but not supported
+        return false
+      }
       
       if (!this.messaging) {
         console.log('❌ Failed to get messaging instance - messaging may not be supported in this environment')
@@ -67,6 +79,7 @@ class NotificationService {
         console.log('  - Browser not supporting push notifications')
         console.log('  - Firebase messaging service not available')
         console.log('  - Firebase Messaging not enabled in Firebase Console')
+        console.log('  - getMessaging function not available')
         this.initialized = true // Mark as initialized but not supported
         return false
       }
@@ -103,8 +116,28 @@ class NotificationService {
       }
     } catch (error) {
       console.error('❌ Error initializing notifications:', error)
-      this.initialized = true // Mark as initialized but not supported
-      return false
+      console.error('❌ Error details:', error.message)
+      console.error('❌ Error stack:', error.stack)
+      
+      // Try fallback initialization
+      console.log('🔄 Attempting fallback initialization...')
+      try {
+        const permission = await Notification.requestPermission()
+        if (permission === 'granted') {
+          console.log('✅ Fallback: Notification permission granted')
+          this.initialized = true
+          this.isSupported = false // Mark as not FCM supported but basic notifications work
+          return true
+        } else {
+          console.log('❌ Fallback: Notification permission denied')
+          this.initialized = true
+          return false
+        }
+      } catch (fallbackError) {
+        console.error('❌ Fallback initialization failed:', fallbackError)
+        this.initialized = true // Mark as initialized but not supported
+        return false
+      }
     }
   }
 
@@ -467,7 +500,7 @@ class NotificationService {
 
   // Check if notifications are supported
   isNotificationsSupported() {
-    return this.isSupported
+    return this.isSupported || (this.initialized && 'Notification' in window && Notification.permission === 'granted')
   }
 
   // Check if service is initialized

@@ -86,12 +86,16 @@ export const getMessagingInstance = async () => {
       // Check if messaging is available in the current context
       if (typeof getMessaging !== 'function') {
         console.log('❌ getMessagingInstance: getMessaging function not available')
+        console.log('🔍 getMessaging type:', typeof getMessaging)
+        console.log('🔍 getMessaging value:', getMessaging)
         return null
       }
       
+      console.log('🔧 getMessagingInstance: Creating messaging instance with app:', app)
       messaging = getMessaging(app)
       messagingInitialized = true
       console.log('✅ getMessagingInstance: Messaging initialized successfully')
+      console.log('🔧 getMessagingInstance: Messaging object:', messaging)
       
     } catch (error) {
       console.log('❌ getMessagingInstance: Error initializing messaging:', error)
