@@ -40,7 +40,7 @@ export default function Groups() {
     
     // Fallback: check organizations array if organizationId is not set
     if (!orgId && userProfile?.organizations && userProfile.organizations.length > 0) {
-      orgId = userProfile.organizations[0].id
+      orgId = userProfile.organizations[0] // organizations is array of strings, not objects
       console.log('🔍 Groups: Using organization from organizations array:', orgId)
     }
     
@@ -177,7 +177,7 @@ export default function Groups() {
     
     // Fallback: check organizations array if organizationId is not set
     if (!orgId && userProfile?.organizations && userProfile.organizations.length > 0) {
-      orgId = userProfile.organizations[0].id
+      orgId = userProfile.organizations[0] // organizations is array of strings, not objects
       console.log('🔍 Groups: Using organization from organizations array:', orgId)
     }
     
