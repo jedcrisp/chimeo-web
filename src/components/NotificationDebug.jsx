@@ -124,16 +124,78 @@ export default function NotificationDebug() {
   const testFCMToken = async () => {
     addLog('🔧 Testing FCM token generation...')
     
+    // Check notification service status first
+    addLog('🔧 Service status:')
+    addLog('  - Initialized: ' + notificationService.isInitialized())
+    addLog('  - Supported: ' + notificationService.isNotificationsSupported())
+    addLog('  - Current token: ' + (notificationService.getCurrentToken() || 'None'))
+    
     try {
+      addLog('🔧 Calling notificationService.getToken()...')
       const token = await notificationService.getToken()
+      addLog('🔧 getToken() returned: ' + (token || 'null'))
+      
       if (token) {
         addLog('✅ FCM token generated: ' + token.substring(0, 50) + '...')
         setFcmToken(token)
       } else {
-        addLog('❌ FCM token generation failed')
+        addLog('❌ FCM token generation failed - getToken() returned null')
+        addLog('🔧 This usually means:')
+        addLog('  - Messaging instance is not properly initialized')
+        addLog('  - Service worker is not registered correctly')
+        addLog('  - VAPID key is incorrect or missing')
+        addLog('  - Firebase Cloud Messaging is not enabled')
       }
     } catch (error) {
       addLog('❌ FCM token error: ' + error.message)
+      addLog('❌ Error details: ' + JSON.stringify(error))
+    }
+  }
+
+  const testFirebaseMessaging = async () => {
+    addLog('🔧 Testing Firebase Messaging directly...')
+    
+    try {
+      // Import Firebase messaging functions
+      const { getMessaging, getToken, isSupported } = await import('firebase/messaging')
+      const { getMessagingInstance } = await import('../services/firebase')
+      
+      addLog('🔧 Firebase imports successful')
+      addLog('  - getMessaging: ' + typeof getMessaging)
+      addLog('  - getToken: ' + typeof getToken)
+      addLog('  - isSupported: ' + typeof isSupported)
+      
+      // Test isSupported
+      const supported = await isSupported()
+      addLog('🔧 isSupported() result: ' + supported)
+      
+      // Test getMessagingInstance
+      addLog('🔧 Testing getMessagingInstance...')
+      const messaging = await getMessagingInstance()
+      addLog('🔧 getMessagingInstance result: ' + (messaging ? 'Success' : 'Failed'))
+      addLog('🔧 Messaging type: ' + typeof messaging)
+      
+      if (messaging) {
+        addLog('🔧 Testing getToken with messaging instance...')
+        const { VAPID_KEY } = await import('../services/firebase')
+        addLog('🔧 VAPID_KEY: ' + VAPID_KEY)
+        
+        try {
+          const token = await getToken(messaging, { vapidKey: VAPID_KEY })
+          addLog('🔧 Direct getToken result: ' + (token || 'null'))
+          if (token) {
+            addLog('✅ Direct FCM token generation successful!')
+          } else {
+            addLog('❌ Direct FCM token generation returned null')
+          }
+        } catch (tokenError) {
+          addLog('❌ Direct getToken error: ' + tokenError.message)
+          addLog('❌ Token error code: ' + tokenError.code)
+        }
+      }
+      
+    } catch (error) {
+      addLog('❌ Firebase Messaging test error: ' + error.message)
     }
   }
 
@@ -198,6 +260,13 @@ export default function NotificationDebug() {
           className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
         >
           Test FCM Token
+        </button>
+        
+        <button
+          onClick={testFirebaseMessaging}
+          className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
+        >
+          Test Firebase Messaging
         </button>
         
         <button
