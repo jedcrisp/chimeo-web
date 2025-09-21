@@ -28,7 +28,15 @@ export default function Groups() {
 
   useEffect(() => {
     fetchGroups()
-  }, [currentUser, organizations])
+    
+    // Auto-set organization for org admins
+    if (userProfile?.organizationId && !groupForm.organizationId) {
+      setGroupForm(prev => ({
+        ...prev,
+        organizationId: userProfile.organizationId
+      }))
+    }
+  }, [currentUser, organizations, userProfile])
 
   const fetchGroups = async () => {
     try {
@@ -106,11 +114,11 @@ export default function Groups() {
       console.log('✅ Group created:', sanitizedGroupName)
       toast.success('Group created successfully!')
       
-      // Reset form and close modal
+      // Reset form and close modal (preserve organizationId for org admins)
       setGroupForm({
         name: '',
         description: '',
-        organizationId: '',
+        organizationId: userProfile?.organizationId || '',
         isPublic: true,
         maxMembers: 50,
         category: '',
@@ -144,6 +152,17 @@ export default function Groups() {
     return org?.name || 'Unknown Organization'
   }
 
+  const handleOpenAddGroupModal = () => {
+    // Set organization for org admins when opening modal
+    if (userProfile?.organizationId) {
+      setGroupForm(prev => ({
+        ...prev,
+        organizationId: userProfile.organizationId
+      }))
+    }
+    setShowAddGroupModal(true)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -163,7 +182,7 @@ export default function Groups() {
           </p>
         </div>
         <button
-          onClick={() => setShowAddGroupModal(true)}
+          onClick={handleOpenAddGroupModal}
           className="btn-primary flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
@@ -210,7 +229,7 @@ export default function Groups() {
           </p>
           {!searchTerm && !selectedOrganization && (
             <button
-              onClick={() => setShowAddGroupModal(true)}
+              onClick={handleOpenAddGroupModal}
               className="btn-primary"
             >
               Create Group
@@ -340,17 +359,23 @@ export default function Groups() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Organization *
                   </label>
-                  <select
-                    value={groupForm.organizationId}
-                    onChange={(e) => setGroupForm({ ...groupForm, organizationId: e.target.value })}
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                    required
-                  >
-                    <option value="">Select an organization</option>
-                    {organizations.map(org => (
-                      <option key={org.id} value={org.id}>{org.name}</option>
-                    ))}
-                  </select>
+                  {userProfile?.organizationId ? (
+                    <div className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                      {getOrganizationName(userProfile.organizationId)}
+                    </div>
+                  ) : (
+                    <select
+                      value={groupForm.organizationId}
+                      onChange={(e) => setGroupForm({ ...groupForm, organizationId: e.target.value })}
+                      className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                      required
+                    >
+                      <option value="">Select an organization</option>
+                      {organizations.map(org => (
+                        <option key={org.id} value={org.id}>{org.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div>
