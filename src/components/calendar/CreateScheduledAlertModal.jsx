@@ -53,7 +53,20 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
     if (isOpen && userProfile?.organizations?.length > 0) {
       // Get the user's organization ID
       const organizationId = userProfile.organizations[0]
-      const orgIdString = typeof organizationId === 'string' ? organizationId : String(organizationId)
+      console.log('🔍 CreateScheduledAlertModal: Raw organization ID:', organizationId, 'Type:', typeof organizationId)
+      
+      // Handle both string and object organization IDs
+      let orgIdString
+      if (typeof organizationId === 'string') {
+        orgIdString = organizationId
+      } else if (typeof organizationId === 'object' && organizationId.id) {
+        orgIdString = organizationId.id
+      } else if (typeof organizationId === 'object' && organizationId.name) {
+        // If it's an object with a name, convert name to ID format
+        orgIdString = organizationId.name.toLowerCase().replace(/\s+/g, '_')
+      } else {
+        orgIdString = String(organizationId)
+      }
       
       console.log('🔍 CreateScheduledAlertModal: Using organization ID:', orgIdString)
       console.log('🔍 CreateScheduledAlertModal: Querying path: /organizations/' + orgIdString + '/groups')
