@@ -8,26 +8,36 @@ class GroupService {
       // Ensure organizationId is a string
       const orgIdString = typeof organizationId === 'string' ? organizationId : String(organizationId)
       
+      console.log('🔍 GroupService: Fetching groups for organization:', orgIdString)
+      
       // Use a simple query without composite index requirements
       const groupsQuery = query(
         collection(db, 'organizations', orgIdString, 'groups')
       )
       
       const groupsSnapshot = await getDocs(groupsQuery)
+      console.log('🔍 GroupService: Raw groups snapshot size:', groupsSnapshot.docs.length)
+      
       let groups = groupsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }))
       
+      console.log('🔍 GroupService: All groups:', groups)
+      
       // Filter active groups in JavaScript (no index needed)
       const activeGroups = groups.filter(group => group.isActive !== false)
+      
+      console.log('🔍 GroupService: Active groups:', activeGroups)
       
       // Sort by name in JavaScript (no index needed)
       activeGroups.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
       
+      console.log('🔍 GroupService: Final sorted groups:', activeGroups)
+      
       return activeGroups
     } catch (error) {
-      console.error('Error fetching groups:', error)
+      console.error('❌ GroupService: Error fetching groups:', error)
       return []
     }
   }
