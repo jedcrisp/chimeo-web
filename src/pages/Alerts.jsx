@@ -83,6 +83,13 @@ export default function Alerts() {
 
   const handleCreateAlert = async (e) => {
     e.preventDefault()
+    
+    // Validate that a group is selected
+    if (!newAlert.groupId) {
+      toast.error('Please select a target group for the alert')
+      return
+    }
+    
     try {
       await createAlert(newAlert)
       
@@ -229,14 +236,15 @@ export default function Alerts() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Target Group
+                    Target Group <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={newAlert.groupId}
                     onChange={(e) => setNewAlert({ ...newAlert, groupId: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200"
+                    required
                   >
-                    <option value="">All Groups (General Alert)</option>
+                    <option value="">- Select a group -</option>
                     {groupsLoading ? (
                       <option disabled>Loading groups...</option>
                     ) : groups.length === 0 ? (
@@ -250,7 +258,7 @@ export default function Alerts() {
                     )}
                   </select>
                   <p className="text-xs text-gray-500 mt-1">
-                    Select a specific group or leave as "All Groups" for a general alert
+                    Select a specific group to target your alert
                   </p>
                 </div>
                 
