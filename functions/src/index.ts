@@ -1,6 +1,5 @@
 import * as functions from 'firebase-functions'
 import * as admin from 'firebase-admin'
-import * as cron from 'node-cron'
 
 // Initialize Firebase Admin
 admin.initializeApp()
@@ -58,7 +57,6 @@ export const onAlertCreated = functions.firestore
   .onCreate(async (snap, context) => {
     const alertData = snap.data()
     const organizationId = context.params.organizationId
-    const alertId = context.params.alertId
     
     console.log(`🔔 Database trigger: New alert created: ${alertData.title}`)
     console.log(`🔔 Alert data:`, alertData)
@@ -93,13 +91,13 @@ export const processAlertsManually = functions.https.onRequest(async (req, res) 
       message: `Processed ${processedAlerts.length} scheduled alerts`,
       processedAlerts: processedAlerts
     })
-  } catch (error) {
-    console.error('❌ Manual processing error:', error)
-    res.status(500).json({
-      success: false,
-      error: error.message
-    })
-  }
+    } catch (error) {
+      console.error('❌ Manual processing error:', error)
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
 })
 
 // Internal function to process all scheduled alerts
@@ -280,7 +278,7 @@ export const cronJobBackup = functions.https.onRequest(async (req, res) => {
     console.error('❌ Cron job error:', error)
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : 'Unknown error'
     })
   }
 })
