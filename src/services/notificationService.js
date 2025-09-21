@@ -144,31 +144,43 @@ class NotificationService {
   // Get FCM token
   async getToken() {
     try {
+      console.log('🔧 getToken: Starting token generation...')
+      console.log('🔧 getToken: Messaging instance:', this.messaging)
+      console.log('🔧 getToken: Messaging type:', typeof this.messaging)
+      
       if (!this.messaging) {
-        console.log('❌ Messaging not initialized')
+        console.log('❌ getToken: Messaging not initialized')
         return null
       }
 
-      console.log('🔧 Getting FCM token...')
-      console.log('🔧 Using VAPID key:', VAPID_KEY)
+      console.log('🔧 getToken: Getting FCM token...')
+      console.log('🔧 getToken: Using VAPID key:', VAPID_KEY)
+      console.log('🔧 getToken: getToken function available:', typeof getToken)
+      
       // Get the registration token
+      console.log('🔧 getToken: Calling getToken with messaging instance...')
       this.currentToken = await getToken(this.messaging, {
         vapidKey: VAPID_KEY
       })
+      console.log('🔧 getToken: Token result:', this.currentToken)
 
       if (this.currentToken) {
-        console.log('✅ FCM Token:', this.currentToken)
+        console.log('✅ getToken: FCM Token obtained:', this.currentToken.substring(0, 50) + '...')
         
         // Save token to user's profile in Firestore
+        console.log('🔧 getToken: Saving token to user profile...')
         await this.saveTokenToUser(this.currentToken)
         
         return this.currentToken
       } else {
-        console.log('❌ No registration token available')
+        console.log('❌ getToken: No registration token available')
         return null
       }
     } catch (error) {
-      console.error('❌ Error getting FCM token:', error)
+      console.error('❌ getToken: Error getting FCM token:', error)
+      console.error('❌ getToken: Error details:', error.message)
+      console.error('❌ getToken: Error code:', error.code)
+      console.error('❌ getToken: Error stack:', error.stack)
       return null
     }
   }

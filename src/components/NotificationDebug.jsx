@@ -121,6 +121,22 @@ export default function NotificationDebug() {
     }
   }
 
+  const testFCMToken = async () => {
+    addLog('🔧 Testing FCM token generation...')
+    
+    try {
+      const token = await notificationService.getToken()
+      if (token) {
+        addLog('✅ FCM token generated: ' + token.substring(0, 50) + '...')
+        setFcmToken(token)
+      } else {
+        addLog('❌ FCM token generation failed')
+      }
+    } catch (error) {
+      addLog('❌ FCM token error: ' + error.message)
+    }
+  }
+
   const clearLogs = () => {
     setLogs([])
   }
@@ -175,6 +191,13 @@ export default function NotificationDebug() {
           className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           Test Notification
+        </button>
+        
+        <button
+          onClick={testFCMToken}
+          className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+        >
+          Test FCM Token
         </button>
         
         <button
