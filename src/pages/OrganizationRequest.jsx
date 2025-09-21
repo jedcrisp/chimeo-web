@@ -436,12 +436,14 @@ export default function OrganizationRequest() {
         website: request.website,
         // Web app compatibility - contact field
         contact: request.phone,
-        // Web app compatibility - location object
+        // Web app compatibility - location object (mirroring first org structure)
         location: {
           address: request.address,
           city: request.city,
           state: request.state,
-          zipCode: request.zipCode
+          zipCode: request.zipCode,
+          latitude: null, // Will be set later with geocoding
+          longitude: null // Will be set later with geocoding
         },
         adminId: newUser.uid,
         adminEmail: request.adminEmail,
@@ -454,10 +456,11 @@ export default function OrganizationRequest() {
         followerCount: 0,
         isActive: true,
         status: 'active',
-        verified: true, // iOS app requires this field to display organization
-        isVerified: true, // Alternative verification field
-        verificationStatus: 'verified', // Verification status
-        verifiedAt: serverTimestamp(), // When it was verified
+        verified: true, // iOS app requires this field to display organization (boolean, not string)
+        // Additional fields to match first organization structure
+        alertCount: 0,
+        groups: [],
+        logoURL: null, // Will be set when logo is uploaded
         // Additional web app compatibility fields
         isAdmin: true, // For the current user
         recentAlerts: [], // Empty array for now
@@ -480,15 +483,6 @@ export default function OrganizationRequest() {
         visibility: 'public',
         category: request.organizationType,
         tags: [request.organizationType.toLowerCase()],
-        // iOS app compatibility - verified field
-        verified: true,
-        location: {
-          address: request.address,
-          city: request.city,
-          state: request.state,
-          zipCode: request.zipCode,
-          coordinates: null // Could be added later with geocoding
-        },
         contact: {
           phone: request.phone,
           email: request.officeEmail,
