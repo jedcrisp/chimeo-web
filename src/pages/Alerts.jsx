@@ -360,10 +360,20 @@ export default function Alerts() {
                       }`}>
                         {alert.type || 'info'}
                       </span>
-                      {alert.location && (
+                      {alert.location && typeof alert.location === 'string' && (
                         <>
                           <span className="mx-2">•</span>
                           <span>{alert.location}</span>
+                        </>
+                      )}
+                      {alert.location && typeof alert.location === 'object' && (
+                        <>
+                          <span className="mx-2">•</span>
+                          <span>
+                            {[alert.location.address, alert.location.city, alert.location.state, alert.location.zipCode]
+                              .filter(Boolean)
+                              .join(', ')}
+                          </span>
                         </>
                       )}
                       {alert.groupId && (

@@ -31,7 +31,7 @@ export default function OrganizationProfileCard({ organization, isOpen, onClose 
       return location
     }
     
-    if (typeof location === 'object') {
+    if (typeof location === 'object' && location !== null) {
       const parts = []
       
       if (location.address) parts.push(location.address)
@@ -40,6 +40,12 @@ export default function OrganizationProfileCard({ organization, isOpen, onClose 
       if (location.zipCode) parts.push(location.zipCode)
       
       return parts.length > 0 ? parts.join(', ') : 'Location available'
+    }
+    
+    // Fallback: convert to string if it's not null/undefined
+    if (location !== null && location !== undefined) {
+      console.warn('OrganizationProfileCard: Unexpected location type:', typeof location, location)
+      return String(location)
     }
     
     return 'Location not specified'
@@ -113,12 +119,15 @@ export default function OrganizationProfileCard({ organization, isOpen, onClose 
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-3">Contact Information</h3>
               <div className="space-y-3">
-                {formatLocation(organization.location) !== 'Location not specified' && (
-                  <div className="flex items-center text-gray-600">
-                    <MapPin className="w-5 h-5 mr-3 text-gray-400" />
-                    <span>{formatLocation(organization.location)}</span>
-                  </div>
-                )}
+                {(() => {
+                  const formattedLocation = formatLocation(organization.location)
+                  return formattedLocation !== 'Location not specified' && typeof formattedLocation === 'string' && (
+                    <div className="flex items-center text-gray-600">
+                      <MapPin className="w-5 h-5 mr-3 text-gray-400" />
+                      <span>{formattedLocation}</span>
+                    </div>
+                  )
+                })()}
                 {organization.contact && (
                   <div className="flex items-center text-gray-600">
                     <Phone className="w-5 h-5 mr-3 text-gray-400" />
