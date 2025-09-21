@@ -138,6 +138,7 @@ export function AlertProvider({ children }) {
         createdAt: new Date(),
         updatedAt: new Date(),
         location: alertData.location || '',
+        groupId: alertData.groupId || null, // Add group targeting
         // Web app specific fields
         source: 'web',
         webAlertData: alertData
@@ -158,16 +159,23 @@ export function AlertProvider({ children }) {
 
       // Send push notification for web app users
       try {
+        console.log('🔔 AlertContext: Attempting to send push notification...')
         const notificationService = (await import('../services/notificationService')).default
-        await notificationService.sendAlertNotification({
+        console.log('🔔 AlertContext: Notification service imported successfully')
+        
+        const notificationPayload = {
           id: webAlertRef.id,
           title: alertData.title,
           message: alertData.message,
           organizationId: organizationId
-        })
+        }
+        console.log('🔔 AlertContext: Sending notification with payload:', notificationPayload)
+        
+        await notificationService.sendAlertNotification(notificationPayload)
         console.log('✅ Push notification sent for web app users')
       } catch (notificationError) {
-        console.warn('⚠️ Failed to send push notification:', notificationError)
+        console.error('❌ Failed to send push notification:', notificationError)
+        console.error('❌ Notification error details:', notificationError.message)
         // Don't fail the alert creation if notification fails
       }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useOrganizations } from '../contexts/OrganizationsContext'
-import { collection, addDoc, query, where, getDocs, doc, setDoc, serverTimestamp, orderBy } from 'firebase/firestore'
+import { collection, addDoc, query, where, getDocs, doc, setDoc, serverTimestamp, orderBy, deleteDoc } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import { UserPlus, Plus, Users, MapPin, Phone, Mail, Settings, Eye, Edit, Trash2, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -12,16 +12,14 @@ export default function Groups() {
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAddGroupModal, setShowAddGroupModal] = useState(false)
+  const [editingGroup, setEditingGroup] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedOrganization, setSelectedOrganization] = useState('')
   const [groupForm, setGroupForm] = useState({
     name: '',
     description: '',
     organizationId: '',
     isPublic: true,
     maxMembers: 50,
-    category: '',
-    location: '',
     contactEmail: '',
     contactPhone: ''
   })
@@ -118,63 +116,117 @@ export default function Groups() {
         organizationId: groupForm.organizationId,
         isPublic: groupForm.isPublic,
         maxMembers: parseInt(groupForm.maxMembers) || 50,
-        category: groupForm.category.trim(),
-        location: groupForm.location.trim(),
         contactEmail: groupForm.contactEmail.trim(),
         contactPhone: groupForm.contactPhone.trim(),
-        createdBy: currentUser.uid,
-        createdByName: userProfile?.displayName || currentUser.displayName || 'Unknown',
-        memberCount: 1,
-        isActive: true,
-        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       }
 
-      // Create group with sanitized name as document ID
-      const groupDocRef = doc(db, 'organizations', groupForm.organizationId, 'groups', sanitizedGroupName)
-      await setDoc(groupDocRef, groupData)
+      if (editingGroup) {
+        // Update existing group
+        groupData.updatedBy = typeof currentUser === 'string' ? currentUser : currentUser.uid
+        groupData.updatedByName = userProfile?.displayName || (typeof currentUser === 'object' ? currentUser.displayName : 'Unknown')
+        
+        const groupDocRef = doc(db, 'organizations', groupForm.organizationId, 'groups', sanitizedGroupName)
+        await setDoc(groupDocRef, groupData, { merge: true })
+        toast.success('Group updated successfully!')
+      } else {
+        // Create new group
+        groupData.createdBy = typeof currentUser === 'string' ? currentUser : currentUser.uid
+        groupData.createdByName = userProfile?.displayName || (typeof currentUser === 'object' ? currentUser.displayName : 'Unknown')
+        groupData.memberCount = 1
+        groupData.isActive = true
+        groupData.createdAt = serverTimestamp()
+        
+        const groupDocRef = doc(db, 'organizations', groupForm.organizationId, 'groups', sanitizedGroupName)
+        await setDoc(groupDocRef, groupData)
+        toast.success('Group created successfully!')
+      }
       
-      console.log('✅ Group created:', sanitizedGroupName)
-      toast.success('Group created successfully!')
+      console.log('✅ Group saved:', sanitizedGroupName)
       
-      // Reset form and close modal (preserve organizationId for org admins)
+      // Reset form and close modal
       setGroupForm({
         name: '',
         description: '',
         organizationId: userProfile?.organizationId || '',
         isPublic: true,
         maxMembers: 50,
-        category: '',
-        location: '',
         contactEmail: '',
         contactPhone: ''
       })
+      setEditingGroup(null)
       setShowAddGroupModal(false)
       
       // Refresh groups list
       fetchGroups()
       
     } catch (error) {
-      console.error('❌ Error creating group:', error)
-      toast.error('Failed to create group')
+      console.error('❌ Error saving group:', error)
+      toast.error(`Failed to ${editingGroup ? 'update' : 'create'} group`)
     }
   }
 
   const filteredGroups = groups.filter(group => {
     const matchesSearch = group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         group.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         group.category.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    // For org admins, don't filter by organization since they only see their org's groups
-    const isOrgAdmin = userProfile?.organizationId || userProfile?.organizations?.length
-    const matchesOrganization = isOrgAdmin || !selectedOrganization || group.organizationId === selectedOrganization
-    
-    return matchesSearch && matchesOrganization
+                         group.description.toLowerCase().includes(searchTerm.toLowerCase())
+
+    return matchesSearch
   })
 
   const getOrganizationName = (organizationId) => {
     const org = organizations.find(o => o.id === organizationId)
     return org?.name || 'Unknown Organization'
+  }
+
+  const handleEditGroup = (group) => {
+    setEditingGroup(group)
+    setGroupForm({
+      name: group.name,
+      description: group.description,
+      organizationId: group.organizationId,
+      isPublic: group.isPublic,
+      maxMembers: group.maxMembers,
+      contactEmail: group.contactEmail,
+      contactPhone: group.contactPhone
+    })
+    setShowAddGroupModal(true)
+  }
+
+  const handleDeleteGroup = async (group) => {
+    if (!window.confirm(`Are you sure you want to delete "${group.name}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      // Get organization ID with fallback logic
+      let orgId = userProfile?.organizationId
+      if (!orgId && userProfile?.organizations && userProfile.organizations.length > 0) {
+        orgId = userProfile.organizations[0]
+      }
+
+      if (!orgId) {
+        toast.error('Unable to determine organization')
+        return
+      }
+
+      // Sanitize group name for document ID
+      const sanitizedGroupName = group.name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '_')
+        .trim()
+
+      // Delete group from Firestore
+      await deleteDoc(doc(db, 'organizations', orgId, 'groups', sanitizedGroupName))
+      
+      toast.success('Group deleted successfully!')
+      
+      // Refresh groups list
+      fetchGroups()
+    } catch (error) {
+      console.error('❌ Error deleting group:', error)
+      toast.error('Failed to delete group')
+    }
   }
 
   const handleOpenAddGroupModal = () => {
@@ -244,19 +296,6 @@ export default function Groups() {
             />
           </div>
         </div>
-        {/* Only show organization filter if user is not an org admin */}
-        {!userProfile?.organizationId && !userProfile?.organizations?.length && (
-          <select
-            value={selectedOrganization}
-            onChange={(e) => setSelectedOrganization(e.target.value)}
-            className="rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-          >
-            <option value="">All Organizations</option>
-            {organizations.map(org => (
-              <option key={org.id} value={org.id}>{org.name}</option>
-            ))}
-          </select>
-        )}
       </div>
 
       {/* Groups List */}
@@ -289,21 +328,6 @@ export default function Groups() {
                   <p className="text-sm text-gray-600 mt-1">{group.description || 'No description'}</p>
                   
                   <div className="mt-4 space-y-2">
-                    {group.category && (
-                      <div className="flex items-center text-sm text-gray-500">
-                        <span className="font-medium">Category:</span>
-                        <span className="ml-2 px-2 py-1 bg-gray-100 rounded-full text-xs">
-                          {group.category}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {group.location && (
-                      <div className="flex items-center text-sm text-gray-500">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        <span>{group.location}</span>
-                      </div>
-                    )}
                     
                     {group.contactEmail && (
                       <div className="flex items-center text-sm text-gray-500">
@@ -350,22 +374,21 @@ export default function Groups() {
                 </div>
                 
                 <div className="flex space-x-2">
-                  <button className="btn-secondary text-sm px-3 py-1">
-                    <Eye className="h-3 w-3 mr-1" />
-                    View
+                  {/* Show edit/delete buttons for all groups if user is org admin */}
+                  <button 
+                    onClick={() => handleEditGroup(group)}
+                    className="btn-secondary text-sm px-3 py-1"
+                  >
+                    <Edit className="h-3 w-3 mr-1" />
+                    Edit
                   </button>
-                  {group.createdBy === currentUser.uid && (
-                    <>
-                      <button className="btn-secondary text-sm px-3 py-1">
-                        <Edit className="h-3 w-3 mr-1" />
-                        Edit
-                      </button>
-                      <button className="btn-secondary text-sm px-3 py-1 text-red-600 hover:text-red-700">
-                        <Trash2 className="h-3 w-3 mr-1" />
-                        Delete
-                      </button>
-                    </>
-                  )}
+                  <button 
+                    onClick={() => handleDeleteGroup(group)}
+                    className="btn-secondary text-sm px-3 py-1 text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Delete
+                  </button>
                 </div>
               </div>
             </div>
@@ -380,7 +403,9 @@ export default function Groups() {
             <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setShowAddGroupModal(false)} />
             <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full">
               <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Create New Group</h3>
+                <h3 className="text-lg font-medium text-gray-900">
+                  {editingGroup ? 'Edit Group' : 'Create New Group'}
+                </h3>
               </div>
               
               <form onSubmit={handleSubmitGroup} className="px-6 py-4 space-y-4">
@@ -398,47 +423,6 @@ export default function Groups() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Organization *
-                  </label>
-                  {(() => {
-                    console.log('🔍 Groups: Rendering organization field - userProfile?.organizationId:', userProfile?.organizationId)
-                    console.log('🔍 Groups: userProfile?.organizations:', userProfile?.organizations)
-                    console.log('🔍 Groups: groupForm.organizationId:', groupForm.organizationId)
-                    
-                    // Check for organization ID with fallback to organizations array
-                    let orgId = userProfile?.organizationId
-                    if (!orgId && userProfile?.organizations && userProfile.organizations.length > 0) {
-                      orgId = userProfile.organizations[0].id
-                      console.log('🔍 Groups: Using organization from organizations array for rendering:', orgId)
-                    }
-                    
-                    if (orgId) {
-                      console.log('✅ Groups: Showing read-only organization field for orgId:', orgId)
-                      return (
-                        <div className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-                          {getOrganizationName(orgId)}
-                        </div>
-                      )
-                    } else {
-                      console.log('⚠️ Groups: Showing organization dropdown - no orgId found')
-                      return (
-                        <select
-                          value={groupForm.organizationId}
-                          onChange={(e) => setGroupForm({ ...groupForm, organizationId: e.target.value })}
-                          className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                          required
-                        >
-                          <option value="">Select an organization</option>
-                          {organizations.map(org => (
-                            <option key={org.id} value={org.id}>{org.name}</option>
-                          ))}
-                        </select>
-                      )
-                    }
-                  })()}
-                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -453,45 +437,17 @@ export default function Groups() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Category
-                    </label>
-                    <input
-                      type="text"
-                      value={groupForm.category}
-                      onChange={(e) => setGroupForm({ ...groupForm, category: e.target.value })}
-                      className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                      placeholder="e.g., Sports, Study, Work"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Max Members
-                    </label>
-                    <input
-                      type="number"
-                      value={groupForm.maxMembers}
-                      onChange={(e) => setGroupForm({ ...groupForm, maxMembers: e.target.value })}
-                      className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                      min="1"
-                      max="1000"
-                    />
-                  </div>
-                </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Location
+                    Max Members
                   </label>
                   <input
-                    type="text"
-                    value={groupForm.location}
-                    onChange={(e) => setGroupForm({ ...groupForm, location: e.target.value })}
+                    type="number"
+                    value={groupForm.maxMembers}
+                    onChange={(e) => setGroupForm({ ...groupForm, maxMembers: e.target.value })}
                     className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                    placeholder="Where does this group meet?"
+                    min="1"
+                    max="1000"
                   />
                 </div>
 
@@ -539,7 +495,10 @@ export default function Groups() {
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowAddGroupModal(false)}
+                    onClick={() => {
+                      setShowAddGroupModal(false)
+                      setEditingGroup(null)
+                    }}
                     className="btn-secondary"
                   >
                     Cancel
@@ -548,7 +507,7 @@ export default function Groups() {
                     type="submit"
                     className="btn-primary"
                   >
-                    Create Group
+                    {editingGroup ? 'Update Group' : 'Create Group'}
                   </button>
                 </div>
               </form>

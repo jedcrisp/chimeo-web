@@ -1,5 +1,5 @@
 import { getToken, onMessage, isSupported } from 'firebase/messaging'
-import { doc, addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { doc, addDoc, collection, serverTimestamp, setDoc } from 'firebase/firestore'
 import { db, getMessagingInstance, VAPID_KEY } from './firebase'
 import toast from 'react-hot-toast'
 
@@ -250,9 +250,11 @@ class NotificationService {
         targetUser: 'jed@onetrack-consulting.com' // Only notify platform admin
       }
 
-      // Add to notifications collection
-      await addDoc(collection(db, 'notifications'), notificationData)
-      console.log('✅ Organization request notification record saved to Firestore')
+      // Add to notifications collection under the target user's email
+      const sanitizedEmail = 'jed@onetrack-consulting.com'.replace(/[^a-zA-Z0-9]/g, '_')
+      const notificationId = `org_request_${Date.now()}`
+      await setDoc(doc(db, 'notifications', sanitizedEmail, 'user_notifications', notificationId), notificationData)
+      console.log('✅ Organization request notification record saved to Firestore under user email')
 
       // Check if notification service is initialized and messaging is available
       console.log('🔍 Notification service status:', {
@@ -294,10 +296,11 @@ class NotificationService {
     }
   }
 
-  // Send notification to all users when alert is created
+  // Send notification to platform admin when alert is created
   async sendAlertNotification(alertData) {
     try {
       console.log('🔔 sendAlertNotification: Starting notification process for alert:', alertData.title)
+      console.log('🔔 sendAlertNotification: Full alert data received:', alertData)
       
       // Create a notification record in Firestore
       const notificationData = {
@@ -307,12 +310,15 @@ class NotificationService {
         alertId: alertData.id,
         organizationId: alertData.organizationId,
         createdAt: serverTimestamp(),
-        sent: true
+        sent: true,
+        targetUser: 'jed@onetrack-consulting.com' // Only notify platform admin
       }
 
-      // Add to notifications collection
-      await addDoc(collection(db, 'notifications'), notificationData)
-      console.log('✅ Notification record saved to Firestore')
+      // Add to notifications collection under the target user's email
+      const sanitizedEmail = 'jed@onetrack-consulting.com'.replace(/[^a-zA-Z0-9]/g, '_')
+      const notificationId = `alert_${Date.now()}`
+      await setDoc(doc(db, 'notifications', sanitizedEmail, 'user_notifications', notificationId), notificationData)
+      console.log('✅ Alert notification record saved to Firestore under user email')
 
       // Check if notification service is initialized and messaging is available
       console.log('🔍 Notification service status:', {

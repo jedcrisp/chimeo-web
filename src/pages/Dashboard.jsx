@@ -59,9 +59,10 @@ export default function Dashboard() {
 
   const fetchNotifications = async () => {
     try {
+      // Fetch notifications from the user-specific path
+      const sanitizedEmail = 'jed@onetrack-consulting.com'.replace(/[^a-zA-Z0-9]/g, '_')
       const notificationsQuery = query(
-        collection(db, 'notifications'),
-        where('targetUser', '==', 'jed@onetrack-consulting.com'),
+        collection(db, 'notifications', sanitizedEmail, 'user_notifications'),
         orderBy('createdAt', 'desc'),
         limit(5)
       )

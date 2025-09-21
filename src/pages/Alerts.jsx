@@ -1,5 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAlerts } from '../contexts/AlertContext'
+import { useAuth } from '../contexts/AuthContext'
+import { collection, query, orderBy, getDocs } from 'firebase/firestore'
+import { db } from '../services/firebase'
 import { Plus, Edit, Trash2, X } from 'lucide-react'
 import notificationService from '../services/notificationService'
 
@@ -21,13 +24,62 @@ function BellIcon({ className }) {
 
 export default function Alerts() {
   const { alerts, loading, deleteAlert, createAlert } = useAlerts()
+  const { currentUser, userProfile } = useAuth()
   const [showNewAlertModal, setShowNewAlertModal] = useState(false)
+  const [groups, setGroups] = useState([])
+  const [groupsLoading, setGroupsLoading] = useState(true)
   const [newAlert, setNewAlert] = useState({
     title: '',
     message: '',
     type: 'info',
-    location: ''
+    location: '',
+    groupId: '' // Add group selection
   })
+
+  // Fetch groups for the user's organization
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        setGroupsLoading(true)
+        
+        // Get organization ID with fallback logic
+        let orgId = userProfile?.organizationId
+        if (!orgId && userProfile?.organizations && userProfile.organizations.length > 0) {
+          orgId = userProfile.organizations[0] // organizations is array of strings
+        }
+
+        if (!currentUser || !orgId) {
+          setGroups([])
+          return
+        }
+
+        console.log('🔍 Alerts: Fetching groups for organization:', orgId)
+
+        // Get groups for the user's organization
+        const groupsQuery = query(
+          collection(db, 'organizations', orgId, 'groups'),
+          orderBy('createdAt', 'desc')
+        )
+
+        const groupsSnapshot = await getDocs(groupsQuery)
+        const groupsData = groupsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+
+        setGroups(groupsData)
+        console.log('✅ Loaded', groupsData.length, 'groups for organization:', orgId)
+      } catch (error) {
+        console.error('❌ Error fetching groups:', error)
+      } finally {
+        setGroupsLoading(false)
+      }
+    }
+
+    if (currentUser && userProfile) {
+      fetchGroups()
+    }
+  }, [currentUser, userProfile])
 
   const handleCreateAlert = async (e) => {
     e.preventDefault()
@@ -37,7 +89,7 @@ export default function Alerts() {
       // Cloud function will automatically send phone notifications to followers
       // No need to manually call notificationService here
       
-      setNewAlert({ title: '', message: '', type: 'info', location: '' })
+      setNewAlert({ title: '', message: '', type: 'info', location: '', groupId: '' })
       setShowNewAlertModal(false)
     } catch (error) {
       console.error('Error creating alert:', error)
@@ -174,6 +226,33 @@ export default function Alerts() {
                     placeholder="Location (optional)"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Target Group
+                  </label>
+                  <select
+                    value={newAlert.groupId}
+                    onChange={(e) => setNewAlert({ ...newAlert, groupId: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200"
+                  >
+                    <option value="">All Groups (General Alert)</option>
+                    {groupsLoading ? (
+                      <option disabled>Loading groups...</option>
+                    ) : groups.length === 0 ? (
+                      <option disabled>No groups available</option>
+                    ) : (
+                      groups.map(group => (
+                        <option key={group.id} value={group.id}>
+                          {group.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Select a specific group or leave as "All Groups" for a general alert
+                  </p>
+                </div>
                 
                 {/* Alert Preview */}
                 {newAlert.title && newAlert.message && (
@@ -272,6 +351,14 @@ export default function Alerts() {
                         <>
                           <span className="mx-2">•</span>
                           <span>{alert.location}</span>
+                        </>
+                      )}
+                      {alert.groupId && (
+                        <>
+                          <span className="mx-2">•</span>
+                          <span className="text-blue-600 font-medium">
+                            Group: {groups.find(g => g.id === alert.groupId)?.name || 'Unknown Group'}
+                          </span>
                         </>
                       )}
                       {alert.createdAt && (

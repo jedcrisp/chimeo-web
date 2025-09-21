@@ -332,6 +332,33 @@ export default function OrganizationRequest() {
     }
   }
 
+  // Geocoding function to get coordinates from address
+  const geocodeAddress = async (address, city, state, zipCode) => {
+    try {
+      const fullAddress = `${address}, ${city}, ${state} ${zipCode}`.replace(/\s+/g, '+')
+      console.log('🌍 Geocoding address:', fullAddress)
+      
+      // Using OpenStreetMap Nominatim API (free, no API key required)
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&limit=1`)
+      const data = await response.json()
+      
+      if (data && data.length > 0) {
+        const coordinates = {
+          latitude: parseFloat(data[0].lat),
+          longitude: parseFloat(data[0].lon)
+        }
+        console.log('✅ Geocoding successful:', coordinates)
+        return coordinates
+      } else {
+        console.warn('⚠️ No coordinates found for address:', fullAddress)
+        return { latitude: null, longitude: null }
+      }
+    } catch (error) {
+      console.error('❌ Geocoding failed:', error)
+      return { latitude: null, longitude: null }
+    }
+  }
+
   const createAdminUserAccount = async (request) => {
     try {
       // Sanitize organization name for use as document ID
@@ -427,6 +454,11 @@ export default function OrganizationRequest() {
       await setDoc(doc(db, 'users', newUser.uid), userProfileData)
       console.log('✅ User profile created in Firestore')
       
+      // Get coordinates from address using geocoding
+      console.log('🌍 Getting coordinates for organization address...')
+      const coordinates = await geocodeAddress(request.address, request.city, request.state, request.zipCode)
+      console.log('🌍 Coordinates obtained:', coordinates)
+
       // Create the organization document
       console.log('🔧 Creating organization with name:', request.organizationName)
       const organizationData = {
@@ -451,8 +483,8 @@ export default function OrganizationRequest() {
           city: request.city,
           state: request.state,
           zipCode: request.zipCode,
-          latitude: null, // Will be set later with geocoding
-          longitude: null // Will be set later with geocoding
+          latitude: coordinates.latitude,
+          longitude: coordinates.longitude
         },
         adminId: newUser.uid,
         adminEmail: request.adminEmail,
