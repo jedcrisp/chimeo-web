@@ -200,6 +200,20 @@ export function AlertProvider({ children }) {
         const notificationService = (await import('../services/notificationService')).default
         console.log('🔔 AlertContext: Notification service imported successfully')
         
+        // Check if notification service is initialized
+        console.log('🔔 AlertContext: Notification service status:', {
+          initialized: notificationService.isInitialized(),
+          isSupported: notificationService.isNotificationsSupported(),
+          currentToken: notificationService.getCurrentToken()
+        })
+        
+        // If not initialized, try to initialize it
+        if (!notificationService.isInitialized()) {
+          console.log('🔔 AlertContext: Notification service not initialized, attempting to initialize...')
+          const initSuccess = await notificationService.initialize()
+          console.log('🔔 AlertContext: Notification service initialization result:', initSuccess)
+        }
+        
         console.log('🔔 AlertContext: Sending notification with payload:', notificationPayload)
         
         await notificationService.sendAlertNotification(notificationPayload)
