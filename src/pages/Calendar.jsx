@@ -191,7 +191,10 @@ export default function CalendarPage() {
           
           <div className="relative">
             <button
-              onClick={() => setShowCreateAlert(true)}
+              onClick={() => {
+                console.log('🔍 Calendar: Schedule Alert button clicked')
+                setShowCreateAlert(true)
+              }}
               className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
             >
               <Plus className="h-4 w-4 mr-2" />

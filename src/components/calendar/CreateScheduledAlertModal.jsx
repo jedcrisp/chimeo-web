@@ -19,6 +19,8 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
   const { currentUser, userProfile } = useAuth()
   const { organizations } = useOrganizations()
   
+  console.log('🔍 CreateScheduledAlertModal: Component rendered', { isOpen, userProfile: !!userProfile })
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
