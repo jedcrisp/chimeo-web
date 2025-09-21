@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useOrganizations } from '../contexts/OrganizationsContext'
-import { User, Mail, Calendar, Shield, Edit, Save, X, Crown, Building, Lock, LogOut, TestTube } from 'lucide-react'
+import { User, Mail, Calendar, Shield, Edit, Save, X, Crown, Building, Lock, LogOut, TestTube, CheckCircle, Clock, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore'
+import { doc, updateDoc, serverTimestamp, getDoc, collection, query, getDocs, orderBy } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import adminService from '../services/adminService'
 import notificationService from '../services/notificationService'
@@ -19,9 +19,24 @@ export default function Profile() {
   const [userRole, setUserRole] = useState('user')
   const [isOrgAdmin, setIsOrgAdmin] = useState(false)
   const [adminOrganizations, setAdminOrganizations] = useState([])
+  const [organizationRequests, setOrganizationRequests] = useState([])
+  const [requestsLoading, setRequestsLoading] = useState(false)
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
 
   // Function to get role display information
   const getRoleDisplay = (role) => {
+    // If user is platform admin, show as Creator
+    if (isPlatformAdmin) {
+      return {
+        name: 'Creator',
+        icon: Crown,
+        textColor: 'text-purple-700',
+        bgColor: 'bg-purple-50',
+        borderColor: 'border-purple-200',
+        description: 'App creator and platform administrator'
+      }
+    }
+    
     switch (role) {
       case 'platform_admin':
         return {
@@ -119,6 +134,79 @@ export default function Profile() {
     } catch (error) {
       console.error('❌ Error testing FCM token:', error)
       toast.error('FCM token test failed')
+    }
+  }
+
+  // Check if user is platform admin (app owner)
+  const checkPlatformAdminStatus = () => {
+    // You can set this based on your email or user ID
+    const platformAdminEmails = ['jed@onetrack-consulting.com'] // Add your email here
+    const isAdmin = currentUser?.email && platformAdminEmails.includes(currentUser.email)
+    setIsPlatformAdmin(isAdmin)
+    return isAdmin
+  }
+
+  // Fetch all organization requests for platform admin
+  const fetchOrganizationRequests = async () => {
+    if (!isPlatformAdmin) return
+    
+    setRequestsLoading(true)
+    try {
+      const requestsQuery = query(
+        collection(db, 'organizationRequests'),
+        orderBy('createdAt', 'desc')
+      )
+      const requestsSnapshot = await getDocs(requestsQuery)
+      
+      const requestsData = requestsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      
+      setOrganizationRequests(requestsData)
+    } catch (error) {
+      console.error('Error fetching organization requests:', error)
+      toast.error('Failed to load organization requests')
+    } finally {
+      setRequestsLoading(false)
+    }
+  }
+
+  // Approve organization request
+  const approveRequest = async (requestId) => {
+    try {
+      const requestRef = doc(db, 'organizationRequests', requestId)
+      await updateDoc(requestRef, {
+        status: 'approved',
+        updatedAt: serverTimestamp(),
+        approvedBy: currentUser.uid,
+        approvedAt: serverTimestamp()
+      })
+      
+      toast.success('Request approved successfully!')
+      fetchOrganizationRequests()
+    } catch (error) {
+      console.error('Error approving request:', error)
+      toast.error('Failed to approve request')
+    }
+  }
+
+  // Reject organization request
+  const rejectRequest = async (requestId) => {
+    try {
+      const requestRef = doc(db, 'organizationRequests', requestId)
+      await updateDoc(requestRef, {
+        status: 'rejected',
+        updatedAt: serverTimestamp(),
+        rejectedBy: currentUser.uid,
+        rejectedAt: serverTimestamp()
+      })
+      
+      toast.success('Request rejected')
+      fetchOrganizationRequests()
+    } catch (error) {
+      console.error('Error rejecting request:', error)
+      toast.error('Failed to reject request')
     }
   }
 
@@ -224,12 +312,22 @@ export default function Profile() {
       console.log('🔧 Profile: Syncing admin service with current user:', currentUser.uid)
       adminService.setCurrentUser(currentUser)
       
+      // Check platform admin status
+      checkPlatformAdminStatus()
+      
       // Give admin service a moment to process
       setTimeout(() => {
         determineUserRole()
       }, 500)
     }
   }, [loading, currentUser, userProfile])
+
+  // Fetch organization requests when platform admin status changes
+  useEffect(() => {
+    if (isPlatformAdmin) {
+      fetchOrganizationRequests()
+    }
+  }, [isPlatformAdmin])
 
   // Debug: Log when component mounts and when data changes
   useEffect(() => {
@@ -469,6 +567,97 @@ export default function Profile() {
               </button>
             </div>
           </div>
+
+          {/* Organization Requests Management - Only for Platform Admin */}
+          {isPlatformAdmin && (
+            <div className="card">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Crown className="h-5 w-5 mr-2 text-purple-600" />
+                Organization Requests Management
+              </h3>
+              
+              {requestsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                  <p className="mt-2 text-sm text-gray-500">Loading requests...</p>
+                </div>
+              ) : organizationRequests.length === 0 ? (
+                <div className="text-center py-8">
+                  <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No organization requests found</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {organizationRequests.map((request) => (
+                    <div key={request.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <h4 className="text-sm font-medium text-gray-900">
+                              {request.organizationName}
+                            </h4>
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              request.status === 'pending' 
+                                ? 'bg-yellow-100 text-yellow-800' 
+                                : request.status === 'approved'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {request.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+                              {request.status === 'approved' && <CheckCircle className="h-3 w-3 mr-1" />}
+                              {request.status === 'rejected' && <X className="h-3 w-3 mr-1" />}
+                              {request.status}
+                            </span>
+                          </div>
+                          
+                          <div className="text-sm text-gray-600 space-y-1">
+                            <p><strong>Requested by:</strong> {request.userDisplayName || request.userEmail}</p>
+                            <p><strong>Email:</strong> {request.userEmail}</p>
+                            <p><strong>Type:</strong> {request.requestType}</p>
+                            {request.description && (
+                              <p><strong>Description:</strong> {request.description}</p>
+                            )}
+                            {request.address && (
+                              <p><strong>Address:</strong> {request.address}, {request.city}, {request.state} {request.zipCode}</p>
+                            )}
+                            {request.contact && (
+                              <p><strong>Contact:</strong> {request.contact}</p>
+                            )}
+                            {request.email && (
+                              <p><strong>Organization Email:</strong> {request.email}</p>
+                            )}
+                            {request.website && (
+                              <p><strong>Website:</strong> {request.website}</p>
+                            )}
+                            <p><strong>Submitted:</strong> {request.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}</p>
+                          </div>
+                        </div>
+                        
+                        {request.status === 'pending' && (
+                          <div className="flex space-x-2 ml-4">
+                            <button
+                              onClick={() => approveRequest(request.id)}
+                              className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+                            >
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => rejectRequest(request.id)}
+                              className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+                            >
+                              <X className="h-3 w-3 mr-1" />
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="card">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Danger Zone</h3>

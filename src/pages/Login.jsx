@@ -4,6 +4,7 @@ import { Bell } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../services/firebase'
+import notificationService from '../services/notificationService'
 import { Building, CheckCircle, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -28,7 +29,13 @@ export default function Login() {
     officeEmail: '',
     contactEmail: '',
     website: '',
-    description: ''
+    description: '',
+    // Admin setup fields
+    adminFirstName: '',
+    adminLastName: '',
+    adminEmail: '',
+    adminPassword: '',
+    adminConfirmPassword: ''
   })
   const [userRequests, setUserRequests] = useState([])
   const [requestLoading, setRequestLoading] = useState(false)
@@ -78,8 +85,40 @@ export default function Login() {
 
   const handleSubmitRequest = async (e) => {
     e.preventDefault()
-    if (!currentUser) {
-      toast.error('You must be logged in to submit a request')
+    
+    // Validation
+    if (!requestForm.organizationName.trim()) {
+      toast.error('Organization name is required')
+      return
+    }
+    
+    if (!requestForm.adminFirstName.trim()) {
+      toast.error('Admin first name is required')
+      return
+    }
+    
+    if (!requestForm.adminLastName.trim()) {
+      toast.error('Admin last name is required')
+      return
+    }
+    
+    if (!requestForm.adminEmail.trim()) {
+      toast.error('Admin email is required')
+      return
+    }
+    
+    if (!requestForm.adminPassword.trim()) {
+      toast.error('Admin password is required')
+      return
+    }
+    
+    if (requestForm.adminPassword !== requestForm.adminConfirmPassword) {
+      toast.error('Passwords do not match')
+      return
+    }
+    
+    if (requestForm.adminPassword.length < 6) {
+      toast.error('Password must be at least 6 characters')
       return
     }
 
@@ -87,19 +126,37 @@ export default function Login() {
     try {
       const requestData = {
         ...requestForm,
-        userId: currentUser.uid,
-        userEmail: currentUser.email, // The user submitting the request
+        userId: currentUser?.uid || null, // Allow null for non-logged in users
+        userEmail: currentUser?.email || requestForm.contactEmail, // Use contact email if not logged in
         status: 'pending',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         // Additional fields for the app's workflow
         requestType: 'organization_creation',
-        adminEmail: requestForm.contactEmail, // This will be the org admin when approved
+        adminEmail: requestForm.adminEmail, // This will be the org admin when approved
         organizationEmail: requestForm.officeEmail // This will be the org's email
       }
 
-      await addDoc(collection(db, 'organizationRequests'), requestData)
-      toast.success('Request submitted successfully!')
+      console.log('🔧 Login: Submitting organization request with data:', requestData)
+      console.log('🔧 Login: Organization name:', requestData.organizationName)
+      console.log('🔧 Login: Admin email:', requestData.adminEmail)
+
+      const docRef = await addDoc(collection(db, 'organizationRequests'), requestData)
+      console.log('✅ Organization request submitted with ID:', docRef.id)
+      
+      // Send notification to platform admin
+      try {
+        await notificationService.sendOrganizationRequestNotification({
+          ...requestData,
+          id: docRef.id
+        })
+        console.log('✅ Notification sent to platform admin')
+      } catch (notificationError) {
+        console.error('❌ Failed to send notification:', notificationError)
+        // Don't fail the request if notification fails
+      }
+      
+      toast.success('Organization request submitted successfully! We will review your request and contact you soon.')
       setShowRequestForm(false)
       setRequestForm({
         organizationName: '',
@@ -112,9 +169,17 @@ export default function Login() {
         officeEmail: '',
         contactEmail: '',
         website: '',
-        description: ''
+        description: '',
+        adminFirstName: '',
+        adminLastName: '',
+        adminEmail: '',
+        adminPassword: '',
+        adminConfirmPassword: ''
       })
-      fetchUserRequests()
+      // Only fetch user requests if logged in
+      if (currentUser) {
+        fetchUserRequests()
+      }
     } catch (error) {
       console.error('Error submitting request:', error)
       toast.error('Failed to submit request')
@@ -341,13 +406,13 @@ export default function Login() {
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
               <Building className="h-4 w-4 mr-2" />
-              {showRequestForm ? 'Hide Request Form' : 'Request Organization Access'}
+              {showRequestForm ? 'Hide Request Form' : 'Create Organization Request'}
             </button>
           </div>
 
           {showRequestForm && (
             <div className="mt-6 bg-white rounded-lg shadow p-6 border border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Request Organization Access</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Create Organization Request</h3>
               
               <form onSubmit={handleSubmitRequest} className="space-y-4">
                 <div className="grid grid-cols-1 gap-6">
@@ -500,6 +565,83 @@ export default function Login() {
                     />
                   </div>
                 </div>
+
+                {/* Admin Setup Section */}
+                <div className="border-t border-gray-200 pt-6 mt-6">
+                  <h4 className="text-lg font-medium text-gray-900 mb-4">Admin Account Setup</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Create the administrator account for this organization. This person will have full access to manage the organization.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 gap-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Admin First Name *</label>
+                        <input
+                          type="text"
+                          name="adminFirstName"
+                          value={requestForm.adminFirstName}
+                          onChange={handleRequestFormChange}
+                          className="mt-1 block w-full rounded-lg border-2 border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200 focus:ring-opacity-50 sm:text-base py-3 px-4 bg-white hover:border-gray-400 transition-colors duration-200"
+                          placeholder="Admin first name"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Admin Last Name *</label>
+                        <input
+                          type="text"
+                          name="adminLastName"
+                          value={requestForm.adminLastName}
+                          onChange={handleRequestFormChange}
+                          className="mt-1 block w-full rounded-lg border-2 border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200 focus:ring-opacity-50 sm:text-base py-3 px-4 bg-white hover:border-gray-400 transition-colors duration-200"
+                          placeholder="Admin last name"
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Admin Email *</label>
+                      <input
+                        type="email"
+                        name="adminEmail"
+                        value={requestForm.adminEmail}
+                        onChange={handleRequestFormChange}
+                        className="mt-1 block w-full rounded-lg border-2 border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200 focus:ring-opacity-50 sm:text-base py-3 px-4 bg-white hover:border-gray-400 transition-colors duration-200"
+                        placeholder="admin@organization.com"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
+                        <input
+                          type="password"
+                          name="adminPassword"
+                          value={requestForm.adminPassword}
+                          onChange={handleRequestFormChange}
+                          className="mt-1 block w-full rounded-lg border-2 border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200 focus:ring-opacity-50 sm:text-base py-3 px-4 bg-white hover:border-gray-400 transition-colors duration-200"
+                          placeholder="Create password"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password *</label>
+                        <input
+                          type="password"
+                          name="adminConfirmPassword"
+                          value={requestForm.adminConfirmPassword}
+                          onChange={handleRequestFormChange}
+                          className="mt-1 block w-full rounded-lg border-2 border-gray-300 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200 focus:ring-opacity-50 sm:text-base py-3 px-4 bg-white hover:border-gray-400 transition-colors duration-200"
+                          placeholder="Confirm password"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 
                 <div className="flex justify-end space-x-3">
                   <button
@@ -527,17 +669,24 @@ export default function Login() {
               <h3 className="text-lg font-medium text-gray-900 mb-4">Your Requests</h3>
               <div className="space-y-3">
                 {userRequests.map((request) => (
-                  <div key={request.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                    <div className="flex items-center space-x-3">
-                      {getStatusIcon(request.status)}
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{request.organizationName}</p>
-                        <p className="text-xs text-gray-500">{request.organizationType}</p>
+                  <div key={request.id} className="p-4 bg-gray-50 rounded-md">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-3">
+                        {getStatusIcon(request.status)}
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{request.organizationName}</p>
+                          <p className="text-xs text-gray-500">{request.organizationType}</p>
+                        </div>
                       </div>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(request.status)}`}>
+                        {request.status}
+                      </span>
                     </div>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(request.status)}`}>
-                      {request.status}
-                    </span>
+                    <div className="text-xs text-gray-600 space-y-1">
+                      <p><strong>Admin:</strong> {request.adminFirstName} {request.adminLastName}</p>
+                      <p><strong>Admin Email:</strong> {request.adminEmail}</p>
+                      <p><strong>Submitted:</strong> {request.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}</p>
+                    </div>
                   </div>
                 ))}
               </div>

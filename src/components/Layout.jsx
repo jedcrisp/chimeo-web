@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Users, User, LogOut, Menu, X, Building, Home, Bell, Calendar } from 'lucide-react'
+import { Users, User, LogOut, Menu, X, Building, Home, Bell, Calendar, FileText } from 'lucide-react'
 import { useOrganizations } from '../contexts/OrganizationsContext'
 import { useState } from 'react'
 
@@ -27,11 +27,15 @@ export default function Layout() {
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  // Check if user is platform admin (app creator)
+  const isPlatformAdmin = currentUser?.email === 'jed@onetrack-consulting.com'
+
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Alerts', href: '/alerts', icon: Bell },
     // { name: 'Organizations', href: '/organizations', icon: Building },
     { name: 'Calendar', href: '/calendar', icon: Calendar },
+    ...(isPlatformAdmin ? [{ name: 'Org Requests', href: '/org-requests', icon: FileText }] : []),
     { name: 'Profile', href: '/profile', icon: User },
   ]
 

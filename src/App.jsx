@@ -11,6 +11,7 @@ import Alerts from './pages/Alerts'
 import Organizations from './pages/Organizations'
 import Calendar from './pages/Calendar'
 import Profile from './pages/Profile'
+import OrganizationRequest from './pages/OrganizationRequest'
 import ProtectedRoute from './components/ProtectedRoute'
 import notificationService from './services/notificationService'
 import globalScheduledAlertProcessor from './services/globalScheduledAlertProcessor'
@@ -70,6 +71,7 @@ function App() {
                 <Route path="alerts" element={<Alerts />} />
                 {/* <Route path="organizations" element={<Organizations />} /> */}
                 <Route path="calendar" element={<Calendar />} />
+                <Route path="org-requests" element={<OrganizationRequest />} />
                 <Route path="profile" element={<Profile />} />
               </Route>
             </Routes>

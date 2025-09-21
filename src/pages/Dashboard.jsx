@@ -16,6 +16,8 @@ import { Link } from 'react-router-dom'
 import adminService from '../services/adminService'
 import groupService from '../services/groupService'
 import { useState, useEffect } from 'react'
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore'
+import { db } from '../services/firebase'
 
 // Custom Bell Icon component
 function BellIcon({ className }) {
@@ -40,6 +42,39 @@ export default function Dashboard() {
   const [hasAdminAccess, setHasAdminAccess] = useState(false)
   const [adminOrgs, setAdminOrgs] = useState([])
   const [totalGroups, setTotalGroups] = useState(0)
+  const [notifications, setNotifications] = useState([])
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
+
+  // Check if user is platform admin
+  useEffect(() => {
+    if (currentUser) {
+      const isPlatformAdminUser = currentUser.email === 'jed@onetrack-consulting.com'
+      setIsPlatformAdmin(isPlatformAdminUser)
+      
+      if (isPlatformAdminUser) {
+        fetchNotifications()
+      }
+    }
+  }, [currentUser])
+
+  const fetchNotifications = async () => {
+    try {
+      const notificationsQuery = query(
+        collection(db, 'notifications'),
+        where('targetUser', '==', 'jed@onetrack-consulting.com'),
+        orderBy('createdAt', 'desc'),
+        limit(5)
+      )
+      const notificationsSnapshot = await getDocs(notificationsQuery)
+      const notificationsData = notificationsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      setNotifications(notificationsData)
+    } catch (error) {
+      console.error('Error fetching notifications:', error)
+    }
+  }
 
   useEffect(() => {
     if (currentUser && organizations.length > 0) {
@@ -69,6 +104,22 @@ export default function Dashboard() {
     fetchGroups()
   }, [userProfile])
 
+  // Get the user's display name with priority order
+  const getDisplayName = () => {
+    // First try to get from userProfile.name (the Name field in user profile)
+    if (userProfile?.name && userProfile.name.trim() && userProfile.name !== 'Email User') {
+      return userProfile.name.trim()
+    } else if (userProfile?.creatorName && userProfile.creatorName.trim()) {
+      return userProfile.creatorName.trim()
+    } else if (userProfile?.displayName && userProfile.displayName.trim()) {
+      return userProfile.displayName.trim()
+    } else if (currentUser?.displayName && currentUser.displayName.trim()) {
+      return currentUser.displayName.trim()
+    } else {
+      return currentUser?.email || 'User'
+    }
+  }
+
   const recentAlerts = alerts.slice(0, 5)
   const totalOrganizations = organizations.length
   const totalAlerts = alerts.length
@@ -82,7 +133,7 @@ export default function Dashboard() {
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
               <p className="text-slate-600 mt-1">
-                Welcome back, {userProfile?.displayName || currentUser?.email}
+                Welcome back, {getDisplayName()}
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -188,6 +239,61 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+
+        {/* Platform Admin Notifications */}
+        {isPlatformAdmin && (
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-medium text-gray-900 flex items-center">
+                <Bell className="h-5 w-5 mr-2 text-blue-600" />
+                Recent Notifications
+              </h2>
+              <Link 
+                to="/org-requests" 
+                className="text-sm text-blue-600 hover:text-blue-500"
+              >
+                View All
+              </Link>
+            </div>
+            
+            {notifications.length === 0 ? (
+              <div className="text-center py-4">
+                <Bell className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-500 text-sm">No recent notifications</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {notifications.map((notification) => (
+                  <div key={notification.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-sm font-medium text-gray-900">
+                          {notification.title}
+                        </h3>
+                        <p className="text-xs text-gray-600 mt-1">
+                          {notification.message}
+                        </p>
+                        {notification.organizationName && (
+                          <p className="text-xs text-blue-600 mt-1">
+                            Organization: {notification.organizationName}
+                          </p>
+                        )}
+                        {notification.adminName && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Admin: {notification.adminName} ({notification.adminEmail})
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-400 ml-2">
+                        {notification.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

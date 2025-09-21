@@ -231,6 +231,69 @@ class NotificationService {
     }
   }
 
+  // Send notification to platform admin when organization request is submitted
+  async sendOrganizationRequestNotification(requestData) {
+    try {
+      console.log('🔔 sendOrganizationRequestNotification: Starting notification process for request:', requestData.organizationName)
+      
+      // Create a notification record in Firestore
+      const notificationData = {
+        type: 'organization_request_submitted',
+        title: 'New Organization Request',
+        message: `${requestData.organizationName} has submitted a request to create an organization`,
+        organizationName: requestData.organizationName,
+        adminName: `${requestData.adminFirstName} ${requestData.adminLastName}`,
+        adminEmail: requestData.adminEmail,
+        requestId: requestData.id || 'pending',
+        createdAt: serverTimestamp(),
+        sent: true,
+        targetUser: 'jed@onetrack-consulting.com' // Only notify platform admin
+      }
+
+      // Add to notifications collection
+      await addDoc(collection(db, 'notifications'), notificationData)
+      console.log('✅ Organization request notification record saved to Firestore')
+
+      // Check if notification service is initialized and messaging is available
+      console.log('🔍 Notification service status:', {
+        initialized: this.initialized,
+        messaging: !!this.messaging,
+        isSupported: this.isSupported
+      })
+      
+      if (this.initialized && this.messaging) {
+        console.log('🔔 Notification service is initialized, showing local notification')
+        // Show a local notification using the messaging service
+        await this.showLocalNotification({
+          notification: {
+            title: 'New Organization Request',
+            body: `${requestData.organizationName} - ${requestData.adminFirstName} ${requestData.adminLastName}`,
+            icon: '/logo192.png'
+          }
+        })
+        console.log('✅ Local notification shown successfully')
+      } else {
+        console.log('⚠️ Notification service not initialized, showing fallback notification')
+        
+        // Fallback: Show a simple browser notification if available
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('New Organization Request', {
+            body: `${requestData.organizationName} - ${requestData.adminFirstName} ${requestData.adminLastName}`,
+            icon: '/logo192.png'
+          })
+          console.log('✅ Fallback notification shown')
+        } else {
+          console.log('⚠️ Browser notifications not available, skipping notification display')
+        }
+      }
+
+      console.log('✅ Organization request notification sent successfully')
+      
+    } catch (error) {
+      console.error('❌ Error sending organization request notification:', error)
+    }
+  }
+
   // Send notification to all users when alert is created
   async sendAlertNotification(alertData) {
     try {
