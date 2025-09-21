@@ -9,6 +9,7 @@ class GroupService {
       const orgIdString = typeof organizationId === 'string' ? organizationId : String(organizationId)
       
       console.log('🔍 GroupService: Fetching groups for organization:', orgIdString)
+      console.log('🔍 GroupService: Querying path: /organizations/' + orgIdString + '/groups')
       
       // Use a simple query without composite index requirements
       const groupsQuery = query(

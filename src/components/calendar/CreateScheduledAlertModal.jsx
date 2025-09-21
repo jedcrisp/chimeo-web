@@ -47,6 +47,7 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
   // Auto-set user's organization and fetch groups when modal opens
   useEffect(() => {
     console.log('🔍 CreateScheduledAlertModal: useEffect triggered', { isOpen, userProfile })
+    console.log('🔍 CreateScheduledAlertModal: Full userProfile:', JSON.stringify(userProfile, null, 2))
     
     if (isOpen && userProfile?.organizations?.length > 0) {
       const organizationId = userProfile.organizations[0] // Use first organization
@@ -56,6 +57,9 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
       // Ensure organizationId is a string
       const orgIdString = typeof organizationId === 'string' ? organizationId : String(organizationId)
       console.log('🔍 CreateScheduledAlertModal: Organization ID string:', orgIdString)
+      console.log('🔍 CreateScheduledAlertModal: Expected path: /organizations/' + orgIdString + '/groups')
+      console.log('🔍 CreateScheduledAlertModal: Actual group path: /organizations/velocity_physical_therapy_north_denton/groups/test')
+      console.log('🔍 CreateScheduledAlertModal: IDs match?', orgIdString === 'velocity_physical_therapy_north_denton')
       
       setFormData(prev => ({
         ...prev,
