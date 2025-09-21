@@ -2,7 +2,7 @@ import { useState, useContext, useEffect, useCallback } from 'react'
 import { AuthContext } from '../contexts/AuthContext'
 import { Bell } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, setDoc } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import notificationService from '../services/notificationService'
 import { Building, CheckCircle, X } from 'lucide-react'
@@ -137,18 +137,27 @@ export default function Login() {
         organizationEmail: requestForm.officeEmail // This will be the org's email
       }
 
+      // Sanitize organization name for use as document ID
+      const sanitizedOrgName = requestData.organizationName
+        .replace(/[^a-zA-Z0-9\s-_]/g, '') // Remove special characters except spaces, hyphens, underscores
+        .replace(/\s+/g, '_') // Replace spaces with underscores
+        .toLowerCase() // Convert to lowercase
+      
       console.log('🔧 Login: Submitting organization request with data:', requestData)
       console.log('🔧 Login: Organization name:', requestData.organizationName)
+      console.log('🔧 Login: Sanitized org name:', sanitizedOrgName)
       console.log('🔧 Login: Admin email:', requestData.adminEmail)
 
-      const docRef = await addDoc(collection(db, 'organizationRequests'), requestData)
-      console.log('✅ Organization request submitted with ID:', docRef.id)
+      // Create organization request with sanitized organization name as document ID
+      const docRef = doc(db, 'organizationRequests', sanitizedOrgName)
+      await setDoc(docRef, requestData)
+      console.log('✅ Organization request submitted with ID:', sanitizedOrgName)
       
       // Send notification to platform admin
       try {
         await notificationService.sendOrganizationRequestNotification({
           ...requestData,
-          id: docRef.id
+          id: sanitizedOrgName
         })
         console.log('✅ Notification sent to platform admin')
       } catch (notificationError) {

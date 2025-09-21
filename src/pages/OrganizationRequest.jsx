@@ -175,18 +175,27 @@ export default function OrganizationRequest() {
         updatedAt: serverTimestamp()
       }
 
+      // Sanitize organization name for use as document ID
+      const sanitizedOrgName = requestData.organizationName
+        .replace(/[^a-zA-Z0-9\s-_]/g, '') // Remove special characters except spaces, hyphens, underscores
+        .replace(/\s+/g, '_') // Replace spaces with underscores
+        .toLowerCase() // Convert to lowercase
+      
       console.log('🔧 OrganizationRequest: Submitting organization request with data:', requestData)
       console.log('🔧 OrganizationRequest: Organization name:', requestData.organizationName)
+      console.log('🔧 OrganizationRequest: Sanitized org name:', sanitizedOrgName)
       console.log('🔧 OrganizationRequest: Admin email:', requestData.adminEmail)
 
-      const docRef = await addDoc(collection(db, 'organizationRequests'), requestData)
-      console.log('✅ Organization request submitted with ID:', docRef.id)
+      // Create organization request with sanitized organization name as document ID
+      const docRef = doc(db, 'organizationRequests', sanitizedOrgName)
+      await setDoc(docRef, requestData)
+      console.log('✅ Organization request submitted with ID:', sanitizedOrgName)
       
       // Send notification to platform admin
       try {
         await notificationService.sendOrganizationRequestNotification({
           ...requestData,
-          id: docRef.id
+          id: sanitizedOrgName
         })
         console.log('✅ Notification sent to platform admin')
       } catch (notificationError) {
