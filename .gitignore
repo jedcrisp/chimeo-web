@@ -45,3 +45,4 @@ firebase-debug.*.log
 
 # Vite
 .vite/
+.env
