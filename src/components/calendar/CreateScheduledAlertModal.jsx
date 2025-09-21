@@ -46,10 +46,15 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
 
   // Auto-set user's organization and fetch groups when modal opens
   useEffect(() => {
+    console.log('🔍 CreateScheduledAlertModal: useEffect triggered', { isOpen, userProfile })
+    
     if (isOpen && userProfile?.organizations?.length > 0) {
       // Get the user's organization ID
       const organizationId = userProfile.organizations[0]
       const orgIdString = typeof organizationId === 'string' ? organizationId : String(organizationId)
+      
+      console.log('🔍 CreateScheduledAlertModal: Using organization ID:', orgIdString)
+      console.log('🔍 CreateScheduledAlertModal: Querying path: /organizations/' + orgIdString + '/groups')
       
       // Convert organization ID to readable name
       const organizationName = orgIdString.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
@@ -62,16 +67,20 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
       
       // Fetch groups for the user's organization
       fetchGroupsForOrganization(orgIdString)
+    } else {
+      console.log('🔍 CreateScheduledAlertModal: Not fetching groups - isOpen:', isOpen, 'userProfile.organizations:', userProfile?.organizations)
     }
   }, [isOpen, userProfile])
 
   // Fetch groups for a specific organization
   const fetchGroupsForOrganization = async (organizationId) => {
     try {
+      console.log('🔍 CreateScheduledAlertModal: Fetching groups for:', organizationId)
       const groups = await groupService.getGroupsForOrganization(organizationId)
+      console.log('🔍 CreateScheduledAlertModal: Groups received:', groups)
       setAvailableGroups(groups)
     } catch (error) {
-      console.error('Error fetching groups:', error)
+      console.error('❌ CreateScheduledAlertModal: Error fetching groups:', error)
       setAvailableGroups([])
     }
   }
