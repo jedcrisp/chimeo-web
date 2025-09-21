@@ -52,6 +52,36 @@ export const onScheduledAlertCreated = functions.firestore
     }
   })
 
+// Database trigger for regular alerts created from web app
+export const onAlertCreated = functions.firestore
+  .document('organizations/{organizationId}/alerts/{alertId}')
+  .onCreate(async (snap, context) => {
+    const alertData = snap.data()
+    const organizationId = context.params.organizationId
+    const alertId = context.params.alertId
+    
+    console.log(`🔔 Database trigger: New alert created: ${alertData.title}`)
+    console.log(`🔔 Alert data:`, alertData)
+    
+    try {
+      // Get organization data
+      const orgDoc = await db.collection('organizations').doc(organizationId).get()
+      const orgData = orgDoc.data()
+      const organizationName = orgData?.name || 'Unknown Organization'
+      
+      // Send push notification
+      await sendPushNotification({
+        ...alertData,
+        organizationName: organizationName
+      })
+      
+      console.log(`✅ Successfully processed alert: ${alertData.title}`)
+    } catch (error) {
+      console.error(`❌ Error processing alert ${alertData.title}:`, error)
+      // Don't throw here, alert was created successfully
+    }
+  })
+
 // HTTP function for manual processing (backup)
 export const processAlertsManually = functions.https.onRequest(async (req, res) => {
   console.log('🔧 Manual processing triggered via HTTP')
@@ -262,7 +292,8 @@ export const healthCheck = functions.https.onRequest(async (req, res) => {
     timestamp: new Date().toISOString(),
     functions: {
       scheduled: 'processScheduledAlerts',
-      database: 'onScheduledAlertCreated',
+      scheduledDatabase: 'onScheduledAlertCreated',
+      regularDatabase: 'onAlertCreated',
       manual: 'processAlertsManually',
       cron: 'cronJobBackup'
     }

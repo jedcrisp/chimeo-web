@@ -14,33 +14,12 @@ import Calendar from './pages/Calendar'
 import Profile from './pages/Profile'
 import OrganizationRequest from './pages/OrganizationRequest'
 import ProtectedRoute from './components/ProtectedRoute'
-import notificationService from './services/notificationService'
 import emailService from './services/emailService'
 import globalScheduledAlertProcessor from './services/globalScheduledAlertProcessor'
 
 function App() {
   useEffect(() => {
-    // Initialize push notifications and email service when app starts
-    const initNotifications = async () => {
-      try {
-        console.log('🚀 Initializing push notifications...')
-        const success = await notificationService.initialize()
-        
-        if (success) {
-          console.log('✅ Push notifications initialized successfully')
-        } else {
-          console.log('⚠️ Push notifications not available - continuing without them')
-          console.log('💡 This is normal if:')
-          console.log('  - Running on HTTP instead of HTTPS (in production)')
-          console.log('  - Browser doesn\'t support push notifications')
-          console.log('  - User denied notification permissions')
-        }
-      } catch (error) {
-        console.error('❌ Failed to initialize push notifications:', error)
-        console.log('⚠️ App will continue without push notifications')
-      }
-    }
-
+    // Initialize email service when app starts
     const initEmailService = async () => {
       try {
         console.log('🚀 Initializing email service...')
@@ -62,7 +41,6 @@ function App() {
 
     // Wait longer for Firebase to fully initialize
     const timer = setTimeout(() => {
-      initNotifications()
       initEmailService()
       
       // Start global scheduled alert processor

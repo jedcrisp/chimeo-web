@@ -194,50 +194,9 @@ export function AlertProvider({ children }) {
         priority: alertData.priority || 'Normal'
       }
 
-      // Send push notification for web app users
-      try {
-        console.log('🔔 AlertContext: Attempting to send push notification...')
-        const notificationService = (await import('../services/notificationService')).default
-        console.log('🔔 AlertContext: Notification service imported successfully')
-        
-        // Check if notification service is initialized
-        console.log('🔔 AlertContext: Notification service status:', {
-          initialized: notificationService.isInitialized(),
-          isSupported: notificationService.isNotificationsSupported(),
-          currentToken: notificationService.getCurrentToken()
-        })
-        
-        // If not initialized, try to initialize it
-        if (!notificationService.isInitialized()) {
-          console.log('🔔 AlertContext: Notification service not initialized, attempting to initialize...')
-          const initSuccess = await notificationService.initialize()
-          console.log('🔔 AlertContext: Notification service initialization result:', initSuccess)
-        }
-        
-        console.log('🔔 AlertContext: Sending notification with payload:', notificationPayload)
-        
-        // Try to send notification via Firebase Messaging first
-        try {
-          await notificationService.sendAlertNotification(notificationPayload)
-          console.log('✅ Push notification sent for web app users')
-        } catch (firebaseError) {
-          console.warn('⚠️ Firebase notification failed, trying simple notification:', firebaseError)
-          // Fallback to simple browser notification
-          const simpleNotificationSuccess = await notificationService.showSimpleNotification(
-            'New Alert Created',
-            `${notificationPayload.title}: ${notificationPayload.message}`
-          )
-          if (simpleNotificationSuccess) {
-            console.log('✅ Simple notification sent successfully')
-          } else {
-            console.log('⚠️ Simple notification also failed')
-          }
-        }
-      } catch (notificationError) {
-        console.error('❌ Failed to send push notification:', notificationError)
-        console.error('❌ Notification error details:', notificationError.message)
-        // Don't fail the alert creation if notification fails
-      }
+      // Note: Push notifications are handled by Cloud Functions
+      // The web app only creates the alert in Firestore
+      console.log('📝 Alert created in Firestore - Cloud Functions will handle push notifications')
 
       // Send email notification to platform admin
       try {

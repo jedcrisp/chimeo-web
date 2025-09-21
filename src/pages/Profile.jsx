@@ -6,7 +6,6 @@ import toast from 'react-hot-toast'
 import { doc, updateDoc, serverTimestamp, getDoc, collection, query, getDocs, orderBy } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import adminService from '../services/adminService'
-import notificationService from '../services/notificationService'
 
 export default function Profile() {
   const { userProfile, currentUser, loading } = useAuth()
@@ -101,36 +100,8 @@ export default function Profile() {
   // Test FCM token functionality
   const testFCMToken = async () => {
     try {
-      console.log('🧪 Testing FCM token functionality...')
-      
-      // Initialize notification service
-      const success = await notificationService.initialize()
-      if (!success) {
-        toast.error('Failed to initialize notification service')
-        return
-      }
-      
-      // Get FCM token
-      const token = await notificationService.getToken()
-      if (token) {
-        console.log('✅ FCM Token obtained:', token)
-        toast.success(`FCM Token: ${token.substring(0, 20)}...`)
-        
-        // Check if token was saved to user profile
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid))
-        if (userDoc.exists()) {
-          const userData = userDoc.data()
-          if (userData.fcmToken) {
-            console.log('✅ FCM Token saved to user profile')
-            toast.success('FCM Token saved successfully!')
-          } else {
-            console.log('❌ FCM Token not found in user profile')
-            toast.error('FCM Token not saved to profile')
-          }
-        }
-      } else {
-        toast.error('Failed to get FCM token')
-      }
+      console.log('🧪 FCM tokens are now managed by Cloud Functions')
+      toast.info('FCM tokens are managed by Cloud Functions - no client-side testing needed')
     } catch (error) {
       console.error('❌ Error testing FCM token:', error)
       toast.error('FCM token test failed')
