@@ -61,19 +61,25 @@ export default function Dashboard() {
     try {
       // Fetch notifications from the user-specific path
       const sanitizedEmail = 'jed@onetrack-consulting.com'.replace(/[^a-zA-Z0-9]/g, '_')
+      const notificationPath = `notifications/${sanitizedEmail}/user_notifications`
+      console.log('🔍 Dashboard: Fetching notifications from path:', notificationPath)
+      
       const notificationsQuery = query(
         collection(db, 'notifications', sanitizedEmail, 'user_notifications'),
         orderBy('createdAt', 'desc'),
         limit(5)
       )
       const notificationsSnapshot = await getDocs(notificationsQuery)
+      console.log('🔍 Dashboard: Found', notificationsSnapshot.docs.length, 'notifications')
+      
       const notificationsData = notificationsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }))
+      console.log('🔍 Dashboard: Notifications data:', notificationsData)
       setNotifications(notificationsData)
     } catch (error) {
-      console.error('Error fetching notifications:', error)
+      console.error('❌ Dashboard: Error fetching notifications:', error)
     }
   }
 

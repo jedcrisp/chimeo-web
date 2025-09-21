@@ -253,6 +253,10 @@ class NotificationService {
       // Add to notifications collection under the target user's email
       const sanitizedEmail = 'jed@onetrack-consulting.com'.replace(/[^a-zA-Z0-9]/g, '_')
       const notificationId = `org_request_${Date.now()}`
+      const notificationPath = `notifications/${sanitizedEmail}/user_notifications/${notificationId}`
+      console.log('🔍 Saving notification to path:', notificationPath)
+      console.log('🔍 Notification data:', notificationData)
+      
       await setDoc(doc(db, 'notifications', sanitizedEmail, 'user_notifications', notificationId), notificationData)
       console.log('✅ Organization request notification record saved to Firestore under user email')
 
