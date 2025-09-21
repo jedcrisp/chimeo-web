@@ -67,7 +67,7 @@ export default function Organizations() {
     }
     
     // If location is an object, format it
-    if (typeof location === 'object') {
+    if (typeof location === 'object' && location !== null) {
       const parts = []
       
       if (location.address) parts.push(location.address)
@@ -76,6 +76,12 @@ export default function Organizations() {
       if (location.zipCode) parts.push(location.zipCode)
       
       return parts.length > 0 ? parts.join(', ') : 'Location available'
+    }
+    
+    // Fallback: convert to string if it's not null/undefined
+    if (location !== null && location !== undefined) {
+      console.warn('Unexpected location type:', typeof location, location)
+      return String(location)
     }
     
     return null
@@ -243,7 +249,7 @@ export default function Organizations() {
                       <p className="text-sm text-gray-600 mt-1">{org.description || 'No description'}</p>
                       
                       <div className="mt-4 space-y-2">
-                        {formattedLocation && (
+                        {formattedLocation && typeof formattedLocation === 'string' && (
                           <div className="flex items-center text-sm text-gray-500">
                             <MapPin className="h-4 w-4 mr-2" />
                             {formattedLocation}
@@ -347,7 +353,7 @@ export default function Organizations() {
                       <p className="text-sm text-gray-600 mt-1">{org.description || 'No description'}</p>
                       
                       <div className="mt-4 space-y-2">
-                        {formattedLocation && (
+                        {formattedLocation && typeof formattedLocation === 'string' && (
                           <div className="flex items-center text-sm text-gray-500">
                             <MapPin className="h-4 w-4 mr-2" />
                             {formattedLocation}
