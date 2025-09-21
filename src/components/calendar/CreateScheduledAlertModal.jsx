@@ -46,43 +46,32 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
 
   // Auto-set user's organization and fetch groups when modal opens
   useEffect(() => {
-    console.log('🔍 CreateScheduledAlertModal: useEffect triggered', { isOpen, userProfile })
-    console.log('🔍 CreateScheduledAlertModal: Full userProfile:', JSON.stringify(userProfile, null, 2))
-    
     if (isOpen && userProfile?.organizations?.length > 0) {
-      const organizationId = userProfile.organizations[0] // Use first organization
-      console.log('🔍 CreateScheduledAlertModal: User organizations:', userProfile.organizations)
-      console.log('🔍 CreateScheduledAlertModal: Selected organization ID:', organizationId)
-      
-      // Ensure organizationId is a string
+      // Get the user's organization ID
+      const organizationId = userProfile.organizations[0]
       const orgIdString = typeof organizationId === 'string' ? organizationId : String(organizationId)
-      console.log('🔍 CreateScheduledAlertModal: Organization ID string:', orgIdString)
-      console.log('🔍 CreateScheduledAlertModal: Expected path: /organizations/' + orgIdString + '/groups')
-      console.log('🔍 CreateScheduledAlertModal: Actual group path: /organizations/velocity_physical_therapy_north_denton/groups/test')
-      console.log('🔍 CreateScheduledAlertModal: IDs match?', orgIdString === 'velocity_physical_therapy_north_denton')
+      
+      // Convert organization ID to readable name
+      const organizationName = orgIdString.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
       
       setFormData(prev => ({
         ...prev,
         organizationId: orgIdString,
-        organizationName: orgIdString.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) // Convert ID to readable name
+        organizationName: organizationName
       }))
       
       // Fetch groups for the user's organization
       fetchGroupsForOrganization(orgIdString)
-    } else {
-      console.log('🔍 CreateScheduledAlertModal: Not fetching groups - isOpen:', isOpen, 'userProfile.organizations:', userProfile?.organizations)
     }
   }, [isOpen, userProfile])
 
   // Fetch groups for a specific organization
   const fetchGroupsForOrganization = async (organizationId) => {
     try {
-      console.log('🔍 CreateScheduledAlertModal: Fetching groups for organization:', organizationId)
       const groups = await groupService.getGroupsForOrganization(organizationId)
-      console.log('🔍 CreateScheduledAlertModal: Groups received:', groups)
       setAvailableGroups(groups)
     } catch (error) {
-      console.error('❌ CreateScheduledAlertModal: Error fetching groups:', error)
+      console.error('Error fetching groups:', error)
       setAvailableGroups([])
     }
   }
@@ -394,32 +383,6 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
                 </div>
               )}
               
-              {/* Debug section */}
-              <div className="mt-2 space-y-2">
-                <div className="text-xs bg-gray-100 p-2 rounded">
-                  <div><strong>User Profile Organizations:</strong> {JSON.stringify(userProfile?.organizations)}</div>
-                  <div><strong>Current Organization ID:</strong> {formData.organizationId}</div>
-                  <div><strong>Available Groups Count:</strong> {availableGroups.length}</div>
-                </div>
-                
-                <button
-                  type="button"
-                  onClick={async () => {
-                    console.log('🔍 Manual test: Trying to fetch groups for velocity_physical_therapy_north_denton');
-                    try {
-                      const groups = await groupService.getGroupsForOrganization('velocity_physical_therapy_north_denton');
-                      console.log('🔍 Manual test result:', groups);
-                      alert(`Found ${groups.length} groups: ${groups.map(g => g.name).join(', ')}`);
-                    } catch (error) {
-                      console.error('❌ Manual test error:', error);
-                      alert('Error: ' + error.message);
-                    }
-                  }}
-                  className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200"
-                >
-                  Test: Fetch Groups for velocity_physical_therapy_north_denton
-                </button>
-              </div>
             </div>
 
 
