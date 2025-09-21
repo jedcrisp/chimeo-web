@@ -180,18 +180,26 @@ export function AlertProvider({ children }) {
       console.log('✅ Alert created in organization alerts subcollection:', webAlertRef.id)
       console.log('✅ Alert payload for web app:', alertPayload)
 
+      // Prepare notification payload for both push and email notifications
+      const notificationPayload = {
+        id: webAlertRef.id,
+        title: alertData.title,
+        message: alertData.message,
+        organizationId: organizationId,
+        organizationName: organizationInfo?.name || 'Unknown Organization',
+        createdBy: currentUser?.displayName || currentUser?.email || 'Unknown User',
+        groupName: alertData.groupName || 'All Groups',
+        location: alertData.location || 'Not specified',
+        type: alertData.type || 'general',
+        priority: alertData.priority || 'Normal'
+      }
+
       // Send push notification for web app users
       try {
         console.log('🔔 AlertContext: Attempting to send push notification...')
         const notificationService = (await import('../services/notificationService')).default
         console.log('🔔 AlertContext: Notification service imported successfully')
         
-        const notificationPayload = {
-          id: webAlertRef.id,
-          title: alertData.title,
-          message: alertData.message,
-          organizationId: organizationId
-        }
         console.log('🔔 AlertContext: Sending notification with payload:', notificationPayload)
         
         await notificationService.sendAlertNotification(notificationPayload)
