@@ -1,4 +1,4 @@
-// Email notification service with fallback for browser compatibility
+// Email notification service using EmailJS (browser-compatible)
 // This service handles sending email notifications for important events
 
 class EmailService {
@@ -6,25 +6,53 @@ class EmailService {
     this.isInitialized = false
     this.fromEmail = 'noreply@chimeo.com'
     this.platformAdminEmail = 'jed@onetrack-consulting.com'
+    this.serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_chimeo'
+    this.templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_org_request'
+    this.publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'YOUR_EMAILJS_PUBLIC_KEY'
+    this.emailjs = null
   }
 
-  // Initialize email service (always succeeds for fallback mode)
+  // Initialize EmailJS service
   async initialize() {
     try {
-      console.log('🔧 Email Service: Initializing fallback email service...')
-      console.log('🔧 Email Service: CORS-safe mode enabled')
+      console.log('🔧 Email Service: Initializing EmailJS service...')
       
-      this.isInitialized = true
-      console.log('✅ Email service initialized successfully (fallback mode)')
-      console.log('📧 Emails will be logged to console for manual sending')
+      // Load EmailJS from CDN
+      if (typeof window !== 'undefined' && !window.emailjs) {
+        console.log('🔧 Loading EmailJS from CDN...')
+        const script = document.createElement('script')
+        script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js'
+        script.onload = () => {
+          console.log('✅ EmailJS loaded successfully')
+          this.emailjs = window.emailjs
+          this.emailjs.init(this.publicKey)
+          this.isInitialized = true
+          console.log('✅ EmailJS service initialized successfully')
+        }
+        script.onerror = () => {
+          console.warn('⚠️ Failed to load EmailJS, falling back to console logging')
+          this.isInitialized = true
+        }
+        document.head.appendChild(script)
+      } else if (window.emailjs) {
+        this.emailjs = window.emailjs
+        this.emailjs.init(this.publicKey)
+        this.isInitialized = true
+        console.log('✅ EmailJS service initialized successfully')
+      } else {
+        console.warn('⚠️ EmailJS not available, falling back to console logging')
+        this.isInitialized = true
+      }
+      
       return true
     } catch (error) {
       console.error('❌ Failed to initialize email service:', error)
-      return false
+      this.isInitialized = true // Still allow fallback mode
+      return true
     }
   }
 
-  // Helper method to send email (fallback mode - logs to console)
+  // Helper method to send email via EmailJS or fallback to console
   async sendEmail(to, subject, htmlContent, textContent = null) {
     try {
       if (!this.isInitialized) {
@@ -32,6 +60,33 @@ class EmailService {
         return false
       }
 
+      // Try EmailJS first if available
+      if (this.emailjs && this.publicKey !== 'YOUR_EMAILJS_PUBLIC_KEY') {
+        try {
+          console.log('📧 Sending email via EmailJS...')
+          
+          const templateParams = {
+            to_email: to,
+            from_name: 'Chimeo Platform',
+            subject: subject,
+            message: textContent || htmlContent,
+            html_message: htmlContent
+          }
+
+          const result = await this.emailjs.send(
+            this.serviceId,
+            this.templateId,
+            templateParams
+          )
+          
+          console.log('✅ Email sent successfully via EmailJS:', result)
+          return true
+        } catch (emailjsError) {
+          console.warn('⚠️ EmailJS failed, falling back to console logging:', emailjsError)
+        }
+      }
+
+      // Fallback to console logging
       console.log('📧 ===== EMAIL NOTIFICATION =====')
       console.log('📧 To:', to)
       console.log('📧 Subject:', subject)
@@ -51,7 +106,7 @@ class EmailService {
       console.log('📧 MANUAL EMAIL INSTRUCTIONS:')
       console.log('📧 1. Copy the email content above')
       console.log('📧 2. Send manually to:', to)
-      console.log('📧 3. Or set up EmailJS/other service for automatic sending')
+      console.log('📧 3. Or set up EmailJS with your public key for automatic sending')
       console.log('📧 ================================')
 
       // Simulate successful sending
@@ -59,7 +114,7 @@ class EmailService {
       return true
 
     } catch (error) {
-      console.error('❌ Failed to log email:', error)
+      console.error('❌ Failed to send email:', error)
       return false
     }
   }
@@ -265,7 +320,10 @@ Chimeo Platform
       console.log('🧪 Starting test email send...')
       console.log('🧪 Email service status:', {
         initialized: this.isInitialized,
-        apiKey: this.apiKey ? 'Present' : 'Missing',
+        emailjs: this.emailjs ? 'Available' : 'Not available',
+        serviceId: this.serviceId,
+        templateId: this.templateId,
+        publicKey: this.publicKey !== 'YOUR_EMAILJS_PUBLIC_KEY' ? 'Configured' : 'Not configured',
         fromEmail: this.fromEmail
       })
       
@@ -278,11 +336,14 @@ Chimeo Platform
           
           <div style="background-color: #e7f3ff; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #007bff;">
             <h3 style="margin-top: 0; color: #0056b3;">Test Details</h3>
-            <p><strong>Service:</strong> SendGrid Email Service</p>
+            <p><strong>Service:</strong> EmailJS Email Service</p>
             <p><strong>Status:</strong> ✅ Working</p>
             <p><strong>Test Date:</strong> ${new Date().toLocaleDateString()}</p>
             <p><strong>Test Time:</strong> ${new Date().toLocaleTimeString()}</p>
-            <p><strong>API Key:</strong> ${this.apiKey ? 'Configured' : 'Missing'}</p>
+            <p><strong>EmailJS:</strong> ${this.emailjs ? 'Available' : 'Not available'}</p>
+            <p><strong>Service ID:</strong> ${this.serviceId}</p>
+            <p><strong>Template ID:</strong> ${this.templateId}</p>
+            <p><strong>Public Key:</strong> ${this.publicKey !== 'YOUR_EMAILJS_PUBLIC_KEY' ? 'Configured' : 'Not configured'}</p>
           </div>
           
           <p>If you received this email, the email notification system is working correctly!</p>
@@ -299,11 +360,14 @@ Hello Platform Admin,
 This is a test email to verify that email notifications are working correctly.
 
 Test Details:
-- Service: SendGrid Email Service
+- Service: EmailJS Email Service
 - Status: ✅ Working
 - Test Date: ${new Date().toLocaleDateString()}
 - Test Time: ${new Date().toLocaleTimeString()}
-- API Key: ${this.apiKey ? 'Configured' : 'Missing'}
+- EmailJS: ${this.emailjs ? 'Available' : 'Not available'}
+- Service ID: ${this.serviceId}
+- Template ID: ${this.templateId}
+- Public Key: ${this.publicKey !== 'YOUR_EMAILJS_PUBLIC_KEY' ? 'Configured' : 'Not configured'}
 
 If you received this email, the email notification system is working correctly!
 

@@ -79,19 +79,27 @@ export default function OrganizationRequest() {
           orderBy('createdAt', 'desc')
         )
       } else {
-        // Regular users see only their own requests
+        // Regular users see their own requests and requests with null userId (from non-logged-in submissions)
+        // We need to fetch all requests and filter client-side since Firestore doesn't support null in 'in' queries
         requestsQuery = query(
           collection(db, 'organizationRequests'),
-          where('userId', '==', currentUser.uid)
+          orderBy('createdAt', 'desc')
         )
       }
       
       const requestsSnapshot = await getDocs(requestsQuery)
       
-      const requestsData = requestsSnapshot.docs.map(doc => ({
+      let requestsData = requestsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }))
+      
+      // Filter for regular users (show their own requests + null userId requests)
+      if (!isPlatformAdmin) {
+        requestsData = requestsData.filter(request => 
+          request.userId === currentUser.uid || request.userId === null
+        )
+      }
       
       console.log('🔧 OrganizationRequest: Fetched requests:', requestsData)
       requestsData.forEach((request, index) => {
@@ -99,7 +107,8 @@ export default function OrganizationRequest() {
           id: request.id,
           organizationName: request.organizationName,
           adminEmail: request.adminEmail,
-          status: request.status
+          status: request.status,
+          userId: request.userId
         })
       })
       

@@ -205,6 +205,9 @@ export default function Login() {
       
       toast.success('Organization request submitted successfully! We will review your request and contact you soon.')
       setShowRequestForm(false)
+      
+      // Refresh user requests to show the new request
+      fetchUserRequests()
       setRequestForm({
         organizationName: '',
         organizationType: '',
