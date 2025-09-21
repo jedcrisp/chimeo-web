@@ -32,14 +32,23 @@ export default function Groups() {
     // Debug logging
     console.log('🔍 Groups: userProfile:', userProfile)
     console.log('🔍 Groups: userProfile.organizationId:', userProfile?.organizationId)
+    console.log('🔍 Groups: userProfile.organizations:', userProfile?.organizations)
     console.log('🔍 Groups: current groupForm.organizationId:', groupForm.organizationId)
     
     // Auto-set organization for org admins
-    if (userProfile?.organizationId && !groupForm.organizationId) {
-      console.log('✅ Groups: Auto-setting organization to:', userProfile.organizationId)
+    let orgId = userProfile?.organizationId
+    
+    // Fallback: check organizations array if organizationId is not set
+    if (!orgId && userProfile?.organizations && userProfile.organizations.length > 0) {
+      orgId = userProfile.organizations[0].id
+      console.log('🔍 Groups: Using organization from organizations array:', orgId)
+    }
+    
+    if (orgId && !groupForm.organizationId) {
+      console.log('✅ Groups: Auto-setting organization to:', orgId)
       setGroupForm(prev => ({
         ...prev,
-        organizationId: userProfile.organizationId
+        organizationId: orgId
       }))
     }
   }, [currentUser, organizations, userProfile])
@@ -161,16 +170,25 @@ export default function Groups() {
   const handleOpenAddGroupModal = () => {
     console.log('🔍 Groups: Opening modal - userProfile:', userProfile)
     console.log('🔍 Groups: userProfile.organizationId:', userProfile?.organizationId)
+    console.log('🔍 Groups: userProfile.organizations:', userProfile?.organizations)
     
     // Set organization for org admins when opening modal
-    if (userProfile?.organizationId) {
-      console.log('✅ Groups: Setting organization in modal to:', userProfile.organizationId)
+    let orgId = userProfile?.organizationId
+    
+    // Fallback: check organizations array if organizationId is not set
+    if (!orgId && userProfile?.organizations && userProfile.organizations.length > 0) {
+      orgId = userProfile.organizations[0].id
+      console.log('🔍 Groups: Using organization from organizations array:', orgId)
+    }
+    
+    if (orgId) {
+      console.log('✅ Groups: Setting organization in modal to:', orgId)
       setGroupForm(prev => ({
         ...prev,
-        organizationId: userProfile.organizationId
+        organizationId: orgId
       }))
     } else {
-      console.log('⚠️ Groups: No organizationId found in userProfile')
+      console.log('⚠️ Groups: No organizationId found in userProfile or organizations array')
     }
     setShowAddGroupModal(true)
   }
@@ -373,17 +391,25 @@ export default function Groups() {
                   </label>
                   {(() => {
                     console.log('🔍 Groups: Rendering organization field - userProfile?.organizationId:', userProfile?.organizationId)
+                    console.log('🔍 Groups: userProfile?.organizations:', userProfile?.organizations)
                     console.log('🔍 Groups: groupForm.organizationId:', groupForm.organizationId)
                     
-                    if (userProfile?.organizationId) {
-                      console.log('✅ Groups: Showing read-only organization field')
+                    // Check for organization ID with fallback to organizations array
+                    let orgId = userProfile?.organizationId
+                    if (!orgId && userProfile?.organizations && userProfile.organizations.length > 0) {
+                      orgId = userProfile.organizations[0].id
+                      console.log('🔍 Groups: Using organization from organizations array for rendering:', orgId)
+                    }
+                    
+                    if (orgId) {
+                      console.log('✅ Groups: Showing read-only organization field for orgId:', orgId)
                       return (
                         <div className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-                          {getOrganizationName(userProfile.organizationId)}
+                          {getOrganizationName(orgId)}
                         </div>
                       )
                     } else {
-                      console.log('⚠️ Groups: Showing organization dropdown')
+                      console.log('⚠️ Groups: Showing organization dropdown - no orgId found')
                       return (
                         <select
                           value={groupForm.organizationId}
