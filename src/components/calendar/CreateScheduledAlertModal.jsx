@@ -393,6 +393,33 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
                   Available groups: {availableGroups.map(g => g.name).join(', ')}
                 </div>
               )}
+              
+              {/* Debug section */}
+              <div className="mt-2 space-y-2">
+                <div className="text-xs bg-gray-100 p-2 rounded">
+                  <div><strong>User Profile Organizations:</strong> {JSON.stringify(userProfile?.organizations)}</div>
+                  <div><strong>Current Organization ID:</strong> {formData.organizationId}</div>
+                  <div><strong>Available Groups Count:</strong> {availableGroups.length}</div>
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={async () => {
+                    console.log('🔍 Manual test: Trying to fetch groups for velocity_physical_therapy_north_denton');
+                    try {
+                      const groups = await groupService.getGroupsForOrganization('velocity_physical_therapy_north_denton');
+                      console.log('🔍 Manual test result:', groups);
+                      alert(`Found ${groups.length} groups: ${groups.map(g => g.name).join(', ')}`);
+                    } catch (error) {
+                      console.error('❌ Manual test error:', error);
+                      alert('Error: ' + error.message);
+                    }
+                  }}
+                  className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200"
+                >
+                  Test: Fetch Groups for velocity_physical_therapy_north_denton
+                </button>
+              </div>
             </div>
 
 
