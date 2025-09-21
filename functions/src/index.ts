@@ -218,33 +218,38 @@ async function processSingleScheduledAlert(
 // Send push notification
 async function sendPushNotification(alertData: any): Promise<void> {
   try {
-    // Get all users in the organization
+    // First, let's get all users and check their FCM tokens
+    // We'll look for users who might be associated with this organization
     const usersSnapshot = await db
       .collection('users')
-      .where('organizationId', '==', alertData.organizationId)
       .get()
 
     if (usersSnapshot.empty) {
-      console.log('No users found for organization:', alertData.organizationId)
+      console.log('No users found in database')
       return
     }
 
-    // Extract FCM tokens from user documents
+    console.log(`Checking ${usersSnapshot.docs.length} users for FCM tokens`)
+
+    // Extract FCM tokens from all user documents
     const tokens = usersSnapshot.docs
       .map(doc => {
         const userData = doc.data()
-        console.log(`User ${doc.id} FCM token:`, userData.fcmToken ? 'Present' : 'Missing')
-        return userData.fcmToken
+        const hasToken = userData.fcmToken && userData.fcmToken.trim() !== ''
+        console.log(`User ${doc.id} FCM token:`, hasToken ? 'Present' : 'Missing')
+        if (hasToken) {
+          console.log(`  - Token: ${userData.fcmToken.substring(0, 20)}...`)
+        }
+        return hasToken ? userData.fcmToken : null
       })
-      .filter(token => token && token.trim() !== '')
+      .filter(token => token !== null)
     
     if (tokens.length === 0) {
-      console.log('No valid FCM tokens found in user documents for organization:', alertData.organizationId)
-      console.log(`Checked ${usersSnapshot.docs.length} users`)
+      console.log('No valid FCM tokens found in any user documents')
       return
     }
 
-    console.log(`Found ${tokens.length} FCM tokens for organization:`, alertData.organizationId)
+    console.log(`Found ${tokens.length} FCM tokens total`)
 
     const message = {
       notification: {
