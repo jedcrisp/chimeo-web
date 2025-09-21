@@ -15,6 +15,7 @@ import Profile from './pages/Profile'
 import OrganizationRequest from './pages/OrganizationRequest'
 import ProtectedRoute from './components/ProtectedRoute'
 import emailService from './services/emailService'
+import notificationService from './services/notificationService'
 import globalScheduledAlertProcessor from './services/globalScheduledAlertProcessor'
 
 function App() {
@@ -39,9 +40,31 @@ function App() {
       }
     }
 
+    // Initialize notification service when app starts
+    const initNotificationService = async () => {
+      try {
+        console.log('🚀 Initializing notification service...')
+        const success = await notificationService.initialize()
+        
+        if (success) {
+          console.log('✅ Notification service initialized successfully')
+        } else {
+          console.log('⚠️ Notification service not available - continuing without push notifications')
+          console.log('💡 To enable push notifications:')
+          console.log('  - Ensure you are running on HTTPS (required for production)')
+          console.log('  - Check that Firebase Cloud Messaging is enabled in Firebase Console')
+          console.log('  - Verify service worker is properly registered')
+        }
+      } catch (error) {
+        console.error('❌ Failed to initialize notification service:', error)
+        console.log('⚠️ App will continue without push notifications')
+      }
+    }
+
     // Wait longer for Firebase to fully initialize
     const timer = setTimeout(() => {
       initEmailService()
+      initNotificationService()
       
       // Start global scheduled alert processor
       console.log('🚀 Starting global scheduled alert processor...')

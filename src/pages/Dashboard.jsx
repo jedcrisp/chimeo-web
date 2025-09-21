@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom'
 import adminService from '../services/adminService'
 import groupService from '../services/groupService'
 import emailService from '../services/emailService'
+import NotificationDebug from '../components/NotificationDebug'
 import { useState, useEffect } from 'react'
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore'
 import { db } from '../services/firebase'
@@ -325,6 +326,13 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+        
+        {/* Notification Debug Component - Only show for platform admin */}
+        {isPlatformAdmin && (
+          <div className="mt-8">
+            <NotificationDebug />
           </div>
         )}
       </div>

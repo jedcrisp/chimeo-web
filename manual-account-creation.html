@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Account Creation - acrisp@velocity-pt.com</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Manual Account Creation</h1>
+        <p>This tool will manually create the missing user account for <strong>acrisp@velocity-pt.com</strong></p>
+        
+        <form id="accountForm">
+            <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input type="email" id="email" value="acrisp@velocity-pt.com" required readonly>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password *</label>
+                <input type="password" id="password" required placeholder="Enter a secure password">
+            </div>
+            
+            <div class="form-group">
+                <label for="firstName">First Name *</label>
+                <input type="text" id="firstName" required placeholder="Enter first name">
+            </div>
+            
+            <div class="form-group">
+                <label for="lastName">Last Name *</label>
+                <input type="text" id="lastName" required placeholder="Enter last name">
+            </div>
+            
+            <div class="form-group">
+                <label for="organizationName">Organization Name *</label>
+                <input type="text" id="organizationName" required placeholder="Enter organization name">
+            </div>
+            
+            <div class="form-group">
+                <label for="organizationType">Organization Type</label>
+                <select id="organizationType">
+                    <option value="business">Business</option>
+                    <option value="nonprofit">Non-profit</option>
+                    <option value="government">Government</option>
+                    <option value="education">Education</option>
+                    <option value="healthcare">Healthcare</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" placeholder="Enter phone number">
+            </div>
+            
+            <div class="form-group">
+                <label for="address">Address</label>
+                <textarea id="address" rows="3" placeholder="Enter full address"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="city">City</label>
+                <input type="text" id="city" placeholder="Enter city">
+            </div>
+            
+            <div class="form-group">
+                <label for="state">State</label>
+                <input type="text" id="state" placeholder="Enter state">
+            </div>
+            
+            <div class="form-group">
+                <label for="zipCode">ZIP Code</label>
+                <input type="text" id="zipCode" placeholder="Enter ZIP code">
+            </div>
+            
+            <div class="form-group">
+                <label for="website">Website</label>
+                <input type="url" id="website" placeholder="https://example.com">
+            </div>
+            
+            <button type="submit" id="createButton">Create Account</button>
+            <button type="button" id="checkButton">Check Existing</button>
+        </form>
+        
+        <div id="status" class="status"></div>
+        <div id="log" class="log" style="display: none;"></div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'
+        import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js'
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js'
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyA96jGLzCUMVe9FHHS1lQ8vdbi8DFhAs6o",
+            authDomain: "chimeo-96dfc.firebaseapp.com",
+            databaseURL: "https://chimeo-96dfc-default-rtdb.firebaseio.com",
+            projectId: "chimeo-96dfc",
+            storageBucket: "chimeo-96dfc.firebasestorage.app",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        }
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig)
+        const auth = getAuth(app)
+        const db = getFirestore(app)
+
+        const form = document.getElementById('accountForm')
+        const createButton = document.getElementById('createButton')
+        const checkButton = document.getElementById('checkButton')
+        const status = document.getElementById('status')
+        const log = document.getElementById('log')
+
+        function showStatus(message, type) {
+            status.textContent = message
+            status.className = `status ${type}`
+            status.style.display = 'block'
+        }
+
+        function addLog(message) {
+            log.style.display = 'block'
+            log.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n'
+            log.scrollTop = log.scrollHeight
+        }
+
+        async function checkExisting() {
+            addLog('Checking for existing account...')
+            
+            try {
+                const email = document.getElementById('email').value
+                
+                // Check if user exists in Firebase Auth
+                try {
+                    await createUserWithEmailAndPassword(auth, email, 'dummy-password')
+                    addLog('❌ User already exists in Firebase Auth')
+                    showStatus('User already exists in Firebase Auth!', 'error')
+                    return
+                } catch (authError) {
+                    if (authError.code === 'auth/email-already-in-use') {
+                        addLog('❌ User already exists in Firebase Auth')
+                        showStatus('User already exists in Firebase Auth!', 'error')
+                        return
+                    } else if (authError.code === 'auth/user-not-found') {
+                        addLog('✅ User does not exist in Firebase Auth')
+                    } else {
+                        addLog('⚠️ Auth check error: ' + authError.message)
+                    }
+                }
+
+                // Check Firestore user profile
+                const usersSnapshot = await getDocs(collection(db, 'users'))
+                let foundUser = null
+                for (const doc of usersSnapshot.docs) {
+                    const data = doc.data()
+                    if (data.email === email) {
+                        foundUser = { id: doc.id, ...data }
+                        break
+                    }
+                }
+
+                if (foundUser) {
+                    addLog('❌ User profile already exists in Firestore')
+                    addLog('User ID: ' + foundUser.id)
+                    addLog('Organization ID: ' + (foundUser.organizationId || 'Not set'))
+                    showStatus('User profile already exists in Firestore!', 'error')
+                } else {
+                    addLog('✅ User profile does not exist in Firestore')
+                }
+
+                // Check organization requests
+                const requestsSnapshot = await getDocs(collection(db, 'organizationRequests'))
+                let foundRequest = null
+                for (const doc of requestsSnapshot.docs) {
+                    const data = doc.data()
+                    if (data.adminEmail === email) {
+                        foundRequest = { id: doc.id, ...data }
+                        break
+                    }
+                }
+
+                if (foundRequest) {
+                    addLog('📋 Found organization request:')
+                    addLog('  ID: ' + foundRequest.id)
+                    addLog('  Organization: ' + foundRequest.organizationName)
+                    addLog('  Status: ' + foundRequest.status)
+                    addLog('  Admin Account Created: ' + (foundRequest.adminAccountCreated || false))
+                    addLog('  Organization Created: ' + (foundRequest.organizationCreated || false))
+                    
+                    if (foundRequest.status === 'approved' && !foundUser) {
+                        addLog('🚨 ISSUE: Request was approved but user account was not created!')
+                        showStatus('Found approved request but missing user account. Ready to create account.', 'info')
+                    } else if (foundRequest.status === 'pending') {
+                        showStatus('Request is still pending approval.', 'info')
+                    } else {
+                        showStatus('Request found but status is: ' + foundRequest.status, 'info')
+                    }
+                } else {
+                    addLog('❌ No organization request found for this email')
+                    showStatus('No organization request found. You can still create an account manually.', 'info')
+                }
+
+            } catch (error) {
+                addLog('❌ Error checking existing account: ' + error.message)
+                showStatus('Error checking existing account: ' + error.message, 'error')
+            }
+        }
+
+        async function createAccount() {
+            addLog('Starting account creation process...')
+            createButton.disabled = true
+            createButton.textContent = 'Creating...'
+
+            try {
+                const email = document.getElementById('email').value
+                const password = document.getElementById('password').value
+                const firstName = document.getElementById('firstName').value
+                const lastName = document.getElementById('lastName').value
+                const organizationName = document.getElementById('organizationName').value
+                const organizationType = document.getElementById('organizationType').value
+                const phone = document.getElementById('phone').value
+                const address = document.getElementById('address').value
+                const city = document.getElementById('city').value
+                const state = document.getElementById('state').value
+                const zipCode = document.getElementById('zipCode').value
+                const website = document.getElementById('website').value
+
+                addLog('Creating Firebase Auth user...')
+                
+                // Create Firebase Auth user
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+                const user = userCredential.user
+                addLog('✅ Firebase Auth user created: ' + user.uid)
+
+                // Update user profile
+                const fullName = `${firstName} ${lastName}`.trim()
+                await updateProfile(user, {
+                    displayName: fullName
+                })
+                addLog('✅ User profile updated with display name')
+
+                // Sanitize organization name for use as document ID
+                const sanitizedOrgName = organizationName
+                    .replace(/[^a-zA-Z0-9\s-_]/g, '')
+                    .replace(/\s+/g, '_')
+                    .toLowerCase()
+
+                addLog('Creating user profile in Firestore...')
+
+                // Create user profile in Firestore
+                const userProfileData = {
+                    uid: user.uid,
+                    email: email,
+                    displayName: fullName,
+                    firstName: firstName,
+                    lastName: lastName,
+                    name: fullName,
+                    creatorName: fullName,
+                    isOrganizationAdmin: true,
+                    organizationName: organizationName,
+                    organizationId: sanitizedOrgName,
+                    organizationType: organizationType,
+                    phone: phone,
+                    address: address,
+                    city: city,
+                    state: state,
+                    zipCode: zipCode,
+                    website: website,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    adminStatus: 'active',
+                    adminRole: 'organization_admin',
+                    adminPermissions: ['manage_organization', 'manage_users', 'manage_alerts', 'manage_calendar'],
+                    createdFromRequest: 'manual_creation',
+                    approvedBy: 'manual_creation',
+                    approvedAt: new Date()
+                }
+
+                await setDoc(doc(db, 'users', user.uid), userProfileData)
+                addLog('✅ User profile created in Firestore')
+
+                addLog('Creating organization...')
+
+                // Create organization
+                const organizationData = {
+                    name: organizationName,
+                    organizationName: organizationName,
+                    displayName: organizationName,
+                    title: organizationName,
+                    type: organizationType,
+                    address: address,
+                    city: city,
+                    state: state,
+                    zipCode: zipCode,
+                    phone: phone,
+                    email: email,
+                    website: website,
+                    location: {
+                        address: address,
+                        city: city,
+                        state: state,
+                        zipCode: zipCode,
+                        latitude: null,
+                        longitude: null
+                    },
+                    adminId: user.uid,
+                    adminEmail: email,
+                    adminName: fullName,
+                    adminIds: {
+                        [user.uid]: true
+                    },
+                    memberCount: 1,
+                    followerCount: 0,
+                    isActive: true,
+                    status: 'active',
+                    verified: true,
+                    alertCount: 0,
+                    groups: [],
+                    logoURL: null,
+                    isAdmin: true,
+                    recentAlerts: [],
+                    organizationId: sanitizedOrgName,
+                    createdBy: user.uid,
+                    approvedBy: 'manual_creation',
+                    approvedAt: new Date(),
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    createdFromRequest: 'manual_creation',
+                    isPublic: true,
+                    allowJoinRequests: true,
+                    isVisible: true,
+                    isDiscoverable: true,
+                    isFollowable: true,
+                    isJoinable: true,
+                    visibility: 'public',
+                    category: organizationType,
+                    tags: [organizationType.toLowerCase()],
+                    contact: {
+                        phone: phone,
+                        email: email,
+                        website: website
+                    },
+                    social: {
+                        website: website,
+                        email: email
+                    },
+                    debugInfo: {
+                        createdFromWeb: true,
+                        originalRequestId: 'manual_creation',
+                        createdTimestamp: new Date().toISOString(),
+                        webAppVersion: '1.0.0'
+                    },
+                    settings: {
+                        allowPublicAlerts: true,
+                        allowMemberInvites: true,
+                        requireApprovalForJoining: false,
+                        allowFollowers: true,
+                        allowComments: true,
+                        allowShares: true
+                    }
+                }
+
+                await setDoc(doc(db, 'organizations', sanitizedOrgName), organizationData)
+                addLog('✅ Organization created: ' + sanitizedOrgName)
+
+                // Update user profile with organization ID
+                await setDoc(doc(db, 'users', user.uid), {
+                    organizationId: sanitizedOrgName,
+                    organizations: [{
+                        id: sanitizedOrgName,
+                        name: organizationName,
+                        role: 'admin',
+                        joinedAt: new Date().toISOString()
+                    }]
+                }, { merge: true })
+                addLog('✅ User profile updated with organization ID')
+
+                addLog('🎉 Account creation completed successfully!')
+                showStatus('Account created successfully! User can now log in.', 'success')
+
+            } catch (error) {
+                addLog('❌ Error creating account: ' + error.message)
+                addLog('Error code: ' + (error.code || 'Unknown'))
+                showStatus('Error creating account: ' + error.message, 'error')
+            } finally {
+                createButton.disabled = false
+                createButton.textContent = 'Create Account'
+            }
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault()
+            createAccount()
+        })
+
+        checkButton.addEventListener('click', checkExisting)
+
+        // Auto-fill some common values
+        document.getElementById('firstName').value = 'Alex'
+        document.getElementById('lastName').value = 'Crisp'
+        document.getElementById('organizationName').value = 'Velocity Physical Therapy'
+        document.getElementById('organizationType').value = 'healthcare'
+    </script>
+</body>
+</html>
