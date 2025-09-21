@@ -174,6 +174,36 @@ export default function NotificationDebug() {
       const messaging = await getMessagingInstance()
       addLog('🔧 getMessagingInstance result: ' + (messaging ? 'Success' : 'Failed'))
       addLog('🔧 Messaging type: ' + typeof messaging)
+      addLog('🔧 Messaging constructor: ' + (messaging?.constructor?.name || 'Unknown'))
+      addLog('🔧 Has getToken method: ' + (typeof messaging?.getToken || 'No'))
+      addLog('🔧 Has onMessage method: ' + (typeof messaging?.onMessage || 'No'))
+      
+      // Try creating messaging instance directly
+      addLog('🔧 Testing direct getMessaging() call...')
+      try {
+        const { initializeApp } = await import('firebase/app')
+        const firebaseConfig = {
+          apiKey: "AIzaSyA96jGLzCUMVe9FHHS1lQ8vdbi8DFhAs6o",
+          authDomain: "chimeo-96dfc.firebaseapp.com",
+          databaseURL: "https://chimeo-96dfc-default-rtdb.firebaseio.com",
+          projectId: "chimeo-96dfc",
+          storageBucket: "chimeo-96dfc.firebasestorage.app",
+          messagingSenderId: "280448574070",
+          appId: "1:280448574070:web:9cb5298f2f0b10770a7557",
+          measurementId: "G-GCSQ5KSTF0"
+        }
+        
+        const testApp = initializeApp(firebaseConfig, 'test-app')
+        addLog('🔧 Test app created: ' + testApp.name)
+        
+        const directMessaging = getMessaging(testApp)
+        addLog('🔧 Direct messaging type: ' + typeof directMessaging)
+        addLog('🔧 Direct messaging constructor: ' + (directMessaging?.constructor?.name || 'Unknown'))
+        addLog('🔧 Direct messaging has getToken: ' + (typeof directMessaging?.getToken || 'No'))
+        
+      } catch (directError) {
+        addLog('❌ Direct messaging creation failed: ' + directError.message)
+      }
       
       if (messaging) {
         addLog('🔧 Testing getToken with messaging instance...')

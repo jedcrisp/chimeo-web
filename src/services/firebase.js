@@ -81,7 +81,15 @@ export const getMessagingInstance = async () => {
       // Create messaging instance
       console.log('🔧 getMessagingInstance: Creating messaging instance...')
       console.log('🔧 getMessagingInstance: Firebase app:', app)
+      console.log('🔧 getMessagingInstance: Firebase app name:', app?.name)
+      console.log('🔧 getMessagingInstance: Firebase app options:', app?.options)
       console.log('🔧 getMessagingInstance: Firebase config:', firebaseConfig)
+      
+      // Check if app is properly initialized
+      if (!app || !app.name) {
+        console.log('❌ getMessagingInstance: Firebase app not properly initialized')
+        return null
+      }
       
       // Check if messaging is available in the current context
       if (typeof getMessaging !== 'function') {
@@ -93,6 +101,20 @@ export const getMessagingInstance = async () => {
       
       console.log('🔧 getMessagingInstance: Creating messaging instance with app:', app)
       messaging = getMessaging(app)
+      
+      // Validate the messaging instance
+      console.log('🔧 getMessagingInstance: Validating messaging instance...')
+      console.log('🔧 getMessagingInstance: Messaging type:', typeof messaging)
+      console.log('🔧 getMessagingInstance: Messaging constructor:', messaging?.constructor?.name)
+      console.log('🔧 getMessagingInstance: Has getToken method:', typeof messaging?.getToken)
+      console.log('🔧 getMessagingInstance: Has onMessage method:', typeof messaging?.onMessage)
+      
+      if (!messaging || typeof messaging.getToken !== 'function') {
+        console.log('❌ getMessagingInstance: Invalid messaging instance created')
+        messagingInitialized = false
+        return null
+      }
+      
       messagingInitialized = true
       console.log('✅ getMessagingInstance: Messaging initialized successfully')
       console.log('🔧 getMessagingInstance: Messaging object:', messaging)
