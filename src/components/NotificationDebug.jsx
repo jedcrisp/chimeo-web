@@ -121,6 +121,26 @@ export default function NotificationDebug() {
     }
   }
 
+  const testFallbackNotification = async () => {
+    addLog('🔔 Testing fallback notification system...')
+    
+    try {
+      const result = await notificationService.showFallbackNotification(
+        'Test Fallback Notification',
+        'This is a test of the fallback notification system',
+        'test'
+      )
+      
+      if (result) {
+        addLog('✅ Fallback notification test successful')
+      } else {
+        addLog('❌ Fallback notification test failed')
+      }
+    } catch (error) {
+      addLog('❌ Fallback notification error: ' + error.message)
+    }
+  }
+
   const testFCMToken = async () => {
     addLog('🔧 Testing FCM token generation...')
     
@@ -283,6 +303,13 @@ export default function NotificationDebug() {
           className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           Test Notification
+        </button>
+        
+        <button
+          onClick={testFallbackNotification}
+          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+        >
+          Test Fallback System
         </button>
         
         <button

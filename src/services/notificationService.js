@@ -315,38 +315,13 @@ class NotificationService {
       await setDoc(doc(db, 'notifications', sanitizedEmail, 'user_notifications', notificationId), notificationData)
       console.log('✅ Organization request notification record saved to Firestore under user email')
 
-      // Check if notification service is initialized and messaging is available
-      console.log('🔍 Notification service status:', {
-        initialized: this.initialized,
-        messaging: !!this.messaging,
-        isSupported: this.isSupported
-      })
-      
-      if (this.initialized && this.messaging) {
-        console.log('🔔 Notification service is initialized, showing local notification')
-        // Show a local notification using the messaging service
-        await this.showLocalNotification({
-          notification: {
-            title: 'New Organization Request',
-            body: `${requestData.organizationName} - ${requestData.adminFirstName} ${requestData.adminLastName}`,
-            icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2MzY2RjEiLz4KPHRleHQgeD0iOTYiIHk9IjExMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkM8L3RleHQ+Cjwvc3ZnPgo='
-          }
-        })
-        console.log('✅ Local notification shown successfully')
-      } else {
-        console.log('⚠️ Notification service not initialized, showing fallback notification')
-        
-        // Fallback: Show a simple browser notification if available
-        if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('New Organization Request', {
-            body: `${requestData.organizationName} - ${requestData.adminFirstName} ${requestData.adminLastName}`,
-            icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2MzY2RjEiLz4KPHRleHQgeD0iOTYiIHk9IjExMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkM8L3RleHQ+Cjwvc3ZnPgo='
-          })
-          console.log('✅ Fallback notification shown')
-        } else {
-          console.log('⚠️ Browser notifications not available, skipping notification display')
-        }
-      }
+      // Always show notification using fallback method since FCM is having issues
+      console.log('🔔 Showing notification using fallback method...')
+      await this.showFallbackNotification(
+        'New Organization Request',
+        `${requestData.organizationName} - ${requestData.adminFirstName} ${requestData.adminLastName}`,
+        'organization_request'
+      )
 
       console.log('✅ Organization request notification sent successfully')
       
@@ -379,58 +354,13 @@ class NotificationService {
       await setDoc(doc(db, 'notifications', sanitizedEmail, 'user_notifications', notificationId), notificationData)
       console.log('✅ Alert notification record saved to Firestore under user email')
 
-      // Check if notification service is initialized and messaging is available
-      console.log('🔍 Notification service status:', {
-        initialized: this.initialized,
-        messaging: !!this.messaging,
-        isSupported: this.isSupported
-      })
-      
-      if (this.initialized && this.messaging) {
-        console.log('🔔 Notification service is initialized, showing local notification')
-        // Show a local notification using the messaging service
-        await this.showLocalNotification({
-          notification: {
-            title: 'New Alert Created',
-            body: `${alertData.title}: ${alertData.message}`,
-            icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2MzY2RjEiLz4KPHRleHQgeD0iOTYiIHk9IjExMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkM8L3RleHQ+Cjwvc3ZnPgo='
-          }
-        })
-        console.log('✅ Local notification shown successfully')
-      } else {
-        console.log('⚠️ Notification service not initialized, showing fallback notification')
-        console.log('🔍 Fallback notification status:', {
-          hasNotification: 'Notification' in window,
-          permission: Notification.permission
-        })
-        
-        // Fallback: Show a simple browser notification if available
-        if ('Notification' in window) {
-          if (Notification.permission === 'granted') {
-            new Notification('New Alert Created', {
-              body: `${alertData.title}: ${alertData.message}`,
-              icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2MzY2RjEiLz4KPHRleHQgeD0iOTYiIHk9IjExMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkM8L3RleHQ+Cjwvc3ZnPgo='
-            })
-            console.log('✅ Fallback notification shown')
-          } else if (Notification.permission === 'default') {
-            // Request permission if not granted yet
-            const permission = await Notification.requestPermission()
-            if (permission === 'granted') {
-              new Notification('New Alert Created', {
-                body: `${alertData.title}: ${alertData.message}`,
-                icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2MzY2RjEiLz4KPHRleHQgeD0iOTYiIHk9IjExMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkM8L3RleHQ+Cjwvc3ZnPgo='
-              })
-              console.log('✅ Fallback notification shown after permission granted')
-            } else {
-              console.log('⚠️ Notification permission denied, skipping notification display')
-            }
-          } else {
-            console.log('⚠️ Notification permission denied, skipping notification display')
-          }
-        } else {
-          console.log('⚠️ Browser notifications not available, skipping notification display')
-        }
-      }
+      // Always show notification using fallback method since FCM is having issues
+      console.log('🔔 Showing alert notification using fallback method...')
+      await this.showFallbackNotification(
+        'New Alert Created',
+        `${alertData.title}: ${alertData.message}`,
+        'alert'
+      )
 
       console.log('✅ Alert notification sent successfully')
       toast.success('Alert posted and notifications sent!')
@@ -441,44 +371,103 @@ class NotificationService {
     }
   }
 
-  // Simple fallback notification method that doesn't require Firebase Messaging
-  async showSimpleNotification(title, body, icon = null) {
+  // Robust fallback notification method that works without FCM
+  async showFallbackNotification(title, body, type = 'general', icon = null) {
     try {
-      console.log('🔔 showSimpleNotification: Attempting to show notification:', { title, body })
+      console.log('🔔 showFallbackNotification: Attempting to show notification:', { title, body, type })
       
       if (!('Notification' in window)) {
         console.log('❌ Browser notifications not supported')
         return false
       }
 
-      if (Notification.permission === 'granted') {
-        const notification = new Notification(title, {
-          body: body,
-          icon: icon || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2MzY2RjEiLz4KPHRleHQgeD0iOTYiIHk9IjExMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkM8L3RleHQ+Cjwvc3ZnPgo='
-        })
-        console.log('✅ Simple notification shown successfully')
-        return true
-      } else if (Notification.permission === 'default') {
+      // Request permission if not granted
+      if (Notification.permission === 'default') {
+        console.log('🔔 Requesting notification permission...')
         const permission = await Notification.requestPermission()
-        if (permission === 'granted') {
-          const notification = new Notification(title, {
-            body: body,
-            icon: icon || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2MzY2RjEiLz4KPHRleHQgeD0iOTYiIHk9IjExMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkM8L3RleHQ+Cjwvc3ZnPgo='
-          })
-          console.log('✅ Simple notification shown after permission granted')
-          return true
-        } else {
-          console.log('❌ Notification permission denied')
-          return false
+        console.log('🔔 Permission result:', permission)
+      }
+
+      if (Notification.permission === 'granted') {
+        const notificationOptions = {
+          body: body,
+          icon: icon || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2MzY2RjEiLz4KPHRleHQgeD0iOTYiIHk9IjExMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkM8L3RleHQ+Cjwvc3ZnPgo=',
+          badge: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjMzM2N0Y3Ii8+Cjwvc3ZnPgo=',
+          tag: `chimeo-${type}-${Date.now()}`,
+          requireInteraction: true,
+          data: {
+            type: type,
+            timestamp: Date.now(),
+            source: 'chimeo-web'
+          }
         }
+
+        // Add actions based on notification type
+        if (type === 'organization_request') {
+          notificationOptions.actions = [
+            {
+              action: 'view',
+              title: 'View Request'
+            },
+            {
+              action: 'dismiss',
+              title: 'Dismiss'
+            }
+          ]
+        } else if (type === 'alert') {
+          notificationOptions.actions = [
+            {
+              action: 'view',
+              title: 'View Alert'
+            },
+            {
+              action: 'dismiss',
+              title: 'Dismiss'
+            }
+          ]
+        }
+
+        const notification = new Notification(title, notificationOptions)
+        
+        // Add event listeners
+        notification.onclick = () => {
+          console.log('🔔 Notification clicked:', type)
+          notification.close()
+          
+          // Focus the window
+          if (window.focus) {
+            window.focus()
+          }
+          
+          // You can add navigation logic here based on type
+          if (type === 'organization_request') {
+            // Navigate to organization requests page
+            window.location.href = '/org-requests'
+          } else if (type === 'alert') {
+            // Navigate to alerts page
+            window.location.href = '/alerts'
+          }
+        }
+
+        notification.onclose = () => {
+          console.log('🔔 Notification closed:', type)
+        }
+
+        console.log('✅ Fallback notification shown successfully')
+        return true
       } else {
-        console.log('❌ Notification permission denied')
+        console.log('❌ Notification permission denied:', Notification.permission)
         return false
       }
     } catch (error) {
-      console.error('❌ Error showing simple notification:', error)
+      console.error('❌ Error showing fallback notification:', error)
       return false
     }
+  }
+
+  // Simple fallback notification method that doesn't require Firebase Messaging
+  async showSimpleNotification(title, body, icon = null) {
+    return await this.showFallbackNotification(title, body, 'general', icon)
   }
 
   // Trigger cloud function to send push notifications (commented out for now)
