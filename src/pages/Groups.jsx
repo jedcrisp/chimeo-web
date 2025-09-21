@@ -29,8 +29,14 @@ export default function Groups() {
   useEffect(() => {
     fetchGroups()
     
+    // Debug logging
+    console.log('🔍 Groups: userProfile:', userProfile)
+    console.log('🔍 Groups: userProfile.organizationId:', userProfile?.organizationId)
+    console.log('🔍 Groups: current groupForm.organizationId:', groupForm.organizationId)
+    
     // Auto-set organization for org admins
     if (userProfile?.organizationId && !groupForm.organizationId) {
+      console.log('✅ Groups: Auto-setting organization to:', userProfile.organizationId)
       setGroupForm(prev => ({
         ...prev,
         organizationId: userProfile.organizationId
@@ -153,12 +159,18 @@ export default function Groups() {
   }
 
   const handleOpenAddGroupModal = () => {
+    console.log('🔍 Groups: Opening modal - userProfile:', userProfile)
+    console.log('🔍 Groups: userProfile.organizationId:', userProfile?.organizationId)
+    
     // Set organization for org admins when opening modal
     if (userProfile?.organizationId) {
+      console.log('✅ Groups: Setting organization in modal to:', userProfile.organizationId)
       setGroupForm(prev => ({
         ...prev,
         organizationId: userProfile.organizationId
       }))
+    } else {
+      console.log('⚠️ Groups: No organizationId found in userProfile')
     }
     setShowAddGroupModal(true)
   }
@@ -359,23 +371,34 @@ export default function Groups() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Organization *
                   </label>
-                  {userProfile?.organizationId ? (
-                    <div className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-                      {getOrganizationName(userProfile.organizationId)}
-                    </div>
-                  ) : (
-                    <select
-                      value={groupForm.organizationId}
-                      onChange={(e) => setGroupForm({ ...groupForm, organizationId: e.target.value })}
-                      className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                      required
-                    >
-                      <option value="">Select an organization</option>
-                      {organizations.map(org => (
-                        <option key={org.id} value={org.id}>{org.name}</option>
-                      ))}
-                    </select>
-                  )}
+                  {(() => {
+                    console.log('🔍 Groups: Rendering organization field - userProfile?.organizationId:', userProfile?.organizationId)
+                    console.log('🔍 Groups: groupForm.organizationId:', groupForm.organizationId)
+                    
+                    if (userProfile?.organizationId) {
+                      console.log('✅ Groups: Showing read-only organization field')
+                      return (
+                        <div className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                          {getOrganizationName(userProfile.organizationId)}
+                        </div>
+                      )
+                    } else {
+                      console.log('⚠️ Groups: Showing organization dropdown')
+                      return (
+                        <select
+                          value={groupForm.organizationId}
+                          onChange={(e) => setGroupForm({ ...groupForm, organizationId: e.target.value })}
+                          className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                          required
+                        >
+                          <option value="">Select an organization</option>
+                          {organizations.map(org => (
+                            <option key={org.id} value={org.id}>{org.name}</option>
+                          ))}
+                        </select>
+                      )
+                    }
+                  })()}
                 </div>
 
                 <div>
