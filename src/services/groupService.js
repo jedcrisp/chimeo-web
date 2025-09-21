@@ -5,9 +5,12 @@ class GroupService {
   // Fetch all groups for a specific organization
   async getGroupsForOrganization(organizationId) {
     try {
+      // Ensure organizationId is a string
+      const orgIdString = typeof organizationId === 'string' ? organizationId : String(organizationId)
+      
       // Use a simple query without composite index requirements
       const groupsQuery = query(
-        collection(db, 'organizations', organizationId, 'groups')
+        collection(db, 'organizations', orgIdString, 'groups')
       )
       
       const groupsSnapshot = await getDocs(groupsQuery)

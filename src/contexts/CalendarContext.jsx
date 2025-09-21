@@ -148,7 +148,8 @@ export function CalendarProvider({ children }) {
       console.log('🔄 CalendarContext: Set loading to true')
       
       // Get organization ID from user profile
-      const organizationId = userProfile?.organizations?.[0] || null
+      const rawOrgId = userProfile?.organizations?.[0] || null
+      const organizationId = rawOrgId && typeof rawOrgId === 'string' ? rawOrgId : null
       
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => {
@@ -245,7 +246,8 @@ export function CalendarProvider({ children }) {
       dispatch({ type: CALENDAR_ACTIONS.SET_LOADING, payload: true })
       
       // Get organization ID from user profile
-      const organizationId = userProfile?.organizations?.[0] || null
+      const rawOrgId = userProfile?.organizations?.[0] || null
+      const organizationId = rawOrgId && typeof rawOrgId === 'string' ? rawOrgId : null
       
       await calendarService.deleteScheduledAlert(alertId, organizationId)
       dispatch({ type: CALENDAR_ACTIONS.DELETE_SCHEDULED_ALERT, payload: alertId })

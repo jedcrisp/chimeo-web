@@ -335,26 +335,80 @@ export default function OrganizationRequest() {
   // Geocoding function to get coordinates from address
   const geocodeAddress = async (address, city, state, zipCode) => {
     try {
-      const fullAddress = `${address}, ${city}, ${state} ${zipCode}`.replace(/\s+/g, '+')
+      // Clean and format the address
+      const fullAddress = `${address}, ${city}, ${state} ${zipCode}`.trim()
       console.log('🌍 Geocoding address:', fullAddress)
       
       // Using OpenStreetMap Nominatim API (free, no API key required)
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&limit=1`)
+      const encodedAddress = encodeURIComponent(fullAddress)
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&addressdetails=1`
+      
+      console.log('🌍 Geocoding URL:', url)
+      
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Chimeo-Web-App/1.0' // Required by Nominatim
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
       const data = await response.json()
+      console.log('🌍 Geocoding response:', data)
       
       if (data && data.length > 0) {
+        const result = data[0]
         const coordinates = {
-          latitude: parseFloat(data[0].lat),
-          longitude: parseFloat(data[0].lon)
+          latitude: parseFloat(result.lat),
+          longitude: parseFloat(result.lon)
         }
+        
+        // Validate coordinates
+        if (isNaN(coordinates.latitude) || isNaN(coordinates.longitude)) {
+          console.warn('⚠️ Invalid coordinates received:', coordinates)
+          return { latitude: null, longitude: null }
+        }
+        
         console.log('✅ Geocoding successful:', coordinates)
+        console.log('✅ Full address found:', result.display_name)
         return coordinates
       } else {
         console.warn('⚠️ No coordinates found for address:', fullAddress)
+        
+        // Try with just city and state as fallback
+        const fallbackAddress = `${city}, ${state}`
+        console.log('🌍 Trying fallback geocoding with:', fallbackAddress)
+        
+        const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fallbackAddress)}&limit=1`
+        const fallbackResponse = await fetch(fallbackUrl, {
+          headers: {
+            'User-Agent': 'Chimeo-Web-App/1.0'
+          }
+        })
+        
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json()
+          if (fallbackData && fallbackData.length > 0) {
+            const fallbackResult = fallbackData[0]
+            const fallbackCoordinates = {
+              latitude: parseFloat(fallbackResult.lat),
+              longitude: parseFloat(fallbackResult.lon)
+            }
+            
+            if (!isNaN(fallbackCoordinates.latitude) && !isNaN(fallbackCoordinates.longitude)) {
+              console.log('✅ Fallback geocoding successful:', fallbackCoordinates)
+              return fallbackCoordinates
+            }
+          }
+        }
+        
         return { latitude: null, longitude: null }
       }
     } catch (error) {
       console.error('❌ Geocoding failed:', error)
+      console.error('❌ Error details:', error.message)
       return { latitude: null, longitude: null }
     }
   }
@@ -456,8 +510,20 @@ export default function OrganizationRequest() {
       
       // Get coordinates from address using geocoding
       console.log('🌍 Getting coordinates for organization address...')
+      console.log('🌍 Address details:', {
+        address: request.address,
+        city: request.city,
+        state: request.state,
+        zipCode: request.zipCode
+      })
       const coordinates = await geocodeAddress(request.address, request.city, request.state, request.zipCode)
       console.log('🌍 Coordinates obtained:', coordinates)
+      console.log('🌍 Coordinates type check:', {
+        latitude: typeof coordinates.latitude,
+        longitude: typeof coordinates.longitude,
+        latitudeValue: coordinates.latitude,
+        longitudeValue: coordinates.longitude
+      })
 
       // Create the organization document
       console.log('🔧 Creating organization with name:', request.organizationName)
@@ -561,7 +627,14 @@ export default function OrganizationRequest() {
       // Verify the organization was created correctly
       const verifyDoc = await getDoc(orgDocRef)
       if (verifyDoc.exists()) {
-        console.log('✅ Organization verification successful:', verifyDoc.data())
+        const orgData = verifyDoc.data()
+        console.log('✅ Organization verification successful:', orgData)
+        console.log('🌍 Stored coordinates verification:', {
+          latitude: orgData.location?.latitude,
+          longitude: orgData.location?.longitude,
+          latitudeType: typeof orgData.location?.latitude,
+          longitudeType: typeof orgData.location?.longitude
+        })
       } else {
         console.error('❌ Organization verification failed - document not found')
       }
@@ -593,8 +666,12 @@ export default function OrganizationRequest() {
       
       // Send multiple notifications to trigger mobile app refresh
       try {
+        // Save notifications under the platform admin's subcollection
+        const sanitizedEmail = 'jed@onetrack-consulting.com'.replace(/[^a-zA-Z0-9]/g, '_')
+        
         // General organization created notification
-        await addDoc(collection(db, 'notifications'), {
+        const orgCreatedId = `org_created_${Date.now()}`
+        await setDoc(doc(db, 'notifications', sanitizedEmail, 'user_notifications', orgCreatedId), {
           type: 'organization_created',
           title: 'New Organization Created',
           message: `${request.organizationName} has been created and is now available`,
@@ -608,7 +685,8 @@ export default function OrganizationRequest() {
         })
         
         // Mobile app specific refresh notification
-        await addDoc(collection(db, 'notifications'), {
+        const refreshId = `refresh_${Date.now()}`
+        await setDoc(doc(db, 'notifications', sanitizedEmail, 'user_notifications', refreshId), {
           type: 'data_refresh_required',
           title: 'Data Refresh Required',
           message: 'New organization data available - please refresh',
@@ -621,7 +699,8 @@ export default function OrganizationRequest() {
         })
         
         // Organization list update notification
-        await addDoc(collection(db, 'notifications'), {
+        const listUpdateId = `list_update_${Date.now()}`
+        await setDoc(doc(db, 'notifications', sanitizedEmail, 'user_notifications', listUpdateId), {
           type: 'organization_list_updated',
           title: 'Organization List Updated',
           message: 'New organization added to the list',

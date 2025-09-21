@@ -28,6 +28,11 @@ export function AlertProvider({ children }) {
       orgId = userProfile.organizations[0] // organizations is array of strings
     }
 
+    // Ensure orgId is a string
+    if (orgId && typeof orgId !== 'string') {
+      orgId = String(orgId)
+    }
+
     if (!orgId) {
       console.log('🔍 AlertContext: No organization ID found, setting empty alerts')
       setAlerts([])

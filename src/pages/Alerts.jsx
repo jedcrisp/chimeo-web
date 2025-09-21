@@ -48,6 +48,11 @@ export default function Alerts() {
           orgId = userProfile.organizations[0] // organizations is array of strings
         }
 
+        // Ensure orgId is a string
+        if (orgId && typeof orgId !== 'string') {
+          orgId = String(orgId)
+        }
+
         if (!currentUser || !orgId) {
           setGroups([])
           return

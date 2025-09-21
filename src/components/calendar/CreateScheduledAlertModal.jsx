@@ -49,10 +49,13 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
     if (isOpen && userProfile?.organizations?.length > 0) {
       const organizationId = userProfile.organizations[0] // Use first organization
       
+      // Ensure organizationId is a string
+      const orgIdString = typeof organizationId === 'string' ? organizationId : String(organizationId)
+      
       setFormData(prev => ({
         ...prev,
-        organizationId: organizationId,
-        organizationName: organizationId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) // Convert ID to readable name
+        organizationId: orgIdString,
+        organizationName: orgIdString.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) // Convert ID to readable name
       }))
       
       // Fetch groups for the user's organization
