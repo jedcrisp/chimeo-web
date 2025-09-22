@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useOrganizations } from '../contexts/OrganizationsContext'
 import { Building, Search, MapPin, Phone, Mail, Heart, UserPlus, Users, Crown } from 'lucide-react'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '../services/firebase'
 import adminService from '../services/adminService'
 
 export default function DiscoverOrganizations() {
@@ -37,10 +39,27 @@ export default function DiscoverOrganizations() {
 
   const loadFollowedOrganizations = async () => {
     try {
-      if (!userProfile?.followedOrganizations) return []
+      if (!currentUser) return []
+      
+      // Get user's followed organizations directly from database
+      const userRef = doc(db, 'users', currentUser.uid)
+      const userDoc = await getDoc(userRef)
+      
+      if (!userDoc.exists()) {
+        console.log('User document not found')
+        return []
+      }
+      
+      const userData = userDoc.data()
+      const followedOrgIds = userData.followedOrganizations || []
+      
+      if (followedOrgIds.length === 0) {
+        console.log('No followed organizations found')
+        return []
+      }
       
       return organizations.filter(org => 
-        userProfile.followedOrganizations.includes(org.id)
+        followedOrgIds.includes(org.id)
       )
     } catch (error) {
       console.error('Error loading followed organizations:', error)
@@ -55,17 +74,16 @@ export default function DiscoverOrganizations() {
       if (isFollowing) {
         // Unfollow organization
         await adminService.unfollowOrganization(orgId)
-        setFollowedOrgs(prev => prev.filter(org => org.id !== orgId))
         console.log('✅ Unfollowed organization:', orgId)
       } else {
         // Follow organization
         await adminService.followOrganization(orgId)
-        const orgToAdd = organizations.find(org => org.id === orgId)
-        if (orgToAdd) {
-          setFollowedOrgs(prev => [...prev, orgToAdd])
-        }
         console.log('✅ Followed organization:', orgId)
       }
+      
+      // Refresh the followed organizations data
+      const updatedFollowedOrgs = await loadFollowedOrganizations()
+      setFollowedOrgs(updatedFollowedOrgs)
     } catch (error) {
       console.error('❌ Error toggling organization follow:', error)
       alert('Error updating organization follow status. Please try again.')

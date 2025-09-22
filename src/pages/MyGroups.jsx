@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { Users, Plus, Search, Building, MapPin, Phone, Mail, Heart, UserPlus } from 'lucide-react'
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore'
+import { collection, query, where, orderBy, getDocs, doc, getDoc } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import adminService from '../services/adminService'
 
@@ -42,10 +42,27 @@ export default function MyGroups() {
 
   const loadFollowedGroups = async () => {
     try {
-      if (!userProfile?.followedGroups) return []
+      if (!currentUser) return []
+      
+      // Get user's followed groups directly from database
+      const userRef = doc(db, 'users', currentUser.uid)
+      const userDoc = await getDoc(userRef)
+      
+      if (!userDoc.exists()) {
+        console.log('User document not found')
+        return []
+      }
+      
+      const userData = userDoc.data()
+      const followedGroupIds = userData.followedGroups || []
+      
+      if (followedGroupIds.length === 0) {
+        console.log('No followed groups found')
+        return []
+      }
       
       const groups = []
-      for (const groupId of userProfile.followedGroups) {
+      for (const groupId of followedGroupIds) {
         try {
           const groupData = await adminService.getGroupById(groupId)
           if (groupData) {
