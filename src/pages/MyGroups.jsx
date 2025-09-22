@@ -11,7 +11,7 @@ export default function MyGroups() {
   const [allGroups, setAllGroups] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [showAllGroups, setShowAllGroups] = useState(false)
+  const [showAllGroups, setShowAllGroups] = useState(true)
 
   useEffect(() => {
     if (currentUser && userProfile) {
