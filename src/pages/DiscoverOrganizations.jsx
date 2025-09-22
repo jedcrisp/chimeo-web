@@ -7,7 +7,7 @@ import { db } from '../services/firebase'
 import adminService from '../services/adminService'
 
 export default function DiscoverOrganizations() {
-  const { currentUser, userProfile } = useAuth()
+  const { currentUser, userProfile, forceUpdate } = useAuth()
   const { organizations } = useOrganizations()
   const [followedOrgs, setFollowedOrgs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -18,7 +18,7 @@ export default function DiscoverOrganizations() {
     if (currentUser && userProfile) {
       loadUserData()
     }
-  }, [currentUser, userProfile])
+  }, [currentUser, userProfile, forceUpdate])
 
   const loadUserData = async () => {
     try {
@@ -69,21 +69,32 @@ export default function DiscoverOrganizations() {
 
   const toggleFollowOrganization = async (orgId) => {
     try {
+      const organization = organizations.find(org => org.id === orgId)
+      if (!organization) {
+        console.error('Organization not found:', orgId)
+        return
+      }
+
       const isFollowing = followedOrgs.some(org => org.id === orgId)
       
       if (isFollowing) {
         // Unfollow organization
         await adminService.unfollowOrganization(orgId)
-        console.log('✅ Unfollowed organization:', orgId)
+        setFollowedOrgs(prev => prev.filter(org => org.id !== orgId))
+        console.log('✅ Unfollowed organization:', organization.name)
       } else {
         // Follow organization
         await adminService.followOrganization(orgId)
-        console.log('✅ Followed organization:', orgId)
+        setFollowedOrgs(prev => [...prev, organization])
+        console.log('✅ Followed organization:', organization.name)
       }
       
-      // Refresh the followed organizations data
-      const updatedFollowedOrgs = await loadFollowedOrganizations()
-      setFollowedOrgs(updatedFollowedOrgs)
+      // Force refresh user profile to sync with mobile app
+      if (window.forceUpdateUserProfile) {
+        window.forceUpdateUserProfile()
+      }
+      
+      console.log('📱 Organization preferences updated - mobile app will sync automatically')
     } catch (error) {
       console.error('❌ Error toggling organization follow:', error)
       alert('Error updating organization follow status. Please try again.')
