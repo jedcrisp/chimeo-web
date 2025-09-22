@@ -72,6 +72,12 @@ export default function MyAlerts() {
       
       setAlerts(filteredAlerts)
       console.log('✅ Loaded', filteredAlerts.length, 'alerts from', groups.length, 'followed groups (out of', allAlerts.length, 'total alerts)')
+      
+      // Debug: Log alert data structure
+      if (filteredAlerts.length > 0) {
+        console.log('🔍 Sample alert data structure:', filteredAlerts[0])
+        console.log('🔍 Available fields:', Object.keys(filteredAlerts[0]))
+      }
     } catch (error) {
       console.error('❌ Error loading user alerts:', error)
     } finally {
@@ -390,8 +396,10 @@ export default function MyAlerts() {
                       </span>
                     </div>
                     
-                    {alert.message && (
-                      <p className="text-gray-700 mb-3 leading-relaxed">{alert.message}</p>
+                    {(alert.message || alert.description || alert.content || alert.text) && (
+                      <p className="text-gray-700 mb-3 leading-relaxed">
+                        {alert.message || alert.description || alert.content || alert.text}
+                      </p>
                     )}
                     
                     {/* Organization and Group info */}
