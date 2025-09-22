@@ -315,36 +315,24 @@ export default function MyAlerts() {
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      {/* Simple Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center">
             <Bell className="h-8 w-8 text-blue-600" />
-            <div className="ml-3">
+            <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Alerts</p>
               <p className="text-2xl font-bold text-gray-900">{alerts.length}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center">
             <Users className="h-8 w-8 text-green-600" />
-            <div className="ml-3">
+            <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Groups Following</p>
               <p className="text-2xl font-bold text-gray-900">{followedGroups.length}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <AlertTriangle className="h-8 w-8 text-red-600" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Emergency Alerts</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {alerts.filter(a => a.type === 'emergency').length}
-              </p>
             </div>
           </div>
         </div>
@@ -374,20 +362,20 @@ export default function MyAlerts() {
         ) : (
           <div className="divide-y divide-gray-200">
             {alerts.map((alert) => (
-              <div key={alert.id} className={`p-6 hover:bg-gray-50 transition-colors border-l-4 ${
-                alert.type === 'emergency' ? 'border-l-red-500 bg-red-50/30' :
-                alert.type === 'warning' ? 'border-l-yellow-500 bg-yellow-50/30' :
-                'border-l-blue-500 bg-blue-50/30'
+              <div key={alert.id} className={`p-8 hover:bg-gray-50 transition-colors border-l-4 ${
+                alert.type === 'emergency' ? 'border-l-red-500 bg-red-50/20' :
+                alert.type === 'warning' ? 'border-l-yellow-500 bg-yellow-50/20' :
+                'border-l-blue-500 bg-blue-50/20'
               }`}>
-                <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0">
+                <div className="flex items-start space-x-6">
+                  <div className="flex-shrink-0 mt-1">
                     {getAlertIcon(alert.type)}
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900 leading-tight">{alert.title}</h3>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ml-3 flex-shrink-0 ${
+                    <div className="flex items-start justify-between mb-4">
+                      <h3 className="text-xl font-semibold text-gray-900 leading-tight">{alert.title}</h3>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ml-4 flex-shrink-0 ${
                         alert.type === 'emergency' ? 'bg-red-100 text-red-800' :
                         alert.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-blue-100 text-blue-800'
@@ -397,21 +385,21 @@ export default function MyAlerts() {
                     </div>
                     
                     {(alert.message || alert.description || alert.content || alert.text) && (
-                      <p className="text-gray-700 mb-3 leading-relaxed">
+                      <p className="text-gray-700 mb-6 leading-relaxed text-base">
                         {alert.message || alert.description || alert.content || alert.text}
                       </p>
                     )}
                     
                     {/* Organization and Group info */}
-                    <div className="flex items-center space-x-4 mb-2">
+                    <div className="flex items-center space-x-6 mb-4">
                       <div className="flex items-center text-sm text-gray-600">
-                        <Building className="h-4 w-4 mr-1.5 text-gray-400" />
+                        <Building className="h-4 w-4 mr-2 text-gray-400" />
                         <span className="font-medium">{alert.organizationName || 'Unknown Organization'}</span>
                       </div>
                       
                       {alert.groupName && (
                         <div className="flex items-center text-sm text-gray-600">
-                          <Users className="h-4 w-4 mr-1.5 text-gray-400" />
+                          <Users className="h-4 w-4 mr-2 text-gray-400" />
                           <span className="font-medium">{alert.groupName}</span>
                         </div>
                       )}
@@ -419,17 +407,17 @@ export default function MyAlerts() {
                     
                     {/* Location and Date info */}
                     <div className="flex items-center justify-between text-sm text-gray-500">
-                      <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-6">
                         {formatLocation(alert.location) && (
                           <div className="flex items-center">
-                            <MapPin className="h-4 w-4 mr-1.5 text-gray-400" />
-                            <span className="truncate max-w-xs">{formatLocation(alert.location)}</span>
+                            <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                            <span className="truncate max-w-sm">{formatLocation(alert.location)}</span>
                           </div>
                         )}
                       </div>
                       
                       <div className="flex items-center text-gray-500">
-                        <Clock className="h-4 w-4 mr-1.5 text-gray-400" />
+                        <Clock className="h-4 w-4 mr-2 text-gray-400" />
                         <span>{alert.createdAt?.toDate?.()?.toLocaleDateString() || 'Recently'}</span>
                       </div>
                     </div>
