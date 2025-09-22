@@ -33,6 +33,7 @@ export default function MyGroups() {
       setAllGroups(all)
       
       console.log('✅ Loaded', followed.length, 'followed groups and', all.length, 'total groups')
+      console.log('🔍 All available groups:', all.map(g => ({ id: g.id, name: g.name, organization: g.organizationName })))
     } catch (error) {
       console.error('❌ Error loading user groups:', error)
     } finally {
@@ -79,6 +80,7 @@ export default function MyGroups() {
       }
       
       console.log('🔍 Final followed groups array:', groups)
+      console.log('🔍 Group names:', groups.map(g => g.name))
       return groups
     } catch (error) {
       console.error('Error loading followed groups:', error)
@@ -178,12 +180,20 @@ export default function MyGroups() {
             Manage which groups you follow to receive alerts
           </p>
         </div>
-        <button
-          onClick={() => setShowAllGroups(!showAllGroups)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-        >
-          {showAllGroups ? 'Show Only Followed' : 'Discover New Groups'}
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={() => setShowAllGroups(!showAllGroups)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            {showAllGroups ? 'Show Only Followed' : 'Discover New Groups'}
+          </button>
+          <button
+            onClick={loadUserGroups}
+            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+          >
+            Refresh Data
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
