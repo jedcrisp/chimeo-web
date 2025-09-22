@@ -6,7 +6,7 @@ import { db } from '../services/firebase'
 import adminService from '../services/adminService'
 
 export default function MyGroups() {
-  const { currentUser, userProfile } = useAuth()
+  const { currentUser, userProfile, forceUpdate } = useAuth()
   const [followedGroups, setFollowedGroups] = useState([])
   const [allGroups, setAllGroups] = useState([])
   const [loading, setLoading] = useState(true)
@@ -17,7 +17,7 @@ export default function MyGroups() {
     if (currentUser && userProfile) {
       loadUserGroups()
     }
-  }, [currentUser, userProfile])
+  }, [currentUser, userProfile, forceUpdate])
 
   const loadUserGroups = async () => {
     try {

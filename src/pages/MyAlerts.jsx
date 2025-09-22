@@ -6,7 +6,7 @@ import { db } from '../services/firebase'
 import adminService from '../services/adminService'
 
 export default function MyAlerts() {
-  const { currentUser, userProfile } = useAuth()
+  const { currentUser, userProfile, forceUpdate } = useAuth()
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(true)
   const [followedGroups, setFollowedGroups] = useState([])
@@ -15,7 +15,7 @@ export default function MyAlerts() {
     if (currentUser && userProfile) {
       loadUserAlerts()
     }
-  }, [currentUser, userProfile])
+  }, [currentUser, userProfile, forceUpdate])
 
   const loadUserAlerts = async () => {
     try {

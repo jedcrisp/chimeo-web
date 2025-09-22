@@ -9,7 +9,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from 'firebase/auth'
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, getDoc, serverTimestamp, onSnapshot } from 'firebase/firestore'
 import adminService from '../services/adminService'
 
 const AuthContext = createContext()
@@ -398,6 +398,33 @@ export function AuthProvider({ children }) {
     
     return unsubscribe
   }, []) // Empty dependency array
+
+  // Simple real-time listener for user profile changes (for mobile app sync)
+  useEffect(() => {
+    if (!currentUser) return
+
+    console.log('🔧 AuthProvider: Setting up real-time user profile listener...')
+    
+    const userRef = doc(db, 'users', currentUser.uid)
+    const unsubscribeProfile = onSnapshot(userRef, (doc) => {
+      if (doc.exists()) {
+        const userData = doc.data()
+        console.log('🔧 AuthProvider: User profile updated from real-time listener')
+        
+        // Update user profile state
+        setUserProfile(userData)
+        
+        // Force update to trigger re-renders in components
+        setForceUpdate(prev => prev + 1)
+        
+        console.log('✅ AuthProvider: User profile synced from mobile app changes')
+      }
+    }, (error) => {
+      console.error('❌ AuthProvider: Error listening to user profile changes:', error)
+    })
+
+    return unsubscribeProfile
+  }, [currentUser])
 
   const value = {
     currentUser,
