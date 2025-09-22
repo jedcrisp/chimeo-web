@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { AlertTriangle, Bell, Users, Building, Clock, MapPin } from 'lucide-react'
+import { AlertTriangle, Bell, Users, Building, Clock, MapPin, Search } from 'lucide-react'
 import { collection, query, where, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import adminService from '../services/adminService'
@@ -10,6 +10,7 @@ export default function MyAlerts() {
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(true)
   const [followedGroups, setFollowedGroups] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     if (currentUser && userProfile) {
@@ -254,11 +255,11 @@ export default function MyAlerts() {
   const getAlertIcon = (type) => {
     switch (type) {
       case 'emergency':
-        return <AlertTriangle className="h-6 w-6 text-red-600" />
+        return <AlertTriangle className="h-4 w-4 text-red-600" />
       case 'warning':
-        return <AlertTriangle className="h-6 w-6 text-yellow-600" />
+        return <AlertTriangle className="h-4 w-4 text-yellow-600" />
       default:
-        return <Bell className="h-6 w-6 text-blue-600" />
+        return <Bell className="h-4 w-4 text-blue-600" />
     }
   }
 
@@ -283,6 +284,18 @@ export default function MyAlerts() {
     }
     return null
   }
+
+  // Filter alerts based on search term
+  const filteredAlerts = alerts.filter(alert => {
+    const searchLower = searchTerm.toLowerCase()
+    return (
+      alert.title?.toLowerCase().includes(searchLower) ||
+      alert.message?.toLowerCase().includes(searchLower) ||
+      alert.groupName?.toLowerCase().includes(searchLower) ||
+      alert.organizationName?.toLowerCase().includes(searchLower) ||
+      (alert.location && formatLocation(alert.location)?.toLowerCase().includes(searchLower))
+    )
+  })
 
   if (loading) {
     return (
@@ -338,6 +351,20 @@ export default function MyAlerts() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search alerts by title, message, group, organization, or location..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
       {/* Alerts List */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         {alerts.length === 0 ? (
@@ -359,67 +386,78 @@ export default function MyAlerts() {
               </button>
             )}
           </div>
+        ) : filteredAlerts.length === 0 ? (
+          <div className="text-center py-12">
+            <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No alerts found</h3>
+            <p className="text-gray-600 mb-4">Try adjusting your search terms</p>
+            <button
+              onClick={() => setSearchTerm('')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Clear Search
+            </button>
+          </div>
         ) : (
-          <div className="divide-y divide-gray-200">
-            {alerts.map((alert) => (
-              <div key={alert.id} className={`p-8 hover:bg-gray-50 transition-colors border-l-4 ${
-                alert.type === 'emergency' ? 'border-l-red-500 bg-red-50/20' :
-                alert.type === 'warning' ? 'border-l-yellow-500 bg-yellow-50/20' :
-                'border-l-blue-500 bg-blue-50/20'
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 p-4">
+            {filteredAlerts.map((alert) => (
+              <div key={alert.id} className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow ${
+                alert.type === 'emergency' ? 'border-l-4 border-l-red-500' :
+                alert.type === 'warning' ? 'border-l-4 border-l-yellow-500' :
+                'border-l-4 border-l-blue-500'
               }`}>
-                <div className="flex items-start space-x-6">
-                  <div className="flex-shrink-0 mt-1">
-                    {getAlertIcon(alert.type)}
+                <div className="space-y-3">
+                  {/* Header with icon and type */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-2">
+                      {getAlertIcon(alert.type)}
+                      <h3 className="text-lg font-semibold text-gray-900 leading-tight">{alert.title}</h3>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      alert.type === 'emergency' ? 'bg-red-100 text-red-800' :
+                      alert.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-blue-100 text-blue-800'
+                    }`}>
+                      {alert.type || 'info'}
+                    </span>
                   </div>
                   
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-4">
-                      <h3 className="text-xl font-semibold text-gray-900 leading-tight">{alert.title}</h3>
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ml-4 flex-shrink-0 ${
-                        alert.type === 'emergency' ? 'bg-red-100 text-red-800' :
-                        alert.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {alert.type || 'info'}
-                      </span>
+                  {/* Message */}
+                  {(alert.message || alert.description || alert.content || alert.text) && (
+                    <p className="text-gray-700 text-sm leading-relaxed">
+                      {alert.message || alert.description || alert.content || alert.text}
+                    </p>
+                  )}
+                  
+                  {/* Organization and Group info */}
+                  <div className="space-y-2">
+                    <div className="flex items-center text-xs text-gray-600">
+                      <Building className="h-3 w-3 mr-2 text-gray-400" />
+                      <span className="font-medium truncate">{alert.organizationName || 'Unknown Organization'}</span>
                     </div>
                     
-                    {(alert.message || alert.description || alert.content || alert.text) && (
-                      <p className="text-gray-700 mb-6 leading-relaxed text-base">
-                        {alert.message || alert.description || alert.content || alert.text}
-                      </p>
-                    )}
-                    
-                    {/* Organization and Group info */}
-                    <div className="flex items-center space-x-6 mb-4">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Building className="h-4 w-4 mr-2 text-gray-400" />
-                        <span className="font-medium">{alert.organizationName || 'Unknown Organization'}</span>
+                    {alert.groupName && (
+                      <div className="flex items-center text-xs text-gray-600">
+                        <Users className="h-3 w-3 mr-2 text-gray-400" />
+                        <span className="font-medium truncate">{alert.groupName}</span>
                       </div>
-                      
-                      {alert.groupName && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Users className="h-4 w-4 mr-2 text-gray-400" />
-                          <span className="font-medium">{alert.groupName}</span>
-                        </div>
+                    )}
+                  </div>
+                  
+                  {/* Location and Date info */}
+                  <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
+                    <div className="flex items-center">
+                      {formatLocation(alert.location) && (
+                        <>
+                          <MapPin className="h-3 w-3 mr-1 text-gray-400" />
+                          <span className="truncate max-w-32">{formatLocation(alert.location)}</span>
+                        </>
                       )}
                     </div>
                     
-                    {/* Location and Date info */}
-                    <div className="flex items-center justify-between text-sm text-gray-500">
-                      <div className="flex items-center space-x-6">
-                        {formatLocation(alert.location) && (
-                          <div className="flex items-center">
-                            <MapPin className="h-4 w-4 mr-2 text-gray-400" />
-                            <span className="truncate max-w-sm">{formatLocation(alert.location)}</span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center text-gray-500">
-                        <Clock className="h-4 w-4 mr-2 text-gray-400" />
-                        <span>{alert.createdAt?.toDate?.()?.toLocaleDateString() || 'Recently'}</span>
-                      </div>
+                    <div className="flex items-center">
+                      <Clock className="h-3 w-3 mr-1 text-gray-400" />
+                      <span>{alert.createdAt?.toDate?.()?.toLocaleDateString() || 'Recently'}</span>
                     </div>
                   </div>
                 </div>
