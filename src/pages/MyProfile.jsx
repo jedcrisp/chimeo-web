@@ -165,8 +165,9 @@ export default function MyProfile() {
         </div>
       </div>
 
-      {/* Profile Details */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      {/* Profile Details - Only show for organization admins */}
+      {userProfile?.isOrganizationAdmin && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Profile Details</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -327,7 +328,8 @@ export default function MyProfile() {
             )}
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Account Information */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -342,13 +344,6 @@ export default function MyProfile() {
             </div>
           </div>
           
-          <div className="flex items-center">
-            <User className="h-5 w-5 text-gray-400 mr-3" />
-            <div>
-              <p className="text-sm font-medium text-gray-900">User ID</p>
-              <p className="text-sm text-gray-600 font-mono">{currentUser?.uid}</p>
-            </div>
-          </div>
           
           <div className="flex items-center">
             <Bell className="h-5 w-5 text-gray-400 mr-3" />
