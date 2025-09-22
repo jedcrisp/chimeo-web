@@ -56,6 +56,9 @@ export default function MyGroups() {
       const userData = userDoc.data()
       const followedGroupIds = userData.followedGroups || []
       
+      console.log('🔍 User data from database:', userData)
+      console.log('🔍 Followed group IDs:', followedGroupIds)
+      
       if (followedGroupIds.length === 0) {
         console.log('No followed groups found')
         return []
@@ -64,7 +67,9 @@ export default function MyGroups() {
       const groups = []
       for (const groupId of followedGroupIds) {
         try {
+          console.log('🔍 Loading group data for ID:', groupId)
           const groupData = await adminService.getGroupById(groupId)
+          console.log('🔍 Group data loaded:', groupData)
           if (groupData) {
             groups.push(groupData)
           }
@@ -73,6 +78,7 @@ export default function MyGroups() {
         }
       }
       
+      console.log('🔍 Final followed groups array:', groups)
       return groups
     } catch (error) {
       console.error('Error loading followed groups:', error)

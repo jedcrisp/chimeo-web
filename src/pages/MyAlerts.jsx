@@ -72,6 +72,9 @@ export default function MyAlerts() {
       const userData = userDoc.data()
       const followedGroupIds = userData.followedGroups || []
       
+      console.log('🔍 MyAlerts - User data from database:', userData)
+      console.log('🔍 MyAlerts - Followed group IDs:', followedGroupIds)
+      
       if (followedGroupIds.length === 0) {
         console.log('No followed groups found')
         return []
