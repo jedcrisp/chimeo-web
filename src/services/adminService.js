@@ -476,6 +476,88 @@ class AdminService {
     }
   }
 
+  // Migrate group preferences from old structure to new structure
+  async migrateGroupPreferences(userData, userRef) {
+    try {
+      // If groupPreferences already exists, no migration needed
+      if (userData.groupPreferences) {
+        return
+      }
+
+      console.log('🔄 Migrating group preferences for mobile/web sync...')
+      
+      let groupPreferences = {}
+      
+      // Migrate from followedGroups array (old structure)
+      if (userData.followedGroups && Array.isArray(userData.followedGroups)) {
+        console.log('🔄 Migrating from followedGroups array:', userData.followedGroups)
+        
+        for (const groupId of userData.followedGroups) {
+          try {
+            const groupData = await this.getGroupById(groupId)
+            if (groupData && groupData.name) {
+              groupPreferences[groupData.name] = true
+              console.log('🔄 Migrated group:', groupData.name)
+            }
+          } catch (error) {
+            console.warn('⚠️ Could not migrate group ID:', groupId, error)
+          }
+        }
+      }
+      
+      // Migrate from subcollections if no groupPreferences found
+      if (Object.keys(groupPreferences).length === 0) {
+        console.log('🔄 No followedGroups array found, checking subcollections...')
+        
+        // Check followedGroups subcollection
+        const followedGroupsRef = collection(db, 'users', this.currentUser.uid, 'followedGroups')
+        const followedGroupsSnapshot = await getDocs(followedGroupsRef)
+        
+        if (!followedGroupsSnapshot.empty) {
+          followedGroupsSnapshot.forEach(doc => {
+            const data = doc.data()
+            if (data.name) {
+              groupPreferences[data.name] = true
+              console.log('🔄 Migrated from subcollection:', data.name)
+            }
+          })
+        }
+        
+        // Check followedOrganizations subcollection
+        const followedOrgsRef = collection(db, 'users', this.currentUser.uid, 'followedOrganizations')
+        const followedOrgsSnapshot = await getDocs(followedOrgsRef)
+        
+        if (!followedOrgsSnapshot.empty) {
+          for (const orgDoc of followedOrgsSnapshot.docs) {
+            const orgData = orgDoc.data()
+            if (orgData.groups) {
+              Object.keys(orgData.groups).forEach(groupName => {
+                if (orgData.groups[groupName] === true) {
+                  groupPreferences[groupName] = true
+                  console.log('🔄 Migrated from org subcollection:', groupName)
+                }
+              })
+            }
+          }
+        }
+      }
+      
+      // Update user document with migrated groupPreferences
+      if (Object.keys(groupPreferences).length > 0) {
+        await updateDoc(userRef, {
+          groupPreferences,
+          updatedAt: serverTimestamp()
+        })
+        console.log('✅ Migration completed. Group preferences:', groupPreferences)
+      } else {
+        console.log('ℹ️ No groups found to migrate')
+      }
+      
+    } catch (error) {
+      console.error('❌ Error during migration:', error)
+    }
+  }
+
   // Follow a group
   async followGroup(groupId) {
     if (!this.currentUser) {
@@ -501,18 +583,37 @@ class AdminService {
       }
 
       const userData = userDoc.data()
-      const groupPreferences = userData.groupPreferences || {}
+      
+      // Migrate from old structure if needed
+      await this.migrateGroupPreferences(userData, userRef)
+      
+      // Get updated user data after migration
+      const updatedUserDoc = await getDoc(userRef)
+      const updatedUserData = updatedUserDoc.data()
+      const groupPreferences = updatedUserData.groupPreferences || {}
       
       // Add group to followed list using group name as key
       groupPreferences[groupName] = true
       
-      // Update user document
-      await updateDoc(userRef, {
+      // Update user document with both structures for maximum compatibility
+      const updateData = {
         groupPreferences,
         updatedAt: serverTimestamp()
-      })
+      }
+      
+      // Also maintain the old followedGroups array for backward compatibility
+      if (updatedUserData.followedGroups) {
+        const followedGroups = updatedUserData.followedGroups
+        if (!followedGroups.includes(groupId)) {
+          followedGroups.push(groupId)
+          updateData.followedGroups = followedGroups
+        }
+      }
+      
+      await updateDoc(userRef, updateData)
 
       console.log('✅ Group followed successfully:', groupName)
+      console.log('📱 Updated both groupPreferences and followedGroups for mobile/web sync')
       return true
     } catch (error) {
       console.error('❌ Error following group:', error)
@@ -545,18 +646,34 @@ class AdminService {
       }
 
       const userData = userDoc.data()
-      const groupPreferences = userData.groupPreferences || {}
+      
+      // Migrate from old structure if needed
+      await this.migrateGroupPreferences(userData, userRef)
+      
+      // Get updated user data after migration
+      const updatedUserDoc = await getDoc(userRef)
+      const updatedUserData = updatedUserDoc.data()
+      const groupPreferences = updatedUserData.groupPreferences || {}
       
       // Remove group from followed list using group name as key
       delete groupPreferences[groupName]
       
-      // Update user document
-      await updateDoc(userRef, {
+      // Update user document with both structures for maximum compatibility
+      const updateData = {
         groupPreferences,
         updatedAt: serverTimestamp()
-      })
+      }
+      
+      // Also maintain the old followedGroups array for backward compatibility
+      if (updatedUserData.followedGroups) {
+        const followedGroups = updatedUserData.followedGroups.filter(id => id !== groupId)
+        updateData.followedGroups = followedGroups
+      }
+      
+      await updateDoc(userRef, updateData)
 
       console.log('✅ Group unfollowed successfully:', groupName)
+      console.log('📱 Updated both groupPreferences and followedGroups for mobile/web sync')
       return true
     } catch (error) {
       console.error('❌ Error unfollowing group:', error)

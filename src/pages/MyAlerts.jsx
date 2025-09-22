@@ -77,7 +77,7 @@ export default function MyAlerts() {
         return groupNames
       }
       
-      // Check for followedOrganizations subcollection (might contain groups)
+      // Check for followedOrganizations subcollection (mobile app structure)
       const followedOrgsRef = collection(db, 'users', currentUser.uid, 'followedOrganizations')
       const followedOrgsSnapshot = await getDocs(followedOrgsRef)
       
@@ -88,11 +88,23 @@ export default function MyAlerts() {
           const orgData = orgDoc.data()
           console.log('🔍 MyAlerts - Organization document:', orgDoc.id, orgData)
           
-          // Check if this org document has groups
+          // Check if this org document has groupPreferences (mobile app structure)
+          if (orgData.groupPreferences) {
+            console.log('🔍 MyAlerts - Found groupPreferences in organization:', orgData.groupPreferences)
+            Object.keys(orgData.groupPreferences).forEach(groupName => {
+              if (orgData.groupPreferences[groupName] === true) {
+                groupNames.push(groupName)
+                console.log('🔍 MyAlerts - Added group from org groupPreferences:', groupName)
+              }
+            })
+          }
+          
+          // Also check the old groups structure for backward compatibility
           if (orgData.groups) {
             Object.keys(orgData.groups).forEach(groupName => {
               if (orgData.groups[groupName] === true) {
                 groupNames.push(groupName)
+                console.log('🔍 MyAlerts - Added group from org groups:', groupName)
               }
             })
           }
@@ -163,19 +175,19 @@ export default function MyAlerts() {
       
       // Check for groupPreferences map (new structure) or followedGroups array (old structure)
       let followedGroupIds = []
-      if (userData.groupPreferences) {
+      if (userData.groupPreferences && Object.keys(userData.groupPreferences).length > 0) {
         // New structure: groupPreferences is a map of group names to boolean values
         followedGroupIds = Object.keys(userData.groupPreferences).filter(
           groupName => userData.groupPreferences[groupName] === true
         )
-        console.log('🔍 MyAlerts - Using groupPreferences structure')
+        console.log('🔍 MyAlerts - Using groupPreferences structure from main document')
       } else if (userData.followedGroups) {
         // Old structure: followedGroups is an array of group IDs
         followedGroupIds = userData.followedGroups
         console.log('🔍 MyAlerts - Using followedGroups structure')
       } else {
-        // Try to load from subcollections
-        console.log('🔍 MyAlerts - No groupPreferences or followedGroups found, trying subcollections...')
+        // Try to load from subcollections (mobile app structure)
+        console.log('🔍 MyAlerts - No groupPreferences or followedGroups found in main document, checking subcollections...')
         followedGroupIds = await loadFollowedGroupsFromSubcollectionsMyAlerts()
       }
       

@@ -58,19 +58,19 @@ export default function MyGroups() {
       
       // Check for groupPreferences map (new structure) or followedGroups array (old structure)
       let followedGroupIds = []
-      if (userData.groupPreferences) {
+      if (userData.groupPreferences && Object.keys(userData.groupPreferences).length > 0) {
         // New structure: groupPreferences is a map of group names to boolean values
         followedGroupIds = Object.keys(userData.groupPreferences).filter(
           groupName => userData.groupPreferences[groupName] === true
         )
-        console.log('🔍 Using groupPreferences structure')
+        console.log('🔍 Using groupPreferences structure from main document')
       } else if (userData.followedGroups) {
         // Old structure: followedGroups is an array of group IDs
         followedGroupIds = userData.followedGroups
         console.log('🔍 Using followedGroups structure')
       } else {
-        // Try to load from subcollections
-        console.log('🔍 No groupPreferences or followedGroups found, trying subcollections...')
+        // Try to load from subcollections (mobile app structure)
+        console.log('🔍 No groupPreferences or followedGroups found in main document, checking subcollections...')
         followedGroupIds = await loadFollowedGroupsFromSubcollections()
       }
       
@@ -131,7 +131,7 @@ export default function MyGroups() {
         return groupNames
       }
       
-      // Check for followedOrganizations subcollection (might contain groups)
+      // Check for followedOrganizations subcollection (mobile app structure)
       const followedOrgsRef = collection(db, 'users', currentUser.uid, 'followedOrganizations')
       const followedOrgsSnapshot = await getDocs(followedOrgsRef)
       
@@ -142,11 +142,23 @@ export default function MyGroups() {
           const orgData = orgDoc.data()
           console.log('🔍 Organization document:', orgDoc.id, orgData)
           
-          // Check if this org document has groups
+          // Check if this org document has groupPreferences (mobile app structure)
+          if (orgData.groupPreferences) {
+            console.log('🔍 Found groupPreferences in organization:', orgData.groupPreferences)
+            Object.keys(orgData.groupPreferences).forEach(groupName => {
+              if (orgData.groupPreferences[groupName] === true) {
+                groupNames.push(groupName)
+                console.log('🔍 Added group from org groupPreferences:', groupName)
+              }
+            })
+          }
+          
+          // Also check the old groups structure for backward compatibility
           if (orgData.groups) {
             Object.keys(orgData.groups).forEach(groupName => {
               if (orgData.groups[groupName] === true) {
                 groupNames.push(groupName)
+                console.log('🔍 Added group from org groups:', groupName)
               }
             })
           }
@@ -256,6 +268,13 @@ export default function MyGroups() {
         setFollowedGroups(prev => [...prev, group])
         console.log('✅ Followed group:', group.name)
       }
+      
+      // Force refresh user profile to sync with mobile app
+      if (window.forceUpdateUserProfile) {
+        window.forceUpdateUserProfile()
+      }
+      
+      console.log('📱 Group preferences updated - mobile app will sync automatically')
     } catch (error) {
       console.error('❌ Error toggling group follow:', error)
       alert('Error updating group follow status. Please try again.')
