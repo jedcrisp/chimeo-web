@@ -11,13 +11,23 @@ class NotificationService {
     this.initialized = false
   }
 
-  // Initialize FCM messaging
+  // Initialize FCM messaging with retry logic for page refreshes
   async initialize() {
+    // Reset state on initialization to handle page refreshes
+    this.messaging = null
+    this.currentToken = null
+    this.isSupported = false
+    this.initialized = false
+
     try {
       console.log('🔧 Starting notification service initialization...')
       console.log('🔧 Current user agent:', navigator.userAgent)
       console.log('🔧 Current URL:', window.location.href)
       console.log('🔧 Is secure context:', window.isSecureContext)
+      console.log('🔧 Page load time:', new Date().toISOString())
+      
+      // Wait a bit for the page to fully load after refresh
+      await new Promise(resolve => setTimeout(resolve, 1000))
       
       // Check if FCM is supported
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -38,42 +48,82 @@ class NotificationService {
         return false
       }
 
-      // Check service worker registration
-      console.log('🔧 Checking service worker registration...')
-      try {
-        const registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
-        if (registration) {
-          console.log('✅ Service worker is registered:', registration)
-        } else {
-          console.log('⚠️ Service worker not found, trying to register...')
-          try {
-            const newRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js')
-            console.log('✅ Service worker registered successfully:', newRegistration)
-          } catch (swError) {
-            console.log('❌ Failed to register service worker:', swError)
-            this.initialized = true // Mark as initialized but not supported
-            return false
+      // Ensure service worker is properly registered with retry logic
+      console.log('🔧 Ensuring service worker registration...')
+      let registration = null
+      let retryCount = 0
+      const maxRetries = 3
+      
+      while (!registration && retryCount < maxRetries) {
+        try {
+          registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+          if (registration) {
+            console.log('✅ Service worker is registered:', registration)
+            // Check if service worker is active
+            if (registration.active) {
+              console.log('✅ Service worker is active')
+            } else {
+              console.log('⚠️ Service worker is not active, waiting...')
+              await new Promise(resolve => setTimeout(resolve, 1000))
+              registration = null
+            }
+          } else {
+            console.log('⚠️ Service worker not found, trying to register...')
+            try {
+              registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js')
+              console.log('✅ Service worker registered successfully:', registration)
+              // Wait for service worker to be ready
+              await navigator.serviceWorker.ready
+            } catch (swError) {
+              console.log('❌ Failed to register service worker:', swError)
+              retryCount++
+              if (retryCount < maxRetries) {
+                console.log(`🔄 Retrying service worker registration (${retryCount}/${maxRetries})...`)
+                await new Promise(resolve => setTimeout(resolve, 2000))
+              }
+            }
+          }
+        } catch (error) {
+          console.log('⚠️ Error checking service worker registration:', error)
+          retryCount++
+          if (retryCount < maxRetries) {
+            console.log(`🔄 Retrying service worker check (${retryCount}/${maxRetries})...`)
+            await new Promise(resolve => setTimeout(resolve, 2000))
           }
         }
-      } catch (error) {
-        console.log('⚠️ Could not check service worker registration:', error)
+      }
+      
+      if (!registration) {
+        console.log('❌ Could not register service worker after retries')
         this.initialized = true // Mark as initialized but not supported
         return false
       }
 
-      // Get the messaging instance first
+      // Get the messaging instance with retry logic
       console.log('🔧 Getting messaging instance...')
-      try {
-        this.messaging = await getMessagingInstance()
-        console.log('🔧 Messaging instance result:', this.messaging)
-      } catch (error) {
-        console.log('❌ Error getting messaging instance:', error)
-        this.initialized = true // Mark as initialized but not supported
-        return false
+      let messagingRetryCount = 0
+      const maxMessagingRetries = 3
+      
+      while (!this.messaging && messagingRetryCount < maxMessagingRetries) {
+        try {
+          this.messaging = await getMessagingInstance()
+          console.log('🔧 Messaging instance result:', this.messaging)
+          
+          if (!this.messaging) {
+            throw new Error('Messaging instance is null')
+          }
+        } catch (error) {
+          console.log('❌ Error getting messaging instance:', error)
+          messagingRetryCount++
+          if (messagingRetryCount < maxMessagingRetries) {
+            console.log(`🔄 Retrying messaging instance creation (${messagingRetryCount}/${maxMessagingRetries})...`)
+            await new Promise(resolve => setTimeout(resolve, 2000))
+          }
+        }
       }
       
       if (!this.messaging) {
-        console.log('❌ Failed to get messaging instance - messaging may not be supported in this environment')
+        console.log('❌ Failed to get messaging instance after retries')
         console.log('🔍 This could be due to:')
         console.log('  - Not running on HTTPS (required for production)')
         console.log('  - Browser not supporting push notifications')
@@ -527,6 +577,54 @@ class NotificationService {
   // Check if service is initialized
   isInitialized() {
     return this.initialized
+  }
+
+  // Reinitialize the service (useful after page refresh)
+  async reinitialize() {
+    console.log('🔄 Reinitializing notification service...')
+    this.messaging = null
+    this.currentToken = null
+    this.isSupported = false
+    this.initialized = false
+    return await this.initialize()
+  }
+
+  // Check if notifications are working properly
+  async checkNotificationHealth() {
+    try {
+      console.log('🔍 Checking notification service health...')
+      
+      // Check if service worker is registered and active
+      const registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+      if (!registration || !registration.active) {
+        console.log('❌ Service worker not properly registered or active')
+        return false
+      }
+      
+      // Check if messaging instance is available
+      if (!this.messaging) {
+        console.log('❌ Messaging instance not available')
+        return false
+      }
+      
+      // Check if we have a valid token
+      if (!this.currentToken) {
+        console.log('❌ No FCM token available')
+        return false
+      }
+      
+      // Check notification permission
+      if (Notification.permission !== 'granted') {
+        console.log('❌ Notification permission not granted')
+        return false
+      }
+      
+      console.log('✅ Notification service is healthy')
+      return true
+    } catch (error) {
+      console.error('❌ Error checking notification health:', error)
+      return false
+    }
   }
 }
 

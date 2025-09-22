@@ -53,6 +53,15 @@ function App() {
         
         if (success) {
           console.log('✅ Notification service initialized successfully')
+          
+          // Check notification health after a delay
+          setTimeout(async () => {
+            const isHealthy = await notificationService.checkNotificationHealth()
+            if (!isHealthy) {
+              console.log('⚠️ Notification service health check failed, attempting reinitialization...')
+              await notificationService.reinitialize()
+            }
+          }, 5000)
         } else {
           console.log('⚠️ Notification service not available - continuing without push notifications')
           console.log('💡 To enable push notifications:')
