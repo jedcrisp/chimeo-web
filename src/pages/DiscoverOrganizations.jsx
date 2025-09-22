@@ -262,7 +262,12 @@ export default function DiscoverOrganizations() {
               {org.contact && (
                 <div className="flex items-center text-sm text-gray-500">
                   <Phone className="h-4 w-4 mr-2" />
-                  <span>{org.contact}</span>
+                  <span>
+                    {typeof org.contact === 'string' 
+                      ? org.contact 
+                      : org.contact.phone || org.contact.email || 'Contact available'
+                    }
+                  </span>
                 </div>
               )}
               

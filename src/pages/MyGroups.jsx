@@ -243,7 +243,12 @@ export default function MyGroups() {
                   {group.contact && (
                     <div className="flex items-center">
                       <Phone className="h-4 w-4 mr-1" />
-                      <span>{group.contact}</span>
+                      <span>
+                        {typeof group.contact === 'string' 
+                          ? group.contact 
+                          : group.contact.phone || group.contact.email || 'Contact available'
+                        }
+                      </span>
                     </div>
                   )}
                 </div>
