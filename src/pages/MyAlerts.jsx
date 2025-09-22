@@ -56,6 +56,58 @@ export default function MyAlerts() {
     }
   }
 
+  const loadFollowedGroupsFromSubcollections = async () => {
+    try {
+      console.log('🔍 MyAlerts - Checking subcollections for followed groups...')
+      
+      // Check for followedGroups subcollection
+      const followedGroupsRef = collection(db, 'users', currentUser.uid, 'followedGroups')
+      const followedGroupsSnapshot = await getDocs(followedGroupsRef)
+      
+      if (!followedGroupsSnapshot.empty) {
+        console.log('🔍 MyAlerts - Found followedGroups subcollection with', followedGroupsSnapshot.size, 'documents')
+        const groupNames = []
+        followedGroupsSnapshot.forEach(doc => {
+          const data = doc.data()
+          console.log('🔍 MyAlerts - Followed group document:', doc.id, data)
+          if (data.name) {
+            groupNames.push(data.name)
+          }
+        })
+        return groupNames
+      }
+      
+      // Check for followedOrganizations subcollection (might contain groups)
+      const followedOrgsRef = collection(db, 'users', currentUser.uid, 'followedOrganizations')
+      const followedOrgsSnapshot = await getDocs(followedOrgsRef)
+      
+      if (!followedOrgsSnapshot.empty) {
+        console.log('🔍 MyAlerts - Found followedOrganizations subcollection with', followedOrgsSnapshot.size, 'documents')
+        const groupNames = []
+        for (const orgDoc of followedOrgsSnapshot.docs) {
+          const orgData = orgDoc.data()
+          console.log('🔍 MyAlerts - Organization document:', orgDoc.id, orgData)
+          
+          // Check if this org document has groups
+          if (orgData.groups) {
+            Object.keys(orgData.groups).forEach(groupName => {
+              if (orgData.groups[groupName] === true) {
+                groupNames.push(groupName)
+              }
+            })
+          }
+        }
+        return groupNames
+      }
+      
+      console.log('🔍 MyAlerts - No subcollections found with followed groups')
+      return []
+    } catch (error) {
+      console.error('Error loading followed groups from subcollections:', error)
+      return []
+    }
+  }
+
   const findGroupByName = async (groupName) => {
     try {
       // Get all organizations first
@@ -120,6 +172,10 @@ export default function MyAlerts() {
         // Old structure: followedGroups is an array of group IDs
         followedGroupIds = userData.followedGroups
         console.log('🔍 MyAlerts - Using followedGroups structure')
+      } else {
+        // Check for subcollection structure
+        console.log('🔍 MyAlerts - No groupPreferences or followedGroups found, checking subcollections...')
+        followedGroupIds = await loadFollowedGroupsFromSubcollections()
       }
       
       console.log('🔍 MyAlerts - User data from database:', userData)
