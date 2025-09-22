@@ -237,21 +237,24 @@ export default function MyGroups() {
 
   const toggleFollowGroup = async (groupId) => {
     try {
-      const isFollowing = followedGroups.some(g => g.id === groupId)
+      const group = allGroups.find(g => g.id === groupId)
+      if (!group) {
+        console.error('Group not found:', groupId)
+        return
+      }
+
+      const isFollowing = followedGroups.some(g => g.name === group.name)
       
       if (isFollowing) {
         // Unfollow group
         await adminService.unfollowGroup(groupId)
-        setFollowedGroups(prev => prev.filter(g => g.id !== groupId))
-        console.log('✅ Unfollowed group:', groupId)
+        setFollowedGroups(prev => prev.filter(g => g.name !== group.name))
+        console.log('✅ Unfollowed group:', group.name)
       } else {
         // Follow group
         await adminService.followGroup(groupId)
-        const groupToAdd = allGroups.find(g => g.id === groupId)
-        if (groupToAdd) {
-          setFollowedGroups(prev => [...prev, groupToAdd])
-        }
-        console.log('✅ Followed group:', groupId)
+        setFollowedGroups(prev => [...prev, group])
+        console.log('✅ Followed group:', group.name)
       }
     } catch (error) {
       console.error('❌ Error toggling group follow:', error)
@@ -266,7 +269,12 @@ export default function MyGroups() {
   )
 
   const isFollowingGroup = (groupId) => {
-    return followedGroups.some(g => g.id === groupId)
+    // Find the group by ID to get its name
+    const group = allGroups.find(g => g.id === groupId)
+    if (!group) return false
+    
+    // Check if the group name is in the followed groups list
+    return followedGroups.some(g => g.name === group.name)
   }
 
   if (loading) {

@@ -56,7 +56,7 @@ export default function MyAlerts() {
     }
   }
 
-  const loadFollowedGroupsFromSubcollections = async () => {
+  const loadFollowedGroupsFromSubcollectionsMyAlerts = async () => {
     try {
       console.log('🔍 MyAlerts - Checking subcollections for followed groups...')
       
@@ -108,39 +108,6 @@ export default function MyAlerts() {
     }
   }
 
-  const loadFollowedGroupsFromSubcollections = async () => {
-    try {
-      console.log('🔍 MyAlerts - Loading followed groups from subcollections...')
-      
-      // Check if there's a followedOrganizations subcollection
-      const followedOrgsRef = collection(db, 'users', currentUser.uid, 'followedOrganizations')
-      const followedOrgsSnapshot = await getDocs(followedOrgsRef)
-      
-      const followedGroupNames = []
-      
-      for (const orgDoc of followedOrgsSnapshot.docs) {
-        console.log('🔍 MyAlerts - Checking organization:', orgDoc.id)
-        
-        // Check if there are groups under this organization
-        const groupsRef = collection(db, 'users', currentUser.uid, 'followedOrganizations', orgDoc.id, 'groups')
-        const groupsSnapshot = await getDocs(groupsRef)
-        
-        for (const groupDoc of groupsSnapshot.docs) {
-          const groupData = groupDoc.data()
-          if (groupData.isFollowing === true) {
-            followedGroupNames.push(groupData.name || groupDoc.id)
-            console.log('🔍 MyAlerts - Found followed group:', groupData.name || groupDoc.id)
-          }
-        }
-      }
-      
-      console.log('🔍 MyAlerts - Followed groups from subcollections:', followedGroupNames)
-      return followedGroupNames
-    } catch (error) {
-      console.error('MyAlerts - Error loading from subcollections:', error)
-      return []
-    }
-  }
 
   const findGroupByName = async (groupName) => {
     try {
@@ -209,7 +176,7 @@ export default function MyAlerts() {
       } else {
         // Try to load from subcollections
         console.log('🔍 MyAlerts - No groupPreferences or followedGroups found, trying subcollections...')
-        followedGroupIds = await loadFollowedGroupsFromSubcollections()
+        followedGroupIds = await loadFollowedGroupsFromSubcollectionsMyAlerts()
       }
       
       console.log('🔍 MyAlerts - User data from database:', userData)

@@ -483,7 +483,16 @@ class AdminService {
     }
 
     try {
-      // Add to user's followed groups
+      // First, get the group data to find the group name
+      const groupData = await this.getGroupById(groupId)
+      if (!groupData) {
+        throw new Error('Group not found')
+      }
+
+      const groupName = groupData.name
+      console.log('🔍 Following group:', groupName, 'with ID:', groupId)
+
+      // Add to user's followed groups using groupPreferences structure
       const userRef = doc(db, 'users', this.currentUser.uid)
       const userDoc = await getDoc(userRef)
       
@@ -492,20 +501,18 @@ class AdminService {
       }
 
       const userData = userDoc.data()
-      const followedGroups = userData.followedGroups || []
+      const groupPreferences = userData.groupPreferences || {}
       
-      // Add group to followed list if not already following
-      if (!followedGroups.includes(groupId)) {
-        followedGroups.push(groupId)
-        
-        // Update user document
-        await updateDoc(userRef, {
-          followedGroups,
-          updatedAt: serverTimestamp()
-        })
-      }
+      // Add group to followed list using group name as key
+      groupPreferences[groupName] = true
+      
+      // Update user document
+      await updateDoc(userRef, {
+        groupPreferences,
+        updatedAt: serverTimestamp()
+      })
 
-      console.log('✅ Group followed successfully')
+      console.log('✅ Group followed successfully:', groupName)
       return true
     } catch (error) {
       console.error('❌ Error following group:', error)
@@ -520,7 +527,16 @@ class AdminService {
     }
 
     try {
-      // Remove from user's followed groups
+      // First, get the group data to find the group name
+      const groupData = await this.getGroupById(groupId)
+      if (!groupData) {
+        throw new Error('Group not found')
+      }
+
+      const groupName = groupData.name
+      console.log('🔍 Unfollowing group:', groupName, 'with ID:', groupId)
+
+      // Remove from user's followed groups using groupPreferences structure
       const userRef = doc(db, 'users', this.currentUser.uid)
       const userDoc = await getDoc(userRef)
       
@@ -529,18 +545,18 @@ class AdminService {
       }
 
       const userData = userDoc.data()
-      const followedGroups = userData.followedGroups || []
+      const groupPreferences = userData.groupPreferences || {}
       
-      // Remove group from followed list
-      const updatedGroups = followedGroups.filter(id => id !== groupId)
+      // Remove group from followed list using group name as key
+      delete groupPreferences[groupName]
       
       // Update user document
       await updateDoc(userRef, {
-        followedGroups: updatedGroups,
+        groupPreferences,
         updatedAt: serverTimestamp()
       })
 
-      console.log('✅ Group unfollowed successfully')
+      console.log('✅ Group unfollowed successfully:', groupName)
       return true
     } catch (error) {
       console.error('❌ Error unfollowing group:', error)
