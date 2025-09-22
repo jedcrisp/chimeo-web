@@ -1,0 +1,3 @@
+# Handle client-side routing for Single Page Application
+# All routes should serve index.html and let React Router handle routing
+/*    /index.html   200
