@@ -1,5 +1,5 @@
 import { db, auth } from './firebase'
-import { doc, getDoc, collection, getDocs, query, where, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, collection, getDocs, query, where, updateDoc, addDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 
 class AdminService {
   constructor() {
@@ -558,6 +558,50 @@ class AdminService {
     }
   }
 
+  // Update organization group preferences for mobile app sync
+  async updateOrganizationGroupPreferences(organizationId, groupName, isFollowing) {
+    try {
+      console.log(`🔄 Updating organization group preferences: ${groupName} = ${isFollowing}`)
+      
+      const orgRef = doc(db, 'users', this.currentUser.uid, 'followedOrganizations', organizationId)
+      const orgDoc = await getDoc(orgRef)
+      
+      if (orgDoc.exists()) {
+        // Update existing organization document
+        const orgData = orgDoc.data()
+        const groupPreferences = orgData.groupPreferences || {}
+        
+        if (isFollowing) {
+          groupPreferences[groupName] = true
+        } else {
+          delete groupPreferences[groupName]
+        }
+        
+        await updateDoc(orgRef, {
+          groupPreferences,
+          updatedAt: serverTimestamp()
+        })
+        
+        console.log(`✅ Updated organization group preferences:`, groupPreferences)
+      } else {
+        // Create new organization document if it doesn't exist
+        const newOrgData = {
+          organizationId,
+          isFollowing: true,
+          groupPreferences: isFollowing ? { [groupName]: true } : {},
+          followedAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }
+        
+        await setDoc(orgRef, newOrgData)
+        console.log(`✅ Created new organization document with group preferences`)
+      }
+      
+    } catch (error) {
+      console.error('❌ Error updating organization group preferences:', error)
+    }
+  }
+
   // Follow a group
   async followGroup(groupId) {
     if (!this.currentUser) {
@@ -611,6 +655,9 @@ class AdminService {
       }
       
       await updateDoc(userRef, updateData)
+      
+      // ALSO update the organization subcollection for mobile app sync
+      await this.updateOrganizationGroupPreferences(groupData.organizationId, groupName, true)
 
       console.log('✅ Group followed successfully:', groupName)
       console.log('📱 Updated both groupPreferences and followedGroups for mobile/web sync')
@@ -671,6 +718,9 @@ class AdminService {
       }
       
       await updateDoc(userRef, updateData)
+      
+      // ALSO update the organization subcollection for mobile app sync
+      await this.updateOrganizationGroupPreferences(groupData.organizationId, groupName, false)
 
       console.log('✅ Group unfollowed successfully:', groupName)
       console.log('📱 Updated both groupPreferences and followedGroups for mobile/web sync')
