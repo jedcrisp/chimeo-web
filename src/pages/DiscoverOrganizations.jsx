@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useOrganizations } from '../contexts/OrganizationsContext'
-import { Building, Search, MapPin, Phone, Mail, Heart, UserPlus, Users, Crown } from 'lucide-react'
+import { Building, Search, MapPin, Phone, Mail, Heart, UserPlus, Users } from 'lucide-react'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import adminService from '../services/adminService'
@@ -234,12 +234,6 @@ export default function DiscoverOrganizations() {
               <div className="flex-1">
                 <div className="flex items-center space-x-2 mb-2">
                   <h3 className="text-lg font-semibold text-gray-900">{org.name}</h3>
-                  {org.isAdmin && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                      <Crown className="h-3 w-3 mr-1" />
-                      Admin
-                    </span>
-                  )}
                 </div>
                 
                 {org.description && (
