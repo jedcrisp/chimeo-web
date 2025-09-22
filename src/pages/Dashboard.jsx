@@ -157,194 +157,197 @@ export default function Dashboard() {
   const totalOrganizations = organizations.length
   const totalAlerts = alerts.length
 
-  return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-              <p className="text-slate-600 mt-1">
-                Welcome back, {getDisplayName()}
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-xs text-slate-500 uppercase tracking-wide">Last updated</p>
-                <p className="text-sm font-medium text-slate-900">{new Date().toLocaleDateString()}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200 min-h-[100px]">
-            <div className="flex items-center h-full">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                  <Bell className="h-6 w-6 text-red-600" />
-                </div>
-              </div>
-              <div className="ml-4 flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-600 truncate">Total Alerts</p>
-                <p className="text-2xl font-bold text-slate-900">{totalAlerts}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200 min-h-[100px]">
-            <div className="flex items-center h-full">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Users className="h-6 w-6 text-purple-600" />
-                </div>
-              </div>
-              <div className="ml-4 flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-600 truncate">Groups</p>
-                <p className="text-2xl font-bold text-slate-900">{totalGroups}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200 min-h-[100px]">
-            <div className="flex items-center h-full">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Users className="h-6 w-6 text-blue-600" />
-                </div>
-              </div>
-              <div className="ml-4 flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-600 truncate">Followers</p>
-                <p className="text-2xl font-bold text-blue-600">{userProfile?.organizations?.[0] ? organizations.find(org => org.id === userProfile.organizations[0])?.followerCount || 0 : 0}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-
-        {/* Recent Alerts */}
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-          <div className="px-6 py-4 border-b border-slate-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-900">Recent Alerts</h2>
-              <Link
-                to="/alerts"
-                className="text-sm text-slate-600 hover:text-slate-900 transition-colors"
-              >
-                View all →
-              </Link>
-            </div>
-          </div>
-          
-          <div className="p-6">
-            {recentAlerts.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <AlertTriangle className="h-6 w-6 text-slate-400" />
-                </div>
-                <h3 className="text-sm font-medium text-slate-900 mb-1">No alerts yet</h3>
-                <p className="text-sm text-slate-500">
-                  Alerts will appear here when they're posted
+  // Show different dashboard based on user role
+  if (isOrganizationAdmin) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        {/* Header */}
+        <div className="bg-white shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-6">
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+                <p className="text-slate-600 mt-1">
+                  Welcome back, {getDisplayName()}
                 </p>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {recentAlerts.map((alert) => (
-                  <div key={alert.id} className="flex items-start space-x-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                    <div className="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <BellIcon className="h-4 w-4 text-slate-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900">{alert.title}</p>
-                      <p className="text-sm text-slate-600 mt-1">{alert.message}</p>
-                      <p className="text-xs text-slate-400 mt-2">
-                        {alert.createdAt?.toDate?.()?.toLocaleDateString() || 'Recently'}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <div className="flex items-center space-x-4">
+                <div className="text-right">
+                  <p className="text-xs text-slate-500 uppercase tracking-wide">Last updated</p>
+                  <p className="text-sm font-medium text-slate-900">{new Date().toLocaleDateString()}</p>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
 
-        {/* Platform Admin Notifications */}
-        {isPlatformAdmin && (
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium text-gray-900 flex items-center">
-                <Bell className="h-5 w-5 mr-2 text-blue-600" />
-                Recent Notifications
-              </h2>
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={handleTestEmail}
-                  className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200 min-h-[100px]">
+              <div className="flex items-center h-full">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <Bell className="h-6 w-6 text-red-600" />
+                  </div>
+                </div>
+                <div className="ml-4 flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-600 truncate">Total Alerts</p>
+                  <p className="text-2xl font-bold text-slate-900">{totalAlerts}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200 min-h-[100px]">
+              <div className="flex items-center h-full">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Users className="h-6 w-6 text-purple-600" />
+                  </div>
+                </div>
+                <div className="ml-4 flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-600 truncate">Groups</p>
+                  <p className="text-2xl font-bold text-slate-900">{totalGroups}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200 min-h-[100px]">
+              <div className="flex items-center h-full">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Users className="h-6 w-6 text-blue-600" />
+                  </div>
+                </div>
+                <div className="ml-4 flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-600 truncate">Followers</p>
+                  <p className="text-2xl font-bold text-blue-600">{userProfile?.organizations?.[0] ? organizations.find(org => org.id === userProfile.organizations[0])?.followerCount || 0 : 0}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Alerts */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+            <div className="px-6 py-4 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-slate-900">Recent Alerts</h2>
+                <Link
+                  to="/alerts"
+                  className="text-sm text-slate-600 hover:text-slate-900 transition-colors"
                 >
-                  Test Email
-                </button>
-                <Link 
-                  to="/org-requests" 
-                  className="text-sm text-blue-600 hover:text-blue-500"
-                >
-                  View All
+                  View all →
                 </Link>
               </div>
             </div>
             
-            {notifications.length === 0 ? (
-              <div className="text-center py-4">
-                <Bell className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-500 text-sm">No recent notifications</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {notifications.map((notification) => (
-                  <div key={notification.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-sm font-medium text-gray-900">
-                          {notification.title}
-                        </h3>
-                        <p className="text-xs text-gray-600 mt-1">
-                          {notification.message}
-                        </p>
-                        {notification.organizationName && (
-                          <p className="text-xs text-blue-600 mt-1">
-                            Organization: {notification.organizationName}
-                          </p>
-                        )}
-                        {notification.adminName && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            Admin: {notification.adminName} ({notification.adminEmail})
-                          </p>
-                        )}
+            <div className="p-6">
+              {recentAlerts.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <AlertTriangle className="h-6 w-6 text-slate-400" />
+                  </div>
+                  <h3 className="text-sm font-medium text-slate-900 mb-1">No alerts yet</h3>
+                  <p className="text-sm text-slate-500">
+                    Alerts will appear here when they're posted
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentAlerts.map((alert) => (
+                    <div key={alert.id} className="flex items-start space-x-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                      <div className="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <BellIcon className="h-4 w-4 text-slate-600" />
                       </div>
-                      <div className="text-xs text-gray-400 ml-2">
-                        {notification.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-900">{alert.title}</p>
+                        <p className="text-sm text-slate-600 mt-1">{alert.message}</p>
+                        <p className="text-xs text-slate-400 mt-2">
+                          {alert.createdAt?.toDate?.()?.toLocaleDateString() || 'Recently'}
+                        </p>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Platform Admin Notifications */}
+          {isPlatformAdmin && (
+            <div className="card">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-medium text-gray-900 flex items-center">
+                  <Bell className="h-5 w-5 mr-2 text-blue-600" />
+                  Recent Notifications
+                </h2>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={handleTestEmail}
+                    className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
+                  >
+                    Test Email
+                  </button>
+                  <Link 
+                    to="/org-requests" 
+                    className="text-sm text-blue-600 hover:text-blue-500"
+                  >
+                    View All
+                  </Link>
+                </div>
               </div>
-            )}
-          </div>
-        )}
-        
-        {/* Notification Debug Component - Only show for platform admin */}
-        {isPlatformAdmin && (
-          <div className="mt-8">
-            <NotificationDebug />
-          </div>
-        )}
+              
+              {notifications.length === 0 ? (
+                <div className="text-center py-4">
+                  <Bell className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-500 text-sm">No recent notifications</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {notifications.map((notification) => (
+                    <div key={notification.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="text-sm font-medium text-gray-900">
+                            {notification.title}
+                          </h3>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {notification.message}
+                          </p>
+                          {notification.organizationName && (
+                            <p className="text-xs text-blue-600 mt-1">
+                              Organization: {notification.organizationName}
+                            </p>
+                          )}
+                          {notification.adminName && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Admin: {notification.adminName} ({notification.adminEmail})
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-400 ml-2">
+                          {notification.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Notification Debug Component - Only show for platform admin */}
+          {isPlatformAdmin && (
+            <div className="mt-8">
+              <NotificationDebug />
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  ) : (
+    )
+  } else {
+    return (
     // Basic User Dashboard
     <div className="space-y-6">
       {/* Welcome Header */}
@@ -475,6 +478,6 @@ export default function Dashboard() {
           )}
         </div>
       </div>
-    </div>
-  )}
+    )
+  }
 }
