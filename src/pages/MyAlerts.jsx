@@ -56,6 +56,43 @@ export default function MyAlerts() {
     }
   }
 
+  const findGroupByName = async (groupName) => {
+    try {
+      // Get all organizations first
+      const orgsQuery = query(collection(db, 'organizations'))
+      const orgsSnapshot = await getDocs(orgsQuery)
+      
+      for (const orgDoc of orgsSnapshot.docs) {
+        try {
+          const groupsQuery = query(
+            collection(db, 'organizations', orgDoc.id, 'groups'),
+            where('isActive', '==', true)
+          )
+          const groupsSnapshot = await getDocs(groupsQuery)
+          
+          for (const groupDoc of groupsSnapshot.docs) {
+            const groupData = groupDoc.data()
+            if (groupData.name === groupName) {
+              return {
+                id: groupDoc.id,
+                ...groupData,
+                organizationId: orgDoc.id,
+                organizationName: orgDoc.data().name
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error searching groups in org:', orgDoc.id, error)
+        }
+      }
+      
+      return null
+    } catch (error) {
+      console.error('Error finding group by name:', error)
+      return null
+    }
+  }
+
   const loadFollowedGroups = async () => {
     try {
       if (!currentUser) return []
@@ -70,10 +107,24 @@ export default function MyAlerts() {
       }
       
       const userData = userDoc.data()
-      const followedGroupIds = userData.followedGroups || []
+      
+      // Check for groupPreferences map (new structure) or followedGroups array (old structure)
+      let followedGroupIds = []
+      if (userData.groupPreferences) {
+        // New structure: groupPreferences is a map of group names to boolean values
+        followedGroupIds = Object.keys(userData.groupPreferences).filter(
+          groupName => userData.groupPreferences[groupName] === true
+        )
+        console.log('🔍 MyAlerts - Using groupPreferences structure')
+      } else if (userData.followedGroups) {
+        // Old structure: followedGroups is an array of group IDs
+        followedGroupIds = userData.followedGroups
+        console.log('🔍 MyAlerts - Using followedGroups structure')
+      }
       
       console.log('🔍 MyAlerts - User data from database:', userData)
-      console.log('🔍 MyAlerts - Followed group IDs:', followedGroupIds)
+      console.log('🔍 MyAlerts - Group preferences:', userData.groupPreferences)
+      console.log('🔍 MyAlerts - Followed group names:', followedGroupIds)
       
       if (followedGroupIds.length === 0) {
         console.log('No followed groups found')
@@ -81,14 +132,17 @@ export default function MyAlerts() {
       }
       
       const groups = []
-      for (const groupId of followedGroupIds) {
+      for (const groupName of followedGroupIds) {
         try {
-          const groupData = await adminService.getGroupById(groupId)
+          console.log('🔍 MyAlerts - Loading group data for name:', groupName)
+          // Search for group by name in all available groups
+          const groupData = await findGroupByName(groupName)
+          console.log('🔍 MyAlerts - Group data loaded:', groupData)
           if (groupData) {
             groups.push(groupData)
           }
         } catch (error) {
-          console.error('Error loading group:', groupId, error)
+          console.error('Error loading group:', groupName, error)
         }
       }
       
