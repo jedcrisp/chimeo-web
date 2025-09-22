@@ -46,6 +46,9 @@ export default function Dashboard() {
   const [totalGroups, setTotalGroups] = useState(0)
   const [notifications, setNotifications] = useState([])
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
+  const [followedGroups, setFollowedGroups] = useState([])
+  const [followedOrgs, setFollowedOrgs] = useState([])
+  const [userAlerts, setUserAlerts] = useState([])
 
   // Check if user is platform admin
   useEffect(() => {

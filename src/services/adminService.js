@@ -475,6 +475,110 @@ class AdminService {
       return null
     }
   }
+
+  // Follow a group
+  async followGroup(groupId) {
+    if (!this.currentUser) {
+      throw new Error('User not authenticated')
+    }
+
+    try {
+      // Add to user's followed groups
+      const userRef = doc(db, 'users', this.currentUser.uid)
+      const userDoc = await getDoc(userRef)
+      
+      if (!userDoc.exists()) {
+        throw new Error('User document not found')
+      }
+
+      const userData = userDoc.data()
+      const followedGroups = userData.followedGroups || []
+      
+      // Add group to followed list if not already following
+      if (!followedGroups.includes(groupId)) {
+        followedGroups.push(groupId)
+        
+        // Update user document
+        await updateDoc(userRef, {
+          followedGroups,
+          updatedAt: serverTimestamp()
+        })
+      }
+
+      console.log('✅ Group followed successfully')
+      return true
+    } catch (error) {
+      console.error('❌ Error following group:', error)
+      throw error
+    }
+  }
+
+  // Unfollow a group
+  async unfollowGroup(groupId) {
+    if (!this.currentUser) {
+      throw new Error('User not authenticated')
+    }
+
+    try {
+      // Remove from user's followed groups
+      const userRef = doc(db, 'users', this.currentUser.uid)
+      const userDoc = await getDoc(userRef)
+      
+      if (!userDoc.exists()) {
+        throw new Error('User document not found')
+      }
+
+      const userData = userDoc.data()
+      const followedGroups = userData.followedGroups || []
+      
+      // Remove group from followed list
+      const updatedGroups = followedGroups.filter(id => id !== groupId)
+      
+      // Update user document
+      await updateDoc(userRef, {
+        followedGroups: updatedGroups,
+        updatedAt: serverTimestamp()
+      })
+
+      console.log('✅ Group unfollowed successfully')
+      return true
+    } catch (error) {
+      console.error('❌ Error unfollowing group:', error)
+      throw error
+    }
+  }
+
+  // Get a group by ID
+  async getGroupById(groupId) {
+    try {
+      // First, we need to find which organization this group belongs to
+      // This is a bit inefficient, but we'll search through all organizations
+      const orgsQuery = query(collection(db, 'organizations'))
+      const orgsSnapshot = await getDocs(orgsQuery)
+      
+      for (const orgDoc of orgsSnapshot.docs) {
+        try {
+          const groupDoc = await getDoc(doc(db, 'organizations', orgDoc.id, 'groups', groupId))
+          if (groupDoc.exists()) {
+            return {
+              id: groupDoc.id,
+              ...groupDoc.data(),
+              organizationId: orgDoc.id,
+              organizationName: orgDoc.data().name
+            }
+          }
+        } catch (error) {
+          // Continue searching other organizations
+          continue
+        }
+      }
+      
+      return null
+    } catch (error) {
+      console.error('❌ Error getting group by ID:', error)
+      return null
+    }
+  }
 }
 
 // Create a singleton instance
