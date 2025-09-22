@@ -29,15 +29,26 @@ export default function Layout() {
 
   // Check if user is platform admin (app creator)
   const isPlatformAdmin = currentUser?.email === 'jed@onetrack-consulting.com'
+  
+  // Check if user is organization admin
+  const isOrganizationAdmin = userProfile?.isOrganizationAdmin || false
 
-  const navigation = [
+  // Different navigation based on user role
+  const navigation = isOrganizationAdmin ? [
+    // Organization Admin Navigation
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Alerts', href: '/alerts', icon: Bell },
-    // { name: 'Organizations', href: '/organizations', icon: Building },
     { name: 'Groups', href: '/groups', icon: UserPlus },
     { name: 'Calendar', href: '/calendar', icon: Calendar },
     ...(isPlatformAdmin ? [{ name: 'Org Requests', href: '/org-requests', icon: FileText }] : []),
     { name: 'Profile', href: '/profile', icon: User },
+  ] : [
+    // Basic User Navigation
+    { name: 'Dashboard', href: '/', icon: Home },
+    { name: 'My Alerts', href: '/my-alerts', icon: Bell },
+    { name: 'My Groups', href: '/my-groups', icon: UserPlus },
+    { name: 'Discover', href: '/discover', icon: Building },
+    { name: 'My Profile', href: '/my-profile', icon: User },
   ]
 
   const handleLogout = async () => {

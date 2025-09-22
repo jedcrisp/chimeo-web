@@ -13,6 +13,11 @@ import Groups from './pages/Groups'
 import Calendar from './pages/Calendar'
 import Profile from './pages/Profile'
 import OrganizationRequest from './pages/OrganizationRequest'
+// New user pages
+import MyAlerts from './pages/MyAlerts'
+import MyGroups from './pages/MyGroups'
+import DiscoverOrganizations from './pages/DiscoverOrganizations'
+import MyProfile from './pages/MyProfile'
 import ProtectedRoute from './components/ProtectedRoute'
 import emailService from './services/emailService'
 import notificationService from './services/notificationService'
@@ -97,6 +102,11 @@ function App() {
                 <Route path="calendar" element={<Calendar />} />
                 <Route path="org-requests" element={<OrganizationRequest />} />
                 <Route path="profile" element={<Profile />} />
+                {/* New user pages */}
+                <Route path="my-alerts" element={<MyAlerts />} />
+                <Route path="my-groups" element={<MyGroups />} />
+                <Route path="discover" element={<DiscoverOrganizations />} />
+                <Route path="my-profile" element={<MyProfile />} />
               </Route>
             </Routes>
           </CalendarProvider>

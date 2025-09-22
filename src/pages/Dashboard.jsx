@@ -10,7 +10,8 @@ import {
   TrendingUp,
   Shield,
   Users,
-  Clock
+  Clock,
+  User
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import adminService from '../services/adminService'
@@ -49,6 +50,9 @@ export default function Dashboard() {
   const [followedGroups, setFollowedGroups] = useState([])
   const [followedOrgs, setFollowedOrgs] = useState([])
   const [userAlerts, setUserAlerts] = useState([])
+  
+  // Check if user is organization admin
+  const isOrganizationAdmin = userProfile?.isOrganizationAdmin || false
 
   // Check if user is platform admin
   useEffect(() => {
@@ -340,5 +344,137 @@ export default function Dashboard() {
         )}
       </div>
     </div>
-  )
+  ) : (
+    // Basic User Dashboard
+    <div className="space-y-6">
+      {/* Welcome Header */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Welcome back, {getDisplayName()}!</h1>
+            <p className="text-gray-600 mt-1">
+              Stay updated with alerts from your followed groups and organizations
+            </p>
+          </div>
+          <div className="flex space-x-3">
+            <Link
+              to="/my-alerts"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              View My Alerts
+            </Link>
+            <Link
+              to="/discover"
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+            >
+              Discover Organizations
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center">
+            <Bell className="h-8 w-8 text-blue-600" />
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">My Alerts</p>
+              <p className="text-2xl font-bold text-gray-900">{userAlerts.length}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center">
+            <Users className="h-8 w-8 text-green-600" />
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Groups Following</p>
+              <p className="text-2xl font-bold text-gray-900">{followedGroups.length}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center">
+            <Building className="h-8 w-8 text-purple-600" />
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Organizations</p>
+              <p className="text-2xl font-bold text-gray-900">{followedOrgs.length}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+          <div className="space-y-3">
+            <Link
+              to="/my-groups"
+              className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Users className="h-5 w-5 text-blue-600 mr-3" />
+              <div>
+                <p className="font-medium text-gray-900">Manage My Groups</p>
+                <p className="text-sm text-gray-600">Follow or unfollow groups</p>
+              </div>
+            </Link>
+            
+            <Link
+              to="/discover"
+              className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Building className="h-5 w-5 text-green-600 mr-3" />
+              <div>
+                <p className="font-medium text-gray-900">Discover Organizations</p>
+                <p className="text-sm text-gray-600">Find new organizations to follow</p>
+              </div>
+            </Link>
+            
+            <Link
+              to="/my-profile"
+              className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <User className="h-5 w-5 text-purple-600 mr-3" />
+              <div>
+                <p className="font-medium text-gray-900">Update Profile</p>
+                <p className="text-sm text-gray-600">Edit your personal information</p>
+              </div>
+            </Link>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+          {userAlerts.length === 0 ? (
+            <div className="text-center py-8">
+              <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">No recent alerts</p>
+              <p className="text-sm text-gray-500 mt-1">Follow some groups to start receiving alerts</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {userAlerts.slice(0, 3).map((alert) => (
+                <div key={alert.id} className="p-3 bg-gray-50 rounded-lg">
+                  <p className="font-medium text-gray-900">{alert.title}</p>
+                  <p className="text-sm text-gray-600 mt-1">{alert.message}</p>
+                  <p className="text-xs text-gray-400 mt-2">
+                    {alert.createdAt?.toDate?.()?.toLocaleDateString() || 'Recently'}
+                  </p>
+                </div>
+              ))}
+              <Link
+                to="/my-alerts"
+                className="block text-center text-blue-600 hover:text-blue-500 text-sm"
+              >
+                View all alerts →
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )}
 }
