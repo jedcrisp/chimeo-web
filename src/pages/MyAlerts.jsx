@@ -32,23 +32,46 @@ export default function MyAlerts() {
         return
       }
       
-      // Load alerts from followed groups
-      const groupIds = groups.map(g => g.id)
+      // Get organization ID (same logic as AlertContext)
+      let orgId = userProfile?.organizationId
+      if (!orgId && userProfile?.organizations && userProfile.organizations.length > 0) {
+        orgId = userProfile.organizations[0]
+      }
+      if (!orgId && userProfile?.followedOrganizations && userProfile.followedOrganizations.length > 0) {
+        orgId = userProfile.followedOrganizations[0]
+      }
+      
+      if (!orgId) {
+        console.log('🔍 MyAlerts: No organization ID found, setting empty alerts')
+        setAlerts([])
+        setLoading(false)
+        return
+      }
+      
+      console.log('🔍 MyAlerts: Loading alerts from organization:', orgId)
+      
+      // Load alerts from organization subcollection (same as AlertContext)
       const alertsQuery = query(
-        collection(db, 'alerts'),
-        where('groupId', 'in', groupIds),
+        collection(db, 'organizations', orgId, 'alerts'),
         orderBy('createdAt', 'desc'),
         limit(50)
       )
       
       const alertsSnapshot = await getDocs(alertsQuery)
-      const alertsData = alertsSnapshot.docs.map(doc => ({
+      const allAlerts = alertsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }))
       
-      setAlerts(alertsData)
-      console.log('✅ Loaded', alertsData.length, 'alerts from', groups.length, 'groups')
+      // Filter alerts to only show those from followed groups
+      const groupNames = groups.map(g => g.name)
+      const filteredAlerts = allAlerts.filter(alert => {
+        // Check if alert is for a followed group
+        return groupNames.includes(alert.groupId) || groupNames.includes(alert.groupName)
+      })
+      
+      setAlerts(filteredAlerts)
+      console.log('✅ Loaded', filteredAlerts.length, 'alerts from', groups.length, 'followed groups (out of', allAlerts.length, 'total alerts)')
     } catch (error) {
       console.error('❌ Error loading user alerts:', error)
     } finally {
