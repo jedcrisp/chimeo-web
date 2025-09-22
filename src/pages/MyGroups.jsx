@@ -69,8 +69,8 @@ export default function MyGroups() {
         followedGroupIds = userData.followedGroups
         console.log('🔍 Using followedGroups structure')
       } else {
-        // Check for subcollection structure
-        console.log('🔍 No groupPreferences or followedGroups found, checking subcollections...')
+        // Try to load from subcollections
+        console.log('🔍 No groupPreferences or followedGroups found, trying subcollections...')
         followedGroupIds = await loadFollowedGroupsFromSubcollections()
       }
       
@@ -161,6 +161,7 @@ export default function MyGroups() {
       return []
     }
   }
+
 
   const findGroupByName = async (groupName) => {
     try {
