@@ -71,7 +71,14 @@ export default function MyAlerts() {
         return groupNames.includes(alert.groupId) || groupNames.includes(alert.groupName)
       })
       
-      setAlerts(filteredAlerts)
+      // Ensure alerts are sorted by creation date (newest first)
+      const sortedAlerts = filteredAlerts.sort((a, b) => {
+        const dateA = a.createdAt?.toDate?.() || new Date(0)
+        const dateB = b.createdAt?.toDate?.() || new Date(0)
+        return dateB - dateA // Newest first
+      })
+      
+      setAlerts(sortedAlerts)
       console.log('✅ Loaded', filteredAlerts.length, 'alerts from', groups.length, 'followed groups (out of', allAlerts.length, 'total alerts)')
       
       // Debug: Log alert data structure
@@ -285,7 +292,7 @@ export default function MyAlerts() {
     return null
   }
 
-  // Filter alerts based on search term
+  // Filter alerts based on search term and maintain chronological order
   const filteredAlerts = alerts.filter(alert => {
     const searchLower = searchTerm.toLowerCase()
     return (
@@ -295,6 +302,11 @@ export default function MyAlerts() {
       alert.organizationName?.toLowerCase().includes(searchLower) ||
       (alert.location && formatLocation(alert.location)?.toLowerCase().includes(searchLower))
     )
+  }).sort((a, b) => {
+    // Ensure search results are also sorted by creation date (newest first)
+    const dateA = a.createdAt?.toDate?.() || new Date(0)
+    const dateB = b.createdAt?.toDate?.() || new Date(0)
+    return dateB - dateA // Newest first
   })
 
   if (loading) {
