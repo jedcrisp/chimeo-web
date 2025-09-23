@@ -41,6 +41,7 @@ export function OrganizationsProvider({ children }) {
       })
       
       console.log('✅ Follower counts calculated:', followerCounts)
+      console.log('🔍 Detailed follower counts:', Object.entries(followerCounts).map(([orgId, count]) => ({ orgId, count })))
       return followerCounts
     } catch (error) {
       console.error('❌ Error getting follower counts:', error)
@@ -90,8 +91,10 @@ export function OrganizationsProvider({ children }) {
   // Function to refresh follower counts for a specific organization
   const refreshFollowerCount = async (orgId) => {
     try {
+      console.log('🔄 Refreshing follower count for org:', orgId)
       const followerCounts = await getFollowerCounts([orgId])
       const followerCount = followerCounts[orgId] || 0
+      console.log('🔍 Refreshed follower count for', orgId, ':', followerCount)
       
       setOrganizations(prev => 
         prev.map(org => 
@@ -101,6 +104,7 @@ export function OrganizationsProvider({ children }) {
         )
       )
       
+      console.log('✅ Updated organizations state with new follower count')
       return followerCount
     } catch (error) {
       console.error(`Error refreshing follower count for org ${orgId}:`, error)
