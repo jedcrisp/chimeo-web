@@ -96,13 +96,15 @@ export function OrganizationsProvider({ children }) {
       const followerCount = followerCounts[orgId] || 0
       console.log('🔍 Refreshed follower count for', orgId, ':', followerCount)
       
-      setOrganizations(prev => 
-        prev.map(org => 
+      setOrganizations(prev => {
+        const updated = prev.map(org => 
           org.id === orgId 
             ? { ...org, followerCount } 
             : org
         )
-      )
+        console.log('🔍 OrganizationsContext: Updated organizations state:', updated.find(org => org.id === orgId))
+        return updated
+      })
       
       console.log('✅ Updated organizations state with new follower count')
       return followerCount
@@ -122,6 +124,14 @@ export function OrganizationsProvider({ children }) {
     fetchOrganizations,
     refreshFollowerCount
   }
+
+  // Debug: Log when organizations state changes
+  useEffect(() => {
+    console.log('🔍 OrganizationsContext: Organizations state changed:', organizations.length, 'organizations')
+    organizations.forEach(org => {
+      console.log('🔍 OrganizationsContext: Org:', org.name, 'followerCount:', org.followerCount)
+    })
+  }, [organizations])
 
   return (
     <OrganizationsContext.Provider value={value}>

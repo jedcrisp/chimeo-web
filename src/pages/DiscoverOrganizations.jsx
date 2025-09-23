@@ -102,16 +102,27 @@ export default function DiscoverOrganizations() {
         console.log('✅ Followed organization:', organization.name)
       }
       
-      // Refresh the followed organizations from the database to ensure UI is in sync
-      setTimeout(async () => {
-        const refreshedFollowed = await loadFollowedOrganizations()
-        setFollowedOrgs(refreshedFollowed)
-        console.log('🔄 Refreshed followed organizations from database:', refreshedFollowed.length)
-        
-        // Also refresh the organizations context to update follower counts
-        await fetchOrganizations()
-        console.log('🔄 Refreshed organizations context with updated follower counts')
-      }, 500)
+      // Immediately refresh the follower count for this organization
+      await refreshFollowerCount(orgId)
+      console.log('🔄 Immediately refreshed follower count for organization:', orgId)
+      
+        // Refresh the followed organizations from the database to ensure UI is in sync
+        setTimeout(async () => {
+          const refreshedFollowed = await loadFollowedOrganizations()
+          setFollowedOrgs(refreshedFollowed)
+          console.log('🔄 Refreshed followed organizations from database:', refreshedFollowed.length)
+          
+          // Also refresh the organizations context to update follower counts
+          await fetchOrganizations()
+          console.log('🔄 Refreshed organizations context with updated follower counts')
+          
+          // Specifically refresh the follower count for this organization
+          await refreshFollowerCount(orgId)
+          console.log('🔄 Specifically refreshed follower count for organization:', orgId)
+          
+          // Force a re-render by updating a dummy state
+          setForceUpdate(prev => prev + 1)
+        }, 500)
       
       // Force refresh user profile to sync with mobile app
       if (window.forceUpdateUserProfile) {
