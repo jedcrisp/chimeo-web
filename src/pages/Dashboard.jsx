@@ -19,7 +19,7 @@ import groupService from '../services/groupService'
 import emailService from '../services/emailService'
 import NotificationDebug from '../components/NotificationDebug'
 import { useState, useEffect } from 'react'
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore'
+import { collection, query, where, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore'
 import { db } from '../services/firebase'
 
 // Custom Bell Icon component
@@ -119,6 +119,35 @@ export default function Dashboard() {
     }
   }, [currentUser, organizations])
 
+  // Load user's followed groups, organizations, and alerts
+  useEffect(() => {
+    if (currentUser && userProfile) {
+      loadUserData()
+    }
+  }, [currentUser, userProfile])
+
+  const loadUserData = async () => {
+    try {
+      console.log('🔍 Dashboard: Loading user data...')
+      
+      // Load followed groups
+      const groups = await loadFollowedGroups()
+      setFollowedGroups(groups)
+      
+      // Load followed organizations
+      const orgs = await loadFollowedOrganizations()
+      setFollowedOrgs(orgs)
+      
+      // Load user alerts
+      const alerts = await loadUserAlerts(groups)
+      setUserAlerts(alerts)
+      
+      console.log('✅ Dashboard: Loaded user data - Groups:', groups.length, 'Orgs:', orgs.length, 'Alerts:', alerts.length)
+    } catch (error) {
+      console.error('❌ Dashboard: Error loading user data:', error)
+    }
+  }
+
   // Fetch groups for user's organization
   useEffect(() => {
     const fetchGroups = async () => {
@@ -150,6 +179,249 @@ export default function Dashboard() {
       return currentUser.displayName.trim()
     } else {
       return currentUser?.email || 'User'
+    }
+  }
+
+  // Load followed groups (similar to MyGroups page)
+  const loadFollowedGroups = async () => {
+    try {
+      if (!currentUser) return []
+      
+      const userRef = doc(db, 'users', currentUser.uid)
+      const userDoc = await getDoc(userRef)
+      
+      if (!userDoc.exists()) {
+        console.log('User document not found')
+        return []
+      }
+      
+      const userData = userDoc.data()
+      
+      // Check for groupPreferences map (new structure) or followedGroups array (old structure)
+      let followedGroupIds = []
+      if (userData.groupPreferences && Object.keys(userData.groupPreferences).length > 0) {
+        followedGroupIds = Object.keys(userData.groupPreferences).filter(
+          groupName => userData.groupPreferences[groupName] === true
+        )
+      } else if (userData.followedGroups) {
+        followedGroupIds = userData.followedGroups
+      } else {
+        // Try to load from subcollections (mobile app structure)
+        followedGroupIds = await loadFollowedGroupsFromSubcollections()
+      }
+      
+      if (followedGroupIds.length === 0) {
+        return []
+      }
+      
+      const groups = []
+      for (const groupName of followedGroupIds) {
+        try {
+          const groupData = await findGroupByName(groupName)
+          if (groupData) {
+            groups.push(groupData)
+          }
+        } catch (error) {
+          console.error('Error loading group:', groupName, error)
+        }
+      }
+      
+      return groups
+    } catch (error) {
+      console.error('Error loading followed groups:', error)
+      return []
+    }
+  }
+
+  // Load followed organizations (similar to DiscoverOrganizations page)
+  const loadFollowedOrganizations = async () => {
+    try {
+      if (!currentUser) return []
+      
+      const userRef = doc(db, 'users', currentUser.uid)
+      const userDoc = await getDoc(userRef)
+      
+      if (!userDoc.exists()) {
+        console.log('User document not found')
+        return []
+      }
+      
+      const userData = userDoc.data()
+      const followedOrgIds = userData.followedOrganizations || []
+      
+      if (followedOrgIds.length === 0) {
+        return []
+      }
+      
+      const orgs = []
+      for (const orgId of followedOrgIds) {
+        try {
+          const orgData = await findOrganizationById(orgId)
+          if (orgData) {
+            orgs.push(orgData)
+          }
+        } catch (error) {
+          console.error('Error loading organization:', orgId, error)
+        }
+      }
+      
+      return orgs
+    } catch (error) {
+      console.error('Error loading followed organizations:', error)
+      return []
+    }
+  }
+
+  // Load user alerts based on followed groups
+  const loadUserAlerts = async (groups) => {
+    try {
+      if (!currentUser || !userProfile || groups.length === 0) {
+        return []
+      }
+      
+      // Get organization ID
+      let orgId = userProfile?.organizationId
+      if (!orgId && userProfile?.organizations && userProfile.organizations.length > 0) {
+        orgId = userProfile.organizations[0]
+      }
+      if (!orgId && userProfile?.followedOrganizations && userProfile.followedOrganizations.length > 0) {
+        orgId = userProfile.followedOrganizations[0]
+      }
+      
+      if (!orgId) {
+        return []
+      }
+      
+      // Load alerts from organization
+      const alertsQuery = query(
+        collection(db, 'organizations', orgId, 'alerts'),
+        orderBy('createdAt', 'desc'),
+        limit(50)
+      )
+      
+      const alertsSnapshot = await getDocs(alertsQuery)
+      const allAlerts = alertsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      
+      // Filter alerts to only show those from followed groups
+      const groupNames = groups.map(g => g.name)
+      const filteredAlerts = allAlerts.filter(alert => {
+        return groupNames.includes(alert.groupId) || groupNames.includes(alert.groupName)
+      })
+      
+      return filteredAlerts
+    } catch (error) {
+      console.error('Error loading user alerts:', error)
+      return []
+    }
+  }
+
+  // Helper function to find group by name
+  const findGroupByName = async (groupName) => {
+    try {
+      const orgsQuery = query(collection(db, 'organizations'))
+      const orgsSnapshot = await getDocs(orgsQuery)
+      
+      for (const orgDoc of orgsSnapshot.docs) {
+        try {
+          const groupsQuery = query(
+            collection(db, 'organizations', orgDoc.id, 'groups'),
+            where('isActive', '==', true)
+          )
+          const groupsSnapshot = await getDocs(groupsQuery)
+          
+          for (const groupDoc of groupsSnapshot.docs) {
+            const groupData = groupDoc.data()
+            if (groupData.name === groupName) {
+              return {
+                id: groupDoc.id,
+                ...groupData,
+                organizationId: orgDoc.id,
+                organizationName: orgDoc.data().name
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error searching groups in org:', orgDoc.id, error)
+        }
+      }
+      
+      return null
+    } catch (error) {
+      console.error('Error finding group by name:', error)
+      return null
+    }
+  }
+
+  // Helper function to find organization by ID
+  const findOrganizationById = async (orgId) => {
+    try {
+      const orgDoc = await getDoc(doc(db, 'organizations', orgId))
+      if (orgDoc.exists()) {
+        return {
+          id: orgDoc.id,
+          ...orgDoc.data()
+        }
+      }
+      return null
+    } catch (error) {
+      console.error('Error finding organization by ID:', error)
+      return null
+    }
+  }
+
+  // Helper function to load followed groups from subcollections
+  const loadFollowedGroupsFromSubcollections = async () => {
+    try {
+      // Check for followedGroups subcollection
+      const followedGroupsRef = collection(db, 'users', currentUser.uid, 'followedGroups')
+      const followedGroupsSnapshot = await getDocs(followedGroupsRef)
+      
+      if (!followedGroupsSnapshot.empty) {
+        const groupNames = []
+        followedGroupsSnapshot.forEach(doc => {
+          const data = doc.data()
+          if (data.name) {
+            groupNames.push(data.name)
+          }
+        })
+        return groupNames
+      }
+      
+      // Check for followedOrganizations subcollection (mobile app structure)
+      const followedOrgsRef = collection(db, 'users', currentUser.uid, 'followedOrganizations')
+      const followedOrgsSnapshot = await getDocs(followedOrgsRef)
+      
+      if (!followedOrgsSnapshot.empty) {
+        const groupNames = []
+        for (const orgDoc of followedOrgsSnapshot.docs) {
+          const orgData = orgDoc.data()
+          
+          if (orgData.groupPreferences) {
+            Object.keys(orgData.groupPreferences).forEach(groupName => {
+              if (orgData.groupPreferences[groupName] === true) {
+                groupNames.push(groupName)
+              }
+            })
+          }
+          
+          if (orgData.groups) {
+            Object.keys(orgData.groups).forEach(groupName => {
+              if (orgData.groups[groupName] === true) {
+                groupNames.push(groupName)
+              }
+            })
+          }
+        }
+        return groupNames
+      }
+      
+      return []
+    } catch (error) {
+      console.error('Error loading followed groups from subcollections:', error)
+      return []
     }
   }
 

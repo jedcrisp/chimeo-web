@@ -262,11 +262,11 @@ export default function MyAlerts() {
   const getAlertIcon = (type) => {
     switch (type) {
       case 'emergency':
-        return <AlertTriangle className="h-4 w-4 text-red-600" />
+        return <AlertTriangle className="h-5 w-5 text-red-600" />
       case 'warning':
-        return <AlertTriangle className="h-4 w-4 text-yellow-600" />
+        return <AlertTriangle className="h-5 w-5 text-yellow-600" />
       default:
-        return <Bell className="h-4 w-4 text-blue-600" />
+        return <Bell className="h-5 w-5 text-blue-600" />
     }
   }
 
@@ -411,65 +411,66 @@ export default function MyAlerts() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 p-4">
+          <div className="space-y-4">
             {filteredAlerts.map((alert) => (
               <div key={alert.id} className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow ${
                 alert.type === 'emergency' ? 'border-l-4 border-l-red-500' :
                 alert.type === 'warning' ? 'border-l-4 border-l-yellow-500' :
                 'border-l-4 border-l-blue-500'
               }`}>
-                <div className="space-y-3">
-                  {/* Header with icon and type */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-2">
-                      {getAlertIcon(alert.type)}
-                      <h3 className="text-lg font-semibold text-gray-900 leading-tight">{alert.title}</h3>
-                    </div>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      alert.type === 'emergency' ? 'bg-red-100 text-red-800' :
-                      alert.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>
-                      {alert.type || 'info'}
-                    </span>
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0 mt-1">
+                    {getAlertIcon(alert.type)}
                   </div>
                   
-                  {/* Message */}
-                  {(alert.message || alert.description || alert.content || alert.text) && (
-                    <p className="text-gray-700 text-sm leading-relaxed">
-                      {alert.message || alert.description || alert.content || alert.text}
-                    </p>
-                  )}
-                  
-                  {/* Organization and Group info */}
-                  <div className="space-y-2">
-                    <div className="flex items-center text-xs text-gray-600">
-                      <Building className="h-3 w-3 mr-2 text-gray-400" />
-                      <span className="font-medium truncate">{alert.organizationName || 'Unknown Organization'}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="text-lg font-semibold text-gray-900 leading-tight">{alert.title}</h3>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ml-4 flex-shrink-0 ${
+                        alert.type === 'emergency' ? 'bg-red-100 text-red-800' :
+                        alert.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {alert.type || 'info'}
+                      </span>
                     </div>
                     
-                    {alert.groupName && (
-                      <div className="flex items-center text-xs text-gray-600">
-                        <Users className="h-3 w-3 mr-2 text-gray-400" />
-                        <span className="font-medium truncate">{alert.groupName}</span>
-                      </div>
+                    {(alert.message || alert.description || alert.content || alert.text) && (
+                      <p className="text-gray-700 mb-4 leading-relaxed text-base">
+                        {alert.message || alert.description || alert.content || alert.text}
+                      </p>
                     )}
-                  </div>
-                  
-                  {/* Location and Date info */}
-                  <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
-                    <div className="flex items-center">
-                      {formatLocation(alert.location) && (
-                        <>
-                          <MapPin className="h-3 w-3 mr-1 text-gray-400" />
-                          <span className="truncate max-w-32">{formatLocation(alert.location)}</span>
-                        </>
+                    
+                    {/* Organization and Group info */}
+                    <div className="flex items-center space-x-6 mb-4">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Building className="h-4 w-4 mr-2 text-gray-400" />
+                        <span className="font-medium">{alert.organizationName || 'Unknown Organization'}</span>
+                      </div>
+                      
+                      {alert.groupName && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Users className="h-4 w-4 mr-2 text-gray-400" />
+                          <span className="font-medium">{alert.groupName}</span>
+                        </div>
                       )}
                     </div>
                     
-                    <div className="flex items-center">
-                      <Clock className="h-3 w-3 mr-1 text-gray-400" />
-                      <span>{alert.createdAt?.toDate?.()?.toLocaleDateString() || 'Recently'}</span>
+                    {/* Location and Date info */}
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <div className="flex items-center space-x-6">
+                        {formatLocation(alert.location) && (
+                          <div className="flex items-center">
+                            <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                            <span className="truncate max-w-sm">{formatLocation(alert.location)}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center text-gray-500">
+                        <Clock className="h-4 w-4 mr-2 text-gray-400" />
+                        <span>{alert.createdAt?.toDate?.()?.toLocaleDateString() || 'Recently'}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
