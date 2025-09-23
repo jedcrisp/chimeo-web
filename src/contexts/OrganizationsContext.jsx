@@ -12,6 +12,42 @@ export function OrganizationsProvider({ children }) {
   const [organizations, setOrganizations] = useState([])
   const [loading, setLoading] = useState(true)
 
+  // Function to get follower counts for multiple organizations
+  const getFollowerCounts = async (organizationIds) => {
+    try {
+      console.log('🔍 Getting follower counts for organizations:', organizationIds)
+      
+      // Get all users and count how many follow each organization
+      const usersQuery = query(collection(db, 'users'))
+      const usersSnapshot = await getDocs(usersQuery)
+      
+      const followerCounts = {}
+      
+      // Initialize counts
+      organizationIds.forEach(orgId => {
+        followerCounts[orgId] = 0
+      })
+      
+      // Count followers for each organization
+      usersSnapshot.docs.forEach(doc => {
+        const userData = doc.data()
+        const followedOrganizations = userData.followedOrganizations || []
+        
+        followedOrganizations.forEach(orgId => {
+          if (followerCounts.hasOwnProperty(orgId)) {
+            followerCounts[orgId]++
+          }
+        })
+      })
+      
+      console.log('✅ Follower counts calculated:', followerCounts)
+      return followerCounts
+    } catch (error) {
+      console.error('❌ Error getting follower counts:', error)
+      return {}
+    }
+  }
+
   const fetchOrganizations = async () => {
     try {
       setLoading(true)
@@ -23,27 +59,13 @@ export function OrganizationsProvider({ children }) {
         ...doc.data()
       }))
       
-      // Get follower counts for each organization from their subcollection
-      const orgsWithFollowers = await Promise.all(
-        orgsData.map(async (org) => {
-          try {
-            const followersQuery = query(collection(db, 'organizations', org.id, 'followers'))
-            const followersSnapshot = await getDocs(followersQuery)
-            const followerCount = followersSnapshot.size
-            
-            return {
-              ...org,
-              followerCount
-            }
-          } catch (error) {
-            console.error(`Error fetching followers for org ${org.id}:`, error)
-            return {
-              ...org,
-              followerCount: 0
-            }
-          }
-        })
-      )
+      // Get follower counts by counting users who have this org in their followedOrganizations array
+      const followerCounts = await getFollowerCounts(orgsData.map(org => org.id))
+      
+      const orgsWithFollowers = orgsData.map(org => ({
+        ...org,
+        followerCount: followerCounts[org.id] || 0
+      }))
       
       setOrganizations(orgsWithFollowers)
       
@@ -68,9 +90,8 @@ export function OrganizationsProvider({ children }) {
   // Function to refresh follower counts for a specific organization
   const refreshFollowerCount = async (orgId) => {
     try {
-      const followersQuery = query(collection(db, 'organizations', orgId, 'followers'))
-      const followersSnapshot = await getDocs(followersQuery)
-      const followerCount = followersSnapshot.size
+      const followerCounts = await getFollowerCounts([orgId])
+      const followerCount = followerCounts[orgId] || 0
       
       setOrganizations(prev => 
         prev.map(org => 

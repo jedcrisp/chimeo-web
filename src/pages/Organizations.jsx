@@ -98,77 +98,32 @@ export default function Organizations() {
   const fetchFollowers = async (orgId) => {
     setFollowersLoading(true)
     try {
-      // Try the subcollection structure first (organizations/{orgId}/followers)
-      let followersData = []
+      console.log('🔍 Fetching followers for organization:', orgId)
       
-      try {
-        const followersQuery = query(collection(db, 'organizations', orgId, 'followers'))
-        const followersSnapshot = await getDocs(followersQuery)
+      // Get all users who have this organization in their followedOrganizations array
+      const usersQuery = query(collection(db, 'users'))
+      const usersSnapshot = await getDocs(usersQuery)
+      
+      const followersData = []
+      
+      for (const userDoc of usersSnapshot.docs) {
+        const userData = userDoc.data()
+        const followedOrganizations = userData.followedOrganizations || []
         
-        if (!followersSnapshot.empty) {
-          for (const doc of followersSnapshot.docs) {
-            const followerData = doc.data()
-            
-            // Use adminId field to get the user ID
-            let userId = followerData.adminId
-            
-            // Get user profile for each follower using the adminId as document ID
-            try {
-              const userDoc = await getDoc(doc(db, 'users', userId))
-              if (userDoc.exists()) {
-                const userData = userDoc.data()
-                followersData.push({
-                  id: doc.id,
-                  ...followerData,
-                  userProfile: userData
-                })
-              }
-            } catch (error) {
-              console.error('Error fetching user profile:', error)
-            }
-          }
-        }
-      } catch (error) {
-        // Subcollection approach failed, try separate collection
-      }
-      
-      // If no followers found in subcollection, try the separate collection structure
-      if (followersData.length === 0) {
-        try {
-          const followersQuery = query(
-            collection(db, 'organizationFollowers'),
-            where('organizationId', '==', orgId)
-          )
-          const followersSnapshot = await getDocs(followersQuery)
-          
-          if (!followersSnapshot.empty) {
-            for (const doc of followersSnapshot.docs) {
-              const followerData = doc.data()
-              
-              // Use adminId field to get the user ID
-              let userId = followerData.adminId
-              
-              // Get user profile for each follower
-              try {
-                const userDoc = await getDoc(doc(db, 'users', userId))
-                if (userDoc.exists()) {
-                  const userData = userDoc.data()
-                  followersData.push({
-                    id: doc.id,
-                    ...followerData,
-                    userProfile: userData
-                  })
-                }
-              } catch (error) {
-                console.error('Error fetching user profile:', error)
-              }
-            }
-          }
-        } catch (error) {
-          // Separate collection approach also failed
+        // Check if this user follows the organization
+        if (followedOrganizations.includes(orgId)) {
+          followersData.push({
+            id: userDoc.id,
+            userId: userDoc.id,
+            adminId: userDoc.id, // For compatibility with existing UI
+            userProfile: userData,
+            createdAt: userData.createdAt || new Date(), // Use user creation date as fallback
+            organizationId: orgId
+          })
         }
       }
       
+      console.log('✅ Found', followersData.length, 'followers for organization:', orgId)
       setFollowers(followersData)
       
     } catch (error) {
