@@ -8,7 +8,7 @@ import adminService from '../services/adminService'
 
 export default function DiscoverOrganizations() {
   const { currentUser, userProfile, forceUpdate } = useAuth()
-  const { organizations } = useOrganizations()
+  const { organizations, fetchOrganizations } = useOrganizations()
   const [followedOrgs, setFollowedOrgs] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -107,6 +107,10 @@ export default function DiscoverOrganizations() {
         const refreshedFollowed = await loadFollowedOrganizations()
         setFollowedOrgs(refreshedFollowed)
         console.log('🔄 Refreshed followed organizations from database:', refreshedFollowed.length)
+        
+        // Also refresh the organizations context to update follower counts
+        await fetchOrganizations()
+        console.log('🔄 Refreshed organizations context with updated follower counts')
       }, 500)
       
       // Force refresh user profile to sync with mobile app
