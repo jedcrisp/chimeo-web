@@ -68,6 +68,7 @@ export default function DiscoverOrganizations() {
   }
 
   const toggleFollowOrganization = async (orgId) => {
+    console.log('🚀 BUTTON CLICKED! toggleFollowOrganization called with orgId:', orgId)
     try {
       console.log('🔍 DiscoverOrganizations: Starting toggleFollowOrganization for orgId:', orgId)
       console.log('🔍 DiscoverOrganizations: Current user:', currentUser?.uid)
@@ -262,7 +263,10 @@ export default function DiscoverOrganizations() {
               </div>
               
               <button
-                onClick={() => toggleFollowOrganization(org.id)}
+                onClick={() => {
+                  console.log('🎯 BUTTON CLICKED for org:', org.id, org.name)
+                  toggleFollowOrganization(org.id)
+                }}
                 className={`px-4 py-2 rounded-md font-medium transition-colors ${
                   isFollowingOrganization(org.id)
                     ? 'bg-red-100 text-red-700 hover:bg-red-200'
