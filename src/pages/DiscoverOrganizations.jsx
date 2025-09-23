@@ -20,6 +20,13 @@ export default function DiscoverOrganizations() {
     }
   }, [currentUser, userProfile, forceUpdate])
 
+  // Refresh followed organizations when organizations context changes
+  useEffect(() => {
+    if (currentUser && organizations && organizations.length > 0) {
+      loadUserData()
+    }
+  }, [organizations])
+
   const loadUserData = async () => {
     try {
       setLoading(true)
@@ -58,6 +65,12 @@ export default function DiscoverOrganizations() {
         return []
       }
       
+      // If organizations context is not loaded yet, return the IDs for now
+      if (!organizations || organizations.length === 0) {
+        console.log('Organizations not loaded yet, returning IDs:', followedOrgIds)
+        return followedOrgIds.map(orgId => ({ id: orgId }))
+      }
+      
       return organizations.filter(org => 
         followedOrgIds.includes(org.id)
       )
@@ -88,6 +101,13 @@ export default function DiscoverOrganizations() {
         setFollowedOrgs(prev => [...prev, organization])
         console.log('✅ Followed organization:', organization.name)
       }
+      
+      // Refresh the followed organizations from the database to ensure UI is in sync
+      setTimeout(async () => {
+        const refreshedFollowed = await loadFollowedOrganizations()
+        setFollowedOrgs(refreshedFollowed)
+        console.log('🔄 Refreshed followed organizations from database:', refreshedFollowed.length)
+      }, 500)
       
       // Force refresh user profile to sync with mobile app
       if (window.forceUpdateUserProfile) {
