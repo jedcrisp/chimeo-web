@@ -269,12 +269,12 @@ export default function MyGroups() {
         console.log('✅ Followed group:', group.name)
       }
       
-      // Note: Mobile app sync disabled until mobile app is updated to use new follow logic
-      // if (window.forceUpdateUserProfile) {
-      //   window.forceUpdateUserProfile()
-      // }
+      // Force refresh user profile to sync with mobile app
+      if (window.forceUpdateUserProfile) {
+        window.forceUpdateUserProfile()
+      }
       
-      console.log('✅ Group preferences updated - web app only')
+      console.log('📱 Group preferences updated - mobile app will sync automatically')
     } catch (error) {
       console.error('❌ Error toggling group follow:', error)
       alert('Error updating group follow status. Please try again.')
