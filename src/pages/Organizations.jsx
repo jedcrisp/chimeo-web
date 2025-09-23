@@ -428,6 +428,9 @@ export default function Organizations() {
                         <p className="text-xs text-gray-500">
                           {follower.userProfile?.email || 'No email'}
                         </p>
+                        <p className="text-xs text-gray-400 font-mono">
+                          User ID: {follower.userId || follower.id}
+                        </p>
                         <p className="text-xs text-gray-400">
                           Following since {follower.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown date'}
                         </p>
