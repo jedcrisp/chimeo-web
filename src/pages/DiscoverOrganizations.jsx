@@ -68,12 +68,7 @@ export default function DiscoverOrganizations() {
   }
 
   const toggleFollowOrganization = async (orgId) => {
-    console.log('🚀 BUTTON CLICKED! toggleFollowOrganization called with orgId:', orgId)
     try {
-      console.log('🔍 DiscoverOrganizations: Starting toggleFollowOrganization for orgId:', orgId)
-      console.log('🔍 DiscoverOrganizations: Current user:', currentUser?.uid)
-      console.log('🔍 DiscoverOrganizations: AdminService currentUser:', adminService.currentUser?.uid)
-      
       const organization = organizations.find(org => org.id === orgId)
       if (!organization) {
         console.error('Organization not found:', orgId)
@@ -81,17 +76,14 @@ export default function DiscoverOrganizations() {
       }
 
       const isFollowing = followedOrgs.some(org => org.id === orgId)
-      console.log('🔍 DiscoverOrganizations: Currently following:', isFollowing)
       
       if (isFollowing) {
         // Unfollow organization
-        console.log('🔍 DiscoverOrganizations: Calling unfollowOrganization...')
         await adminService.unfollowOrganization(orgId)
         setFollowedOrgs(prev => prev.filter(org => org.id !== orgId))
         console.log('✅ Unfollowed organization:', organization.name)
       } else {
         // Follow organization
-        console.log('🔍 DiscoverOrganizations: Calling followOrganization...')
         await adminService.followOrganization(orgId)
         setFollowedOrgs(prev => [...prev, organization])
         console.log('✅ Followed organization:', organization.name)
@@ -105,8 +97,6 @@ export default function DiscoverOrganizations() {
       console.log('📱 Organization preferences updated - mobile app will sync automatically')
     } catch (error) {
       console.error('❌ Error toggling organization follow:', error)
-      console.error('❌ Error details:', error.message)
-      console.error('❌ Error stack:', error.stack)
       alert('Error updating organization follow status. Please try again.')
     }
   }
@@ -263,10 +253,7 @@ export default function DiscoverOrganizations() {
               </div>
               
               <button
-                onClick={() => {
-                  console.log('🎯 BUTTON CLICKED for org:', org.id, org.name)
-                  toggleFollowOrganization(org.id)
-                }}
+                onClick={() => toggleFollowOrganization(org.id)}
                 className={`px-4 py-2 rounded-md font-medium transition-colors ${
                   isFollowingOrganization(org.id)
                     ? 'bg-red-100 text-red-700 hover:bg-red-200'

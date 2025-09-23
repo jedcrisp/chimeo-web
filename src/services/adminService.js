@@ -311,17 +311,12 @@ class AdminService {
 
   // Follow an organization
   async followOrganization(organizationId) {
-    console.log('🔍 AdminService: followOrganization called with orgId:', organizationId)
-    console.log('🔍 AdminService: currentUser:', this.currentUser?.uid)
-    
     if (!this.currentUser) {
       throw new Error('User not authenticated')
     }
 
     try {
       const userRef = doc(db, 'users', this.currentUser.uid)
-      console.log('🔍 AdminService: userRef path:', userRef.path)
-      
       const userDoc = await getDoc(userRef)
       
       if (!userDoc.exists()) {
@@ -330,39 +325,28 @@ class AdminService {
 
       const userData = userDoc.data()
       const followedOrganizations = userData.followedOrganizations || []
-      console.log('🔍 AdminService: Current followedOrganizations:', followedOrganizations)
       
       // Add organization to followed list if not already following
       if (!followedOrganizations.includes(organizationId)) {
         followedOrganizations.push(organizationId)
-        console.log('🔍 AdminService: Updated followedOrganizations:', followedOrganizations)
         
         // Update user document
-        console.log('🔍 AdminService: Updating user document in Firestore...')
         await updateDoc(userRef, {
           followedOrganizations,
           updatedAt: serverTimestamp()
         })
-        console.log('✅ AdminService: User document updated successfully')
-      } else {
-        console.log('🔍 AdminService: User already following organization')
       }
 
       console.log('✅ User now following organization:', organizationId)
       return true
     } catch (error) {
-      console.error('❌ AdminService: Error following organization:', error)
-      console.error('❌ AdminService: Error details:', error.message)
-      console.error('❌ AdminService: Error stack:', error.stack)
+      console.error('Error following organization:', error)
       throw error
     }
   }
 
   // Unfollow an organization
   async unfollowOrganization(organizationId) {
-    console.log('🔍 AdminService: unfollowOrganization called with orgId:', organizationId)
-    console.log('🔍 AdminService: currentUser:', this.currentUser?.uid)
-    
     if (!this.currentUser) {
       throw new Error('User not authenticated')
     }
@@ -370,8 +354,6 @@ class AdminService {
     try {
       // Remove from user's followed organizations
       const userRef = doc(db, 'users', this.currentUser.uid)
-      console.log('🔍 AdminService: userRef path:', userRef.path)
-      
       const userDoc = await getDoc(userRef)
       
       if (!userDoc.exists()) {
@@ -380,26 +362,20 @@ class AdminService {
 
       const userData = userDoc.data()
       const followedOrganizations = userData.followedOrganizations || []
-      console.log('🔍 AdminService: Current followedOrganizations:', followedOrganizations)
       
       // Remove organization from followed list
       const updatedFollowedOrgs = followedOrganizations.filter(orgId => orgId !== organizationId)
-      console.log('🔍 AdminService: Updated followedOrganizations:', updatedFollowedOrgs)
       
       // Update user document
-      console.log('🔍 AdminService: Updating user document in Firestore...')
       await updateDoc(userRef, {
         followedOrganizations: updatedFollowedOrgs,
         updatedAt: serverTimestamp()
       })
-      console.log('✅ AdminService: User document updated successfully')
 
       console.log('✅ User unfollowed organization:', organizationId)
       return true
     } catch (error) {
-      console.error('❌ AdminService: Error unfollowing organization:', error)
-      console.error('❌ AdminService: Error details:', error.message)
-      console.error('❌ AdminService: Error stack:', error.stack)
+      console.error('Error unfollowing organization:', error)
       throw error
     }
   }
