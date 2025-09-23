@@ -11,6 +11,7 @@ import toast from 'react-hot-toast'
 export default function Organizations() {
   const { organizations, loading, refreshFollowerCount, fetchOrganizations } = useOrganizations()
   const { currentUser } = useAuth()
+  
   const [adminOrgs, setAdminOrgs] = useState([])
   const [hasAdminAccess, setHasAdminAccess] = useState(false)
   const [followingStatus, setFollowingStatus] = useState({})
@@ -37,18 +38,6 @@ export default function Organizations() {
     }
   }, [currentUser, organizations])
 
-  // Debug: Log when organizations context changes
-  useEffect(() => {
-    console.log('🔍 Organizations page: Organizations context updated:', organizations.length, 'organizations')
-    organizations.forEach(org => {
-      console.log('🔍 Organizations page: Org:', org.name, 'followerCount:', org.followerCount)
-    })
-  }, [organizations])
-
-  // Debug: Log when component renders
-  useEffect(() => {
-    console.log('🔍 Organizations page: Component rendered, organizations count:', organizations.length)
-  })
 
   // Check following status for all organizations
   const checkFollowingStatus = async () => {
@@ -102,7 +91,6 @@ export default function Organizations() {
 
   // Helper function to format follower count
   const formatFollowerCount = (count) => {
-    console.log('🔍 Organizations page: formatFollowerCount called with count:', count)
     if (!count || count === 0) return '0 followers'
     if (count === 1) return '1 follower'
     return `${count} followers`
@@ -216,8 +204,6 @@ export default function Organizations() {
               const formattedLocation = formatLocation(org.location)
               const isFollowing = followingStatus[org.id] || false
               
-              console.log('🔍 Organizations page: Rendering org:', org.name, 'followerCount:', org.followerCount)
-              
               return (
                 <div key={org.id} className="p-4 border border-gray-200 rounded-lg bg-yellow-50">
                   <div className="flex items-start justify-between">
@@ -313,8 +299,6 @@ export default function Organizations() {
             {organizations.map((org) => {
               const isFollowing = followingStatus[org.id] || false
               const formattedLocation = formatLocation(org.location)
-              
-              console.log('🔍 Organizations page: Rendering org:', org.name, 'followerCount:', org.followerCount)
               
               return (
                 <div key={org.id} className={`p-4 border rounded-lg ${isAdminOfOrganization(org.id) ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200'}`}>

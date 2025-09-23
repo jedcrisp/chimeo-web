@@ -20,7 +20,8 @@ export const CALENDAR_ACTIONS = {
   DELETE_SCHEDULED_ALERT: 'DELETE_SCHEDULED_ALERT',
   SET_FILTER: 'SET_FILTER',
   SET_SELECTED_DATE: 'SET_SELECTED_DATE',
-  SET_VIEW_MODE: 'SET_VIEW_MODE'
+  SET_VIEW_MODE: 'SET_VIEW_MODE',
+  CLEAR_ALL_DATA: 'CLEAR_ALL_DATA'
 }
 
 // Initial State
@@ -94,11 +95,20 @@ function calendarReducer(state, action) {
       return { ...state, filter: action.payload }
     
     case CALENDAR_ACTIONS.SET_SELECTED_DATE:
-      console.log('📅 CalendarContext: SET_SELECTED_DATE reducer called with:', action.payload.toDateString())
       return { ...state, selectedDate: action.payload }
     
     case CALENDAR_ACTIONS.SET_VIEW_MODE:
       return { ...state, viewMode: action.payload }
+    
+    case CALENDAR_ACTIONS.CLEAR_ALL_DATA:
+      console.log('🗑️ CLEAR_ALL_DATA reducer called - clearing all calendar data')
+      return { 
+        ...state, 
+        events: [], 
+        scheduledAlerts: [], 
+        isLoading: false, 
+        error: null 
+      }
     
     default:
       return state
@@ -108,7 +118,7 @@ function calendarReducer(state, action) {
 // Calendar Provider
 export function CalendarProvider({ children }) {
   const [state, dispatch] = useReducer(calendarReducer, initialState)
-  const { userProfile } = useAuth()
+  const { currentUser, userProfile } = useAuth()
 
   // Load calendar data on mount
   useEffect(() => {
@@ -142,21 +152,51 @@ export function CalendarProvider({ children }) {
   }, [])
 
   const loadCalendarData = async (dateRange = null) => {
+    console.log('🚀 CalendarContext: loadCalendarData called!')
     try {
-      console.log('🔄 CalendarContext: Starting loadCalendarData')
       dispatch({ type: CALENDAR_ACTIONS.SET_LOADING, payload: true })
-      console.log('🔄 CalendarContext: Set loading to true')
+      
+      // Clear any existing data first
+      dispatch({ type: CALENDAR_ACTIONS.SET_SCHEDULED_ALERTS, payload: [] })
+      console.log('🗑️ CalendarContext: Cleared existing scheduled alerts')
       
       // Get organization ID from user profile
       const rawOrgId = userProfile?.organizations?.[0] || null
       const organizationId = rawOrgId && typeof rawOrgId === 'string' ? rawOrgId : null
+      
+      console.log('🔍 CalendarContext: Current user info:', {
+        currentUser: currentUser?.uid || 'null',
+        userProfile: userProfile ? 'exists' : 'null',
+        organizationId: organizationId || 'null'
+      })
+      
+      // Log the full user profile to see what organizations are available
+      if (userProfile) {
+        console.log('🔍 Full user profile:', userProfile)
+        console.log('🔍 User organizations:', userProfile.organizations)
+      }
+      
+      // For now, let's try to fetch from the specific organization where the alert was posted
+      const targetOrgId = 'velocity_physical_therapy_north_denton'
+      console.log('🔍 CalendarContext: Using target organization ID:', targetOrgId)
+      
+      // Check if currentUser is properly set
+      if (currentUser) {
+        console.log('🔍 Current user details:', {
+          uid: currentUser.uid,
+          email: currentUser.email,
+          displayName: currentUser.displayName
+        })
+      } else {
+        console.log('⚠️ No current user found!')
+      }
       
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Calendar data fetch timeout')), 2000) // 2 second timeout
       })
       
-      const fetchPromise = calendarService.fetchCalendarData(dateRange, organizationId)
+      const fetchPromise = calendarService.fetchCalendarData(dateRange, targetOrgId)
       
       await Promise.race([fetchPromise, timeoutPromise])
       
@@ -166,15 +206,25 @@ export function CalendarProvider({ children }) {
         organizationId
       })
       
+      // Log the actual scheduled alerts data
+      if (calendarService.scheduledAlerts.length > 0) {
+        console.log('📅 CalendarContext: Scheduled alerts loaded:', calendarService.scheduledAlerts.map(alert => ({
+          id: alert.id,
+          title: alert.title,
+          scheduledDate: alert.scheduledDate,
+          parsedDate: new Date(alert.scheduledDate).toDateString()
+        })))
+      } else {
+        console.log('📅 CalendarContext: No scheduled alerts loaded')
+      }
+      
       dispatch({ type: CALENDAR_ACTIONS.SET_EVENTS, payload: calendarService.events })
       dispatch({ type: CALENDAR_ACTIONS.SET_SCHEDULED_ALERTS, payload: calendarService.scheduledAlerts })
       dispatch({ type: CALENDAR_ACTIONS.SET_LOADING, payload: false })
-      console.log('✅ CalendarContext: Set loading to false (success)')
     } catch (error) {
       console.error('CalendarContext: Error loading calendar data:', error)
       dispatch({ type: CALENDAR_ACTIONS.SET_ERROR, payload: error.message })
       dispatch({ type: CALENDAR_ACTIONS.SET_LOADING, payload: false })
-      console.log('✅ CalendarContext: Set loading to false (error)')
     }
   }
 
@@ -220,7 +270,6 @@ export function CalendarProvider({ children }) {
       const alert = await calendarService.createScheduledAlert(alertData)
       // Add the new scheduled alert to calendar state immediately
       dispatch({ type: CALENDAR_ACTIONS.ADD_SCHEDULED_ALERT, payload: alert })
-      console.log('✅ CalendarContext: Added scheduled alert to calendar state:', alert.title)
       return alert
     } catch (error) {
       console.error('CalendarContext: Error creating scheduled alert:', error)
@@ -262,7 +311,6 @@ export function CalendarProvider({ children }) {
   }
 
   const setSelectedDate = (date) => {
-    console.log('📅 CalendarContext: setSelectedDate called with:', date.toDateString())
     dispatch({ type: CALENDAR_ACTIONS.SET_SELECTED_DATE, payload: date })
   }
 
@@ -331,6 +379,28 @@ export function CalendarProvider({ children }) {
     return calendarService.getTodaysAlerts()
   }
 
+  const deleteAllScheduledAlerts = async () => {
+    try {
+      // Get organization ID from user profile
+      const rawOrgId = userProfile?.organizations?.[0] || null
+      const organizationId = rawOrgId && typeof rawOrgId === 'string' ? rawOrgId : 'velocity_physical_therapy_north_denton'
+      
+      console.log('🗑️ CalendarContext: Deleting all alerts for organization:', organizationId)
+      const result = await calendarService.deleteAllScheduledAlerts(organizationId)
+      
+      // Clear the local state immediately
+      dispatch({ type: CALENDAR_ACTIONS.SET_SCHEDULED_ALERTS, payload: [] })
+      
+      // Reload calendar data to reflect changes
+      await loadCalendarData()
+      
+      return result
+    } catch (error) {
+      console.error('❌ CalendarContext: Error deleting all alerts:', error)
+      throw error
+    }
+  }
+
   const value = {
     // State
     ...state,
@@ -355,7 +425,11 @@ export function CalendarProvider({ children }) {
     getScheduledAlertsForDate,
     getUpcomingAlerts,
     getTodaysEvents,
-    getTodaysAlerts
+    getTodaysAlerts,
+    deleteAllScheduledAlerts,
+    
+    // Direct dispatch access
+    dispatch
   }
 
   return (

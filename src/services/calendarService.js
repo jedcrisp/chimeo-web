@@ -4,6 +4,7 @@ import {
   updateDoc, 
   deleteDoc, 
   getDocs, 
+  getDoc,
   query, 
   where, 
   orderBy, 
@@ -220,6 +221,8 @@ class CalendarService {
 
   async updateScheduledAlert(alertId, alertData) {
     console.log('⏰ Updating scheduled alert:', alertId)
+    console.log('⏰ Alert data:', alertData)
+    console.log('⏰ Organization ID:', alertData.organizationId)
     
     try {
       const alert = new ScheduledAlert({ ...alertData, id: alertId })
@@ -255,6 +258,8 @@ class CalendarService {
       }
 
       // Update in organization's scheduledAlerts subcollection
+      const docPath = `organizations/${alert.organizationId}/scheduledAlerts/${alertId}`
+      console.log('⏰ Updating document at path:', docPath)
       await updateDoc(doc(db, 'organizations', alert.organizationId, 'scheduledAlerts', alertId), docData)
       
       // Update local state
@@ -293,6 +298,8 @@ class CalendarService {
   async fetchScheduledAlerts(dateRange = null, organizationId = null) {
     console.log('⏰ Fetching scheduled alerts...')
     console.log('🔍 CalendarService: organizationId type:', typeof organizationId, 'value:', organizationId)
+    console.log('🔍 CalendarService: dateRange:', dateRange)
+    console.log('🔍 CalendarService: Current local alerts count:', this.scheduledAlerts.length)
     
     this.isLoading = true
     this.errorMessage = null
@@ -301,7 +308,10 @@ class CalendarService {
       let alerts = []
       
       if (organizationId && typeof organizationId === 'string') {
+        console.log('🔍 CalendarService: Fetching alerts for specific organization:', organizationId)
         // Fetch scheduled alerts for specific organization
+        const orgPath = `organizations/${organizationId}/scheduledAlerts`
+        console.log('🔍 CalendarService: Querying path:', orgPath)
         let q = query(collection(db, 'organizations', organizationId, 'scheduledAlerts'), orderBy('scheduledDate', 'asc'))
         
         if (dateRange) {
@@ -314,8 +324,30 @@ class CalendarService {
         }
         
         const snapshot = await getDocs(q)
+        console.log('🔍 CalendarService: Snapshot size for organization:', snapshot.size)
+        console.log('🔍 CalendarService: Query executed successfully for path:', orgPath)
+        
+        if (snapshot.empty) {
+          console.log('⚠️ CalendarService: No documents found in the collection')
+          console.log('🔍 CalendarService: Let me try to check if the organization exists...')
+          
+          // Try to check if the organization document exists
+          try {
+            const orgRef = doc(db, 'organizations', organizationId)
+            const orgDoc = await getDoc(orgRef)
+            if (orgDoc.exists()) {
+              console.log('✅ Organization exists:', orgDoc.data().name || organizationId)
+            } else {
+              console.log('❌ Organization does not exist:', organizationId)
+            }
+          } catch (orgError) {
+            console.log('❌ Error checking organization:', orgError)
+          }
+        }
+        
         snapshot.forEach(doc => {
           const data = doc.data()
+          console.log('🔍 CalendarService: Found alert in organization:', doc.id, data.title)
           alerts.push(new ScheduledAlert({
             id: doc.id,
             ...data,
@@ -337,9 +369,17 @@ class CalendarService {
         })
       } else {
         // Fetch alerts from all organizations
+        console.log('🔍 CalendarService: Fetching alerts from all organizations')
         const organizationsSnapshot = await getDocs(collection(db, 'organizations'))
+        console.log('🔍 CalendarService: Found organizations:', organizationsSnapshot.size)
+        
+        // Log all organizations found
+        organizationsSnapshot.docs.forEach(orgDoc => {
+          console.log('🔍 Organization found:', orgDoc.id, orgDoc.data().name || 'No name')
+        })
         
         for (const orgDoc of organizationsSnapshot.docs) {
+          console.log('🔍 CalendarService: Checking organization:', orgDoc.id)
           const orgId = orgDoc.id
           let q = query(collection(db, 'organizations', orgId, 'scheduledAlerts'), orderBy('scheduledDate', 'asc'))
           
@@ -353,8 +393,10 @@ class CalendarService {
           }
           
           const alertsSnapshot = await getDocs(q)
+          console.log('🔍 CalendarService: Found alerts in org', orgId, ':', alertsSnapshot.size)
           alertsSnapshot.forEach(doc => {
             const data = doc.data()
+            console.log('🔍 CalendarService: Found alert in all orgs:', doc.id, data.title, 'in org:', orgId)
             alerts.push(new ScheduledAlert({
               id: doc.id,
               ...data,
@@ -380,19 +422,53 @@ class CalendarService {
       // Sort all alerts by scheduled date
       alerts.sort((a, b) => a.scheduledDate - b.scheduledDate)
       
-      this.scheduledAlerts = alerts
+      // Remove duplicates based on ID and title combination
+      const uniqueAlerts = alerts.filter((alert, index, self) => 
+        index === self.findIndex(a => a.id === alert.id && a.title === alert.title)
+      )
+      
+      if (alerts.length !== uniqueAlerts.length) {
+        console.log(`🔄 Removed ${alerts.length - uniqueAlerts.length} duplicate alerts`)
+        console.log(`📊 Original count: ${alerts.length}, Unique count: ${uniqueAlerts.length}`)
+      }
+      
+      // Always clear and set the alerts array to ensure fresh data
+      this.scheduledAlerts = []
+      this.scheduledAlerts = uniqueAlerts
       this.isLoading = false
       
       console.log(`✅ Fetched ${alerts.length} scheduled alerts`)
-      if (alerts.length > 0) {
-        console.log('📅 Scheduled alerts:', alerts.map(alert => ({
+      console.log(`✅ Updated local scheduledAlerts array to ${this.scheduledAlerts.length} alerts`)
+      
+      // Check for duplicates
+      const alertTitles = uniqueAlerts.map(alert => alert.title)
+      const uniqueTitles = [...new Set(alertTitles)]
+      if (alertTitles.length !== uniqueTitles.length) {
+        console.log('⚠️ DUPLICATE ALERTS DETECTED!')
+        console.log('📋 All alert titles:', alertTitles)
+        console.log('📋 Unique titles:', uniqueTitles)
+        
+        // Find duplicates
+        const duplicates = alertTitles.filter((title, index) => alertTitles.indexOf(title) !== index)
+        console.log('📋 Duplicate titles:', [...new Set(duplicates)])
+      }
+      
+      if (uniqueAlerts.length > 0) {
+        console.log('📅 Scheduled alerts:', uniqueAlerts.map(alert => ({
           id: alert.id,
           title: alert.title,
           scheduledDate: alert.scheduledDate,
           organizationId: alert.organizationId
         })))
+        // Log each alert's scheduled date in detail
+        uniqueAlerts.forEach((alert, index) => {
+          const alertDate = new Date(alert.scheduledDate)
+          console.log(`📅 Alert ${index + 1}: "${alert.title}" - Raw date: ${alert.scheduledDate}, Parsed date: ${alertDate.toDateString()}, postedByUserId: ${alert.postedByUserId}`)
+        })
+      } else {
+        console.log('⚠️ No scheduled alerts found in database')
       }
-      return alerts
+      return uniqueAlerts
     } catch (error) {
       console.error('❌ Error fetching scheduled alerts:', error)
       this.errorMessage = error.message
@@ -440,11 +516,28 @@ class CalendarService {
   }
 
   getScheduledAlertsForDate(date) {
+    console.log('🔍 getScheduledAlertsForDate FUNCTION CALLED')
     const targetDate = new Date(date)
-    return this.scheduledAlerts.filter(alert => {
+    console.log('🔍 getScheduledAlertsForDate called with date:', targetDate.toDateString())
+    console.log('🔍 Total scheduled alerts:', this.scheduledAlerts.length)
+    
+    // Log all scheduled alerts and their dates
+    this.scheduledAlerts.forEach((alert, index) => {
       const alertDate = new Date(alert.scheduledDate)
-      return alertDate.toDateString() === targetDate.toDateString()
+      console.log(`🔍 Alert ${index + 1}: "${alert.title}" scheduled for: ${alertDate.toDateString()}`)
     })
+    
+    const filteredAlerts = this.scheduledAlerts.filter(alert => {
+      const alertDate = new Date(alert.scheduledDate)
+      const matches = alertDate.toDateString() === targetDate.toDateString()
+      if (matches) {
+        console.log('🔍 Found matching alert:', alert.title, 'for date:', alertDate.toDateString())
+      }
+      return matches
+    })
+    
+    console.log('🔍 Returning', filteredAlerts.length, 'alerts for date:', targetDate.toDateString())
+    return filteredAlerts
   }
 
   getUpcomingAlerts(limit = 10) {
@@ -460,6 +553,137 @@ class CalendarService {
 
   getTodaysAlerts() {
     return this.getScheduledAlertsForDate(new Date())
+  }
+
+  // Nuclear option - completely clear all data
+  clearAllData() {
+    console.log('💥 Nuclear clear: Clearing all calendar data')
+    this.events = []
+    this.scheduledAlerts = []
+    this.isLoading = false
+    this.errorMessage = null
+    console.log('💥 Nuclear clear: All data cleared')
+  }
+
+  // Debug function to search for alerts in all possible locations
+  async debugFindAllAlerts() {
+    console.log('🔍 DEBUG: Searching for alerts in all possible locations...')
+    
+    try {
+      // Check main scheduledAlerts collection
+      try {
+        const mainAlertsRef = collection(db, 'scheduledAlerts')
+        const mainSnapshot = await getDocs(mainAlertsRef)
+        console.log('🔍 Main scheduledAlerts collection:', mainSnapshot.size, 'alerts')
+        
+        if (mainSnapshot.size > 0) {
+          mainSnapshot.docs.forEach(alertDoc => {
+            const data = alertDoc.data()
+            console.log(`  - Main Alert: ${data.title} (${alertDoc.id})`)
+          })
+        }
+      } catch (error) {
+        console.log('🔍 Main scheduledAlerts collection does not exist or error:', error.message)
+      }
+      
+      // Check all organizations
+      const orgsSnapshot = await getDocs(collection(db, 'organizations'))
+      console.log('🔍 Found organizations:', orgsSnapshot.size)
+      
+      for (const orgDoc of orgsSnapshot.docs) {
+        const orgId = orgDoc.id
+        const orgData = orgDoc.data()
+        console.log(`🔍 Checking organization: ${orgId} (${orgData.name || 'No name'})`)
+        
+        try {
+          const alertsRef = collection(db, 'organizations', orgId, 'scheduledAlerts')
+          const alertsSnapshot = await getDocs(alertsRef)
+          console.log(`🔍 Organization ${orgId}: ${alertsSnapshot.size} alerts`)
+          
+          if (alertsSnapshot.size > 0) {
+            alertsSnapshot.docs.forEach(alertDoc => {
+              const data = alertDoc.data()
+              console.log(`  - Org Alert: ${data.title} (${alertDoc.id})`)
+            })
+          }
+        } catch (error) {
+          console.log(`🔍 Error checking org ${orgId}:`, error.message)
+        }
+      }
+      
+      // Check if alerts are in local state
+      console.log('🔍 Local scheduledAlerts array:', this.scheduledAlerts.length, 'alerts')
+      if (this.scheduledAlerts.length > 0) {
+        this.scheduledAlerts.forEach((alert, index) => {
+          console.log(`  - Local Alert ${index + 1}: ${alert.title} (${alert.id})`)
+        })
+      }
+      
+    } catch (error) {
+      console.error('❌ Error in debug search:', error)
+    }
+  }
+
+  // Delete all scheduled alerts from the main collection
+  async deleteAllScheduledAlerts(organizationId) {
+    console.log('🗑️ Deleting all scheduled alerts from main collection')
+    
+    try {
+      // Delete from main scheduledAlerts collection
+      const mainAlertsRef = collection(db, 'scheduledAlerts')
+      const mainQuery = query(mainAlertsRef, orderBy('scheduledDate', 'asc'))
+      const mainSnapshot = await getDocs(mainQuery)
+      
+      console.log(`📊 Found ${mainSnapshot.size} alerts in main collection to delete`)
+      
+      let deletedCount = 0
+      
+      // Delete from main collection
+      for (const alertDoc of mainSnapshot.docs) {
+        try {
+          const docPath = `scheduledAlerts/${alertDoc.id}`
+          console.log(`🗑️ Deleting from main collection: ${docPath}`)
+          
+          await deleteDoc(doc(db, 'scheduledAlerts', alertDoc.id))
+          console.log(`✅ Successfully deleted alert: ${alertDoc.data().title} (${alertDoc.id})`)
+          deletedCount++
+        } catch (error) {
+          console.error(`❌ Failed to delete alert ${alertDoc.id}:`, error)
+        }
+      }
+      
+      // Also try to delete from organization subcollection (in case there are any)
+      const orgAlertsRef = collection(db, 'organizations', organizationId, 'scheduledAlerts')
+      const orgQuery = query(orgAlertsRef, orderBy('scheduledDate', 'asc'))
+      const orgSnapshot = await getDocs(orgQuery)
+      
+      console.log(`📊 Found ${orgSnapshot.size} alerts in organization collection to delete`)
+      
+      for (const alertDoc of orgSnapshot.docs) {
+        try {
+          const docPath = `organizations/${organizationId}/scheduledAlerts/${alertDoc.id}`
+          console.log(`🗑️ Deleting from organization collection: ${docPath}`)
+          
+          await deleteDoc(doc(db, 'organizations', organizationId, 'scheduledAlerts', alertDoc.id))
+          console.log(`✅ Successfully deleted org alert: ${alertDoc.data().title} (${alertDoc.id})`)
+          deletedCount++
+        } catch (error) {
+          console.error(`❌ Failed to delete org alert ${alertDoc.id}:`, error)
+        }
+      }
+      
+      // Clear local state
+      this.scheduledAlerts = []
+      console.log('🗑️ Cleared local scheduledAlerts array')
+      
+      const totalAlerts = mainSnapshot.size + orgSnapshot.size
+      console.log(`🎉 Successfully deleted ${deletedCount} out of ${totalAlerts} alerts`)
+      return { deletedCount, totalCount: totalAlerts }
+      
+    } catch (error) {
+      console.error('❌ Error deleting all alerts:', error)
+      throw error
+    }
   }
 }
 

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { collection, getDocs, query, orderBy, where } from 'firebase/firestore'
 import { db } from '../services/firebase'
 
@@ -118,20 +118,13 @@ export function OrganizationsProvider({ children }) {
     fetchOrganizations()
   }, [])
 
-  const value = {
+  const value = useMemo(() => ({
     organizations,
     loading,
     fetchOrganizations,
     refreshFollowerCount
-  }
+  }), [organizations, loading, fetchOrganizations, refreshFollowerCount])
 
-  // Debug: Log when organizations state changes
-  useEffect(() => {
-    console.log('🔍 OrganizationsContext: Organizations state changed:', organizations.length, 'organizations')
-    organizations.forEach(org => {
-      console.log('🔍 OrganizationsContext: Org:', org.name, 'followerCount:', org.followerCount)
-    })
-  }, [organizations])
 
   return (
     <OrganizationsContext.Provider value={value}>

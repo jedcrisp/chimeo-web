@@ -331,10 +331,16 @@ class AdminService {
         followedOrganizations.push(organizationId)
         
         // Update user document
-        await updateDoc(userRef, {
-          followedOrganizations,
-          updatedAt: serverTimestamp()
-        })
+        try {
+          await updateDoc(userRef, {
+            followedOrganizations,
+            updatedAt: serverTimestamp()
+          })
+          console.log('✅ Firestore update successful for follow')
+        } catch (updateError) {
+          console.error('❌ Firestore update failed for follow:', updateError)
+          throw updateError
+        }
       }
 
       console.log('✅ User now following organization:', organizationId)
@@ -367,10 +373,16 @@ class AdminService {
       const updatedFollowedOrgs = followedOrganizations.filter(orgId => orgId !== organizationId)
       
       // Update user document
-      await updateDoc(userRef, {
-        followedOrganizations: updatedFollowedOrgs,
-        updatedAt: serverTimestamp()
-      })
+      try {
+        await updateDoc(userRef, {
+          followedOrganizations: updatedFollowedOrgs,
+          updatedAt: serverTimestamp()
+        })
+        console.log('✅ Firestore update successful for unfollow')
+      } catch (updateError) {
+        console.error('❌ Firestore update failed for unfollow:', updateError)
+        throw updateError
+      }
 
       console.log('✅ User unfollowed organization:', organizationId)
       return true

@@ -8,7 +8,7 @@ import adminService from '../services/adminService'
 
 export default function DiscoverOrganizations() {
   const { currentUser, userProfile, forceUpdate } = useAuth()
-  const { organizations, fetchOrganizations } = useOrganizations()
+  const { organizations, fetchOrganizations, refreshFollowerCount } = useOrganizations()
   const [followedOrgs, setFollowedOrgs] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -102,32 +102,13 @@ export default function DiscoverOrganizations() {
         console.log('✅ Followed organization:', organization.name)
       }
       
-      // Immediately refresh the follower count for this organization
-      await refreshFollowerCount(orgId)
-      console.log('🔄 Immediately refreshed follower count for organization:', orgId)
-      
-        // Refresh the followed organizations from the database to ensure UI is in sync
-        setTimeout(async () => {
-          const refreshedFollowed = await loadFollowedOrganizations()
-          setFollowedOrgs(refreshedFollowed)
-          console.log('🔄 Refreshed followed organizations from database:', refreshedFollowed.length)
-          
-          // Also refresh the organizations context to update follower counts
-          await fetchOrganizations()
-          console.log('🔄 Refreshed organizations context with updated follower counts')
-          
-          // Specifically refresh the follower count for this organization
-          await refreshFollowerCount(orgId)
-          console.log('🔄 Specifically refreshed follower count for organization:', orgId)
-          
-          // Force a re-render by updating a dummy state
-          setForceUpdate(prev => prev + 1)
-        }, 500)
+      // No refresh needed - let the UI update naturally
       
       // Force refresh user profile to sync with mobile app
-      if (window.forceUpdateUserProfile) {
-        window.forceUpdateUserProfile()
-      }
+      // Temporarily disabled to test if mobile app is overwriting changes
+      // if (window.forceUpdateUserProfile) {
+      //   window.forceUpdateUserProfile()
+      // }
       
       console.log('📱 Organization preferences updated - mobile app will sync automatically')
     } catch (error) {
@@ -140,9 +121,28 @@ export default function DiscoverOrganizations() {
     if (!location) return null
     if (typeof location === 'string') return location
     if (typeof location === 'object' && location !== null) {
-      return [location.address, location.city, location.state, location.zipCode]
+      // If address already contains city/state/zip, just return it
+      if (location.address && (location.address.includes(location.city) || location.address.includes(location.state))) {
+        return location.address
+      }
+      
+      const parts = []
+      
+      // Add street address
+      if (location.address) {
+        parts.push(location.address)
+      }
+      
+      // Add city, state, zip in a more readable format
+      const cityStateZip = [location.city, location.state, location.zipCode]
         .filter(Boolean)
         .join(', ')
+      
+      if (cityStateZip) {
+        parts.push(cityStateZip)
+      }
+      
+      return parts.join('\n')
     }
     return null
   }
@@ -287,33 +287,14 @@ export default function DiscoverOrganizations() {
                 )}
               </div>
               
-              <button
-                onClick={() => toggleFollowOrganization(org.id)}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                  isFollowingOrganization(org.id)
-                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                }`}
-              >
-                {isFollowingOrganization(org.id) ? (
-                  <>
-                    <Heart className="h-4 w-4 mr-1 inline" />
-                    Following
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="h-4 w-4 mr-1 inline" />
-                    Follow
-                  </>
-                )}
-              </button>
+              {/* Follow button removed - use mobile app to follow organizations */}
             </div>
             
             <div className="space-y-2">
               {formatLocation(org.location) && (
-                <div className="flex items-center text-sm text-gray-500">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  <span>{formatLocation(org.location)}</span>
+                <div className="flex items-start text-sm text-gray-500">
+                  <MapPin className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                  <div className="whitespace-pre-line">{formatLocation(org.location)}</div>
                 </div>
               )}
               

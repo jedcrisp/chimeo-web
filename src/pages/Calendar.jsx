@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useCalendar } from '../contexts/CalendarContext'
+import { useCalendar, CALENDAR_ACTIONS } from '../contexts/CalendarContext'
 import { CalendarViewMode, CalendarViewModeLabels } from '../models/calendarModels'
 import { Calendar, Plus, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
 import MonthCalendarView from '../components/calendar/MonthCalendarView'
@@ -8,6 +8,7 @@ import DayCalendarView from '../components/calendar/DayCalendarView'
 import AgendaView from '../components/calendar/AgendaView'
 import CreateScheduledAlertModal from '../components/calendar/CreateScheduledAlertModal'
 import CalendarFilterModal from '../components/calendar/CalendarFilterModal'
+import calendarService from '../services/calendarService'
 
 export default function CalendarPage() {
   const {
@@ -20,11 +21,14 @@ export default function CalendarPage() {
     setFilter,
     loadCalendarData,
     clearLoading,
-    processScheduledAlerts
+    processScheduledAlerts,
+    deleteAllScheduledAlerts,
+    dispatch
   } = useCalendar()
 
   const [showCreateAlert, setShowCreateAlert] = useState(false)
   const [showFilter, setShowFilter] = useState(false)
+  const [isDeletingAll, setIsDeletingAll] = useState(false)
 
   // Safety mechanism: Clear loading if it gets stuck for too long
   useEffect(() => {
@@ -116,6 +120,67 @@ export default function CalendarPage() {
     setSelectedDate(new Date())
   }
 
+  const handleDeleteAllAlerts = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL scheduled alerts? This action cannot be undone.')) {
+      return
+    }
+
+    setIsDeletingAll(true)
+    try {
+      console.log('🗑️ Starting aggressive deletion process...')
+      
+      // Clear local state immediately
+      console.log('🗑️ Cleared local state')
+      
+      // Try to delete from database
+      console.log('🗑️ Calling deleteAllScheduledAlerts...')
+      const result = await deleteAllScheduledAlerts()
+      console.log('🗑️ Deletion result:', result)
+      
+      // Wait a moment to ensure deletion is complete
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      console.log('🗑️ Waited 1 second after deletion')
+      
+      // Clear browser cache and local storage
+      if ('caches' in window) {
+        const cacheNames = await caches.keys()
+        await Promise.all(cacheNames.map(name => caches.delete(name)))
+        console.log('🗑️ Cleared browser cache')
+      }
+      
+      // Clear local storage
+      localStorage.clear()
+      sessionStorage.clear()
+      console.log('🗑️ Cleared local storage')
+      
+      alert(`Successfully deleted ${result.deletedCount} out of ${result.totalCount} alerts`)
+      
+      // Force complete calendar refresh
+      console.log('🔄 Forcing complete calendar refresh...')
+      
+      // Clear all calendar state first
+      console.log('🗑️ Dispatching CLEAR_ALL_DATA action...')
+      dispatch({ type: CALENDAR_ACTIONS.CLEAR_ALL_DATA })
+      console.log('✅ CLEAR_ALL_DATA action dispatched')
+      
+      // Wait a moment for state to clear
+      await new Promise(resolve => setTimeout(resolve, 100))
+      console.log('⏰ Waited 100ms for state to clear')
+      
+      // Reload calendar data
+      await loadCalendarData()
+      
+      // Force a re-render by updating the selected date
+      setSelectedDate(new Date(selectedDate.getTime() + 1))
+      setTimeout(() => setSelectedDate(new Date(selectedDate.getTime() - 1)), 100)
+    } catch (error) {
+      console.error('Error deleting all alerts:', error)
+      alert('Failed to delete all alerts. Please try again.')
+    } finally {
+      setIsDeletingAll(false)
+    }
+  }
+
 
   const formatDateTitle = () => {
     const options = { 
@@ -190,16 +255,81 @@ export default function CalendarPage() {
           
           
           <div className="relative">
-            <button
-              onClick={() => {
-                console.log('🔍 Calendar: Schedule Alert button clicked')
-                setShowCreateAlert(true)
-              }}
-              className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Schedule Alert
-            </button>
+          <button
+            onClick={() => {
+              console.log('🔍 Calendar: Schedule Alert button clicked')
+              setShowCreateAlert(true)
+            }}
+            className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Schedule Alert
+          </button>
+          
+          <button
+            onClick={handleDeleteAllAlerts}
+            disabled={isDeletingAll}
+            className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-800 rounded-md hover:bg-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isDeletingAll ? 'Deleting...' : 'Delete All Alerts'}
+          </button>
+          
+          <button
+            onClick={() => {
+              console.log('🔄 Manual refresh triggered')
+              loadCalendarData()
+            }}
+            className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+          >
+            Refresh Calendar
+          </button>
+          
+          <button
+            onClick={() => {
+              if (window.confirm('This will completely reset the calendar and clear all cached data. Continue?')) {
+                console.log('💥 Nuclear reset triggered')
+                // Clear everything
+                localStorage.clear()
+                sessionStorage.clear()
+                // Clear browser cache
+                if ('caches' in window) {
+                  caches.keys().then(names => {
+                    names.forEach(name => caches.delete(name))
+                  })
+                }
+                // Hard refresh
+                window.location.href = window.location.href
+              }
+            }}
+            className="flex items-center px-3 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700"
+          >
+            Nuclear Reset
+          </button>
+          
+          <button
+            onClick={() => {
+              if (window.confirm('This will clear all calendar data from memory. Continue?')) {
+                console.log('💥 Clearing calendar service data')
+                // Clear calendar service data
+                calendarService.clearAllData()
+                // Force reload calendar data
+                loadCalendarData()
+              }
+            }}
+            className="flex items-center px-3 py-2 text-sm font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700"
+          >
+            Clear Memory
+          </button>
+          
+          <button
+            onClick={() => {
+              console.log('🔍 Starting debug search for all alerts...')
+              calendarService.debugFindAllAlerts()
+            }}
+            className="flex items-center px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+          >
+            Debug Search
+          </button>
           </div>
         </div>
       </div>

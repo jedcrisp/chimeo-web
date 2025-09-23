@@ -3,6 +3,7 @@ import { useCalendar } from '../../contexts/CalendarContext'
 import { CalendarEventColors, IncidentSeverityColors } from '../../models/calendarModels'
 import { Trash2 } from 'lucide-react'
 import EditScheduledAlertModal from './EditScheduledAlertModal'
+import calendarService from '../../services/calendarService'
 
 export default function MonthCalendarView() {
   const { selectedDate, events, scheduledAlerts, filter, getEventsForDate, getScheduledAlertsForDate, setSelectedDate, deleteScheduledAlert } = useCalendar()
@@ -49,23 +50,21 @@ export default function MonthCalendarView() {
   }
 
   const getEventsForDay = (date) => {
+    console.log('🔍 getEventsForDay called for date:', date.toDateString())
     const dayEvents = getEventsForDate(date).filter(event => filter.showEvents)
     const allDayAlerts = getScheduledAlertsForDate(date)
-    const dayAlerts = allDayAlerts.filter(alert => {
-      if (!filter.showAlerts) return false
-      
-      // If no types are selected, show all types
-      const typeMatch = filter.selectedTypes.size === 0 || filter.selectedTypes.has(alert.type)
-      
-      // If no severities are selected, show all severities  
-      const severityMatch = filter.selectedSeverities.size === 0 || filter.selectedSeverities.has(alert.severity)
-      
-      return typeMatch && severityMatch
-    })
+    // For now, show all alerts without filtering to make sure they appear
+    const dayAlerts = allDayAlerts
+    
+    console.log('🔍 Showing all alerts without filtering:', dayAlerts.length)
+    console.log('🔍 All day alerts source:', allDayAlerts)
+    console.log('🔍 Calendar service alerts array length:', calendarService?.scheduledAlerts?.length || 'undefined')
+    console.log('🔍 Calendar service alerts:', calendarService?.scheduledAlerts || 'undefined')
     
     // Debug logging
+    console.log(`📅 Date ${date.toDateString()}: Found ${allDayAlerts.length} scheduled alerts, showing ${dayAlerts.length}`)
     if (allDayAlerts.length > 0) {
-      console.log(`📅 Date ${date.toDateString()}: Found ${allDayAlerts.length} scheduled alerts, showing ${dayAlerts.length}`)
+      console.log('📅 All day alerts:', allDayAlerts.map(alert => ({ title: alert.title, scheduledDate: alert.scheduledDate })))
     }
     
     return { events: dayEvents, alerts: dayAlerts }
@@ -85,10 +84,10 @@ export default function MonthCalendarView() {
   }
 
   const handleDateClick = (date) => {
-    console.log('📅 MonthCalendarView: Date clicked:', date.toDateString())
-    console.log('📅 MonthCalendarView: Current selectedDate:', selectedDate.toDateString())
-    console.log('📅 MonthCalendarView: Setting selectedDate to:', date.toDateString())
+    console.log('🔍 Date clicked:', date.toDateString())
+    console.log('🔍 Previous selected date:', selectedDate.toDateString())
     setSelectedDate(date)
+    console.log('🔍 New selected date set to:', date.toDateString())
   }
 
   const navigateMonth = (direction) => {
@@ -115,12 +114,14 @@ export default function MonthCalendarView() {
   }
 
   const handleAlertClick = (alert) => {
-    console.log('🔍 MonthCalendarView: Alert clicked:', alert)
-    console.log('🔍 MonthCalendarView: Alert data:', JSON.stringify(alert, null, 2))
-    console.log('🔍 MonthCalendarView: Setting selectedAlert and showEditModal to true')
+    console.log('🔍 Alert clicked:', alert)
+    console.log('🔍 Alert ID:', alert.id)
+    console.log('🔍 Alert title:', alert.title)
+    console.log('🔍 Alert organizationId:', alert.organizationId)
+    console.log('🔍 Opening edit modal for alert:', alert.title)
     setSelectedAlert(alert)
     setShowEditModal(true)
-    console.log('🔍 MonthCalendarView: State updated - selectedAlert:', alert, 'showEditModal: true')
+    console.log('🔍 Edit modal state set to true')
   }
 
   const handleCloseEditModal = () => {
@@ -134,6 +135,10 @@ export default function MonthCalendarView() {
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ]
+  
+  console.log('🔍 Current month being displayed:', currentMonth.toDateString())
+  console.log('🔍 Calendar days count:', calendarDays.length)
+  console.log('🔍 First few calendar days:', calendarDays.slice(0, 5).map(d => d.toDateString()))
 
   return (
     <div className="space-y-4">
@@ -156,6 +161,18 @@ export default function MonthCalendarView() {
           const isCurrentMonthDay = isCurrentMonth(date)
           const isTodayDate = isToday(date)
           const isSelectedDate = isSelected(date)
+          
+          // Debug logging for September 26
+          if (date.toDateString() === 'Fri Sep 26 2025') {
+            console.log('🔍 September 26 rendering:', {
+              dayEvents: dayEvents.length,
+              dayAlerts: dayAlerts.length,
+              hasContent,
+              isCurrentMonthDay,
+              isTodayDate,
+              isSelectedDate
+            })
+          }
           
           return (
             <div
@@ -195,72 +212,40 @@ export default function MonthCalendarView() {
                   ))}
                   
                   {/* Alerts */}
-                  {dayAlerts.slice(0, 2 - dayEvents.length).map((alert, alertIndex) => {
-                    console.log('🔍 MonthCalendarView: Rendering alert:', alert)
-                    console.log('🔍 MonthCalendarView: Alert ID:', alert.id)
-                    console.log('🔍 MonthCalendarView: Alert title:', alert.title)
-                    console.log('🔍 MonthCalendarView: Alert type:', typeof alert)
-                    console.log('🔍 MonthCalendarView: Alert keys:', Object.keys(alert))
-                    console.log('🔍 MonthCalendarView: Alert organizationId:', alert.organizationId)
-                    console.log('🔍 MonthCalendarView: Alert groupId:', alert.groupId)
-                    console.log('🔍 MonthCalendarView: Alert scheduledDate:', alert.scheduledDate)
-                    console.log('🔍 MonthCalendarView: Alert isActive:', alert.isActive)
+                  {dayAlerts.map((alert, alertIndex) => {
+                    console.log('🔍 Rendering alert:', alert.title, 'for date:', date.toDateString())
                     return (
                       <div
                         key={`alert-${alertIndex}`}
-                        className="flex items-center space-x-1 text-xs group cursor-pointer hover:bg-blue-100 hover:border hover:border-blue-300 rounded p-2 border border-transparent transition-all"
+                        className="flex items-center space-x-1 text-xs group cursor-pointer hover:bg-blue-100 hover:border hover:border-blue-300 rounded p-3 border border-transparent transition-all min-h-[32px] w-full bg-red-50 border-red-200"
                         onClick={(e) => {
-                          console.log('🔍 MonthCalendarView: Alert div clicked - BEFORE stopPropagation')
+                          console.log('🔍 Alert div clicked!', alert.title)
                           e.preventDefault()
                           e.stopPropagation()
-                          console.log('🔍 MonthCalendarView: Alert div clicked - AFTER stopPropagation, calling handleAlertClick')
                           handleAlertClick(alert)
                         }}
-                        onMouseDown={(e) => {
-                          console.log('🔍 MonthCalendarView: Alert div mouse down')
-                          e.preventDefault()
-                          e.stopPropagation()
-                        }}
-                        onMouseUp={(e) => {
-                          console.log('🔍 MonthCalendarView: Alert div mouse up')
-                          e.preventDefault()
-                          e.stopPropagation()
-                        }}
-                        onMouseEnter={(e) => {
-                          console.log('🔍 MonthCalendarView: Alert div mouse enter')
-                        }}
-                        onMouseLeave={(e) => {
-                          console.log('🔍 MonthCalendarView: Alert div mouse leave')
-                        }}
                         title="Click to edit alert"
-                        style={{ 
-                          pointerEvents: 'auto', 
-                          zIndex: 1000,
-                          minHeight: '20px',
-                          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                          position: 'relative'
-                        }}
                       >
-                        <div
-                          className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: IncidentSeverityColors[alert.severity] }}
-                        />
-                        <span 
-                          className="text-gray-700 truncate flex-1"
-                        >
-                          {alert.title}
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteScheduledAlert(alert.id)
-                          }}
-                          className="text-red-600 hover:text-red-800 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-red-200 flex-shrink-0"
-                          title="Delete scheduled alert"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
+                      <div
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: IncidentSeverityColors[alert.severity] }}
+                      />
+                      <span 
+                        className="text-gray-700 truncate flex-1"
+                      >
+                        {alert.title}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteScheduledAlert(alert.id)
+                        }}
+                        className="text-red-600 hover:text-red-800 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-red-200 flex-shrink-0"
+                        title="Delete scheduled alert"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
                     )
                   })}
                   

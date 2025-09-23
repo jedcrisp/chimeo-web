@@ -641,8 +641,6 @@ export default function OrganizationRequest() {
         phone: request.phone,
         email: request.officeEmail,
         website: request.website,
-        // Web app compatibility - contact field
-        contact: request.phone,
         // Web app compatibility - location object (mirroring first org structure)
         location: {
           address: request.address,

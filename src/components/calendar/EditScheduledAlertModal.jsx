@@ -48,20 +48,11 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
   // Initialize form data when alert changes
   useEffect(() => {
     if (alert) {
-      console.log('🔍 EditScheduledAlertModal: Alert received:', alert)
-      console.log('🔍 EditScheduledAlertModal: Alert data:', JSON.stringify(alert, null, 2))
-      console.log('🔍 EditScheduledAlertModal: Alert keys:', Object.keys(alert))
-      console.log('🔍 EditScheduledAlertModal: Alert organizationId:', alert.organizationId)
-      console.log('🔍 EditScheduledAlertModal: Alert groupId:', alert.groupId)
-      console.log('🔍 EditScheduledAlertModal: Alert scheduledDate:', alert.scheduledDate)
-      console.log('🔍 EditScheduledAlertModal: Alert isActive:', alert.isActive)
-      
       // Check if alert has required fields
       const hasRequiredFields = alert.id && alert.title && alert.organizationId
-      console.log('🔍 EditScheduledAlertModal: Has required fields:', hasRequiredFields)
       
       if (!hasRequiredFields) {
-        console.error('❌ EditScheduledAlertModal: Alert missing required fields')
+        console.error('Alert is missing required data and cannot be edited')
         setError('Alert is missing required data and cannot be edited')
         return
       }
@@ -131,6 +122,10 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
+    console.log('🔍 EditScheduledAlertModal: handleSubmit called')
+    console.log('🔍 Current user:', currentUser?.uid)
+    console.log('🔍 Alert being edited:', alert)
+    
     if (!formData.title.trim()) {
       setError('Title is required')
       return
@@ -169,8 +164,9 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
           interval: formData.recurrenceInterval,
           endDate: formData.recurrenceEndDate
         } : null,
-        postedBy: currentUser?.displayName || currentUser?.email || 'Unknown',
-        postedByUserId: currentUser?.uid || 'unknown',
+        // Keep the original postedBy and postedByUserId to maintain consistency
+        postedBy: alert.postedBy || currentUser?.displayName || currentUser?.email || 'Unknown',
+        postedByUserId: alert.postedByUserId || currentUser?.uid || 'unknown',
         expiresAt: formData.hasExpiration ? formData.expiresAt : null
       }
 
@@ -230,8 +226,8 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
             interval: formData.recurrenceInterval,
             endDate: formData.recurrenceEndDate
           } : null,
-          postedBy: currentUser?.displayName || currentUser?.email || 'Unknown',
-          postedByUserId: currentUser?.uid || 'unknown',
+          postedBy: alert.postedBy || currentUser?.displayName || currentUser?.email || 'Unknown',
+          postedByUserId: alert.postedByUserId || currentUser?.uid || 'unknown',
           expiresAt: formData.hasExpiration ? formData.expiresAt : null
         }
 
@@ -262,8 +258,6 @@ export default function EditScheduledAlertModal({ isOpen, onClose, alert }) {
   }
 
 
-  console.log('🔍 EditScheduledAlertModal: isOpen:', isOpen, 'alert:', !!alert)
-  
   if (!isOpen || !alert) return null
 
   return (
