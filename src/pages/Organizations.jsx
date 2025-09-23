@@ -135,9 +135,15 @@ export default function Organizations() {
   }
 
   // Function to open followers modal
-  const openFollowersModal = (org) => {
+  const openFollowersModal = async (org) => {
     setSelectedOrg(org)
     setShowFollowersModal(true)
+    
+    // Refresh the follower count for this organization
+    const updatedCount = await refreshFollowerCount(org.id)
+    console.log('🔄 Refreshed follower count for', org.name, ':', updatedCount)
+    
+    // Fetch the followers list
     fetchFollowers(org.id)
   }
 
