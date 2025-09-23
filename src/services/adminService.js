@@ -299,8 +299,8 @@ class AdminService {
       const userDoc = await getDoc(doc(db, 'users', this.currentUser.uid))
       if (userDoc.exists()) {
         const userData = userDoc.data()
-        const followedOrganizations = userData.followedOrganizations || {}
-        return followedOrganizations[organizationId] === true
+        const followedOrganizations = userData.followedOrganizations || []
+        return followedOrganizations.includes(organizationId)
       }
       return false
     } catch (error) {
@@ -324,23 +324,18 @@ class AdminService {
       }
 
       const userData = userDoc.data()
-      const followedOrganizations = userData.followedOrganizations || {}
+      const followedOrganizations = userData.followedOrganizations || []
       
-      // Add organization to followed list
-      followedOrganizations[organizationId] = true
-      
-      // Update user document
-      await updateDoc(userRef, {
-        followedOrganizations,
-        updatedAt: serverTimestamp()
-      })
-
-      // Add follower to organization's followers subcollection
-      await addDoc(collection(db, 'organizations', organizationId, 'followers'), {
-        userId: this.currentUser.uid,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      })
+      // Add organization to followed list if not already following
+      if (!followedOrganizations.includes(organizationId)) {
+        followedOrganizations.push(organizationId)
+        
+        // Update user document
+        await updateDoc(userRef, {
+          followedOrganizations,
+          updatedAt: serverTimestamp()
+        })
+      }
 
       console.log('✅ User now following organization:', organizationId)
       return true
@@ -366,29 +361,16 @@ class AdminService {
       }
 
       const userData = userDoc.data()
-      const followedOrganizations = userData.followedOrganizations || {}
+      const followedOrganizations = userData.followedOrganizations || []
       
       // Remove organization from followed list
-      delete followedOrganizations[organizationId]
+      const updatedFollowedOrgs = followedOrganizations.filter(orgId => orgId !== organizationId)
       
       // Update user document
       await updateDoc(userRef, {
-        followedOrganizations,
+        followedOrganizations: updatedFollowedOrgs,
         updatedAt: serverTimestamp()
       })
-
-      // Mark follower as deleted in organization's followers subcollection
-      const followersQuery = query(
-        collection(db, 'organizations', organizationId, 'followers'),
-        where('userId', '==', this.currentUser.uid)
-      )
-      const followersSnapshot = await getDocs(followersQuery)
-      
-      for (const doc of followersSnapshot.docs) {
-        await updateDoc(doc.ref, {
-          deletedAt: serverTimestamp()
-        })
-      }
 
       console.log('✅ User unfollowed organization:', organizationId)
       return true

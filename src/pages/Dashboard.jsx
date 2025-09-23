@@ -624,27 +624,11 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Welcome Header */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Welcome back, {getDisplayName()}!</h1>
-            <p className="text-gray-600 mt-1">
-              Stay updated with alerts from your followed groups and organizations
-            </p>
-          </div>
-          <div className="flex space-x-3">
-            <Link
-              to="/my-alerts"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              View My Alerts
-            </Link>
-            <Link
-              to="/discover"
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-            >
-              Discover Organizations
-            </Link>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Welcome back, {getDisplayName()}!</h1>
+          <p className="text-gray-600 mt-1">
+            Stay updated with alerts from your followed groups and organizations
+          </p>
         </div>
       </div>
 

@@ -115,8 +115,12 @@ export default function MonthCalendarView() {
   }
 
   const handleAlertClick = (alert) => {
+    console.log('🔍 MonthCalendarView: Alert clicked:', alert)
+    console.log('🔍 MonthCalendarView: Alert data:', JSON.stringify(alert, null, 2))
+    console.log('🔍 MonthCalendarView: Setting selectedAlert and showEditModal to true')
     setSelectedAlert(alert)
     setShowEditModal(true)
+    console.log('🔍 MonthCalendarView: State updated - selectedAlert:', alert, 'showEditModal: true')
   }
 
   const handleCloseEditModal = () => {
@@ -191,37 +195,74 @@ export default function MonthCalendarView() {
                   ))}
                   
                   {/* Alerts */}
-                  {dayAlerts.slice(0, 2 - dayEvents.length).map((alert, alertIndex) => (
-                    <div
-                      key={`alert-${alertIndex}`}
-                      className="flex items-center space-x-1 text-xs group"
-                    >
+                  {dayAlerts.slice(0, 2 - dayEvents.length).map((alert, alertIndex) => {
+                    console.log('🔍 MonthCalendarView: Rendering alert:', alert)
+                    console.log('🔍 MonthCalendarView: Alert ID:', alert.id)
+                    console.log('🔍 MonthCalendarView: Alert title:', alert.title)
+                    console.log('🔍 MonthCalendarView: Alert type:', typeof alert)
+                    console.log('🔍 MonthCalendarView: Alert keys:', Object.keys(alert))
+                    console.log('🔍 MonthCalendarView: Alert organizationId:', alert.organizationId)
+                    console.log('🔍 MonthCalendarView: Alert groupId:', alert.groupId)
+                    console.log('🔍 MonthCalendarView: Alert scheduledDate:', alert.scheduledDate)
+                    console.log('🔍 MonthCalendarView: Alert isActive:', alert.isActive)
+                    return (
                       <div
-                        className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: IncidentSeverityColors[alert.severity] }}
-                      />
-                      <span 
-                        className="text-gray-700 truncate cursor-pointer hover:text-blue-600 flex-1"
+                        key={`alert-${alertIndex}`}
+                        className="flex items-center space-x-1 text-xs group cursor-pointer hover:bg-blue-100 hover:border hover:border-blue-300 rounded p-2 border border-transparent transition-all"
                         onClick={(e) => {
+                          console.log('🔍 MonthCalendarView: Alert div clicked - BEFORE stopPropagation')
+                          e.preventDefault()
                           e.stopPropagation()
+                          console.log('🔍 MonthCalendarView: Alert div clicked - AFTER stopPropagation, calling handleAlertClick')
                           handleAlertClick(alert)
                         }}
-                        title="Click to edit alert"
-                      >
-                        {alert.title}
-                      </span>
-                      <button
-                        onClick={(e) => {
+                        onMouseDown={(e) => {
+                          console.log('🔍 MonthCalendarView: Alert div mouse down')
+                          e.preventDefault()
                           e.stopPropagation()
-                          handleDeleteScheduledAlert(alert.id)
                         }}
-                        className="text-red-600 hover:text-red-800 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-red-200 flex-shrink-0"
-                        title="Delete scheduled alert"
+                        onMouseUp={(e) => {
+                          console.log('🔍 MonthCalendarView: Alert div mouse up')
+                          e.preventDefault()
+                          e.stopPropagation()
+                        }}
+                        onMouseEnter={(e) => {
+                          console.log('🔍 MonthCalendarView: Alert div mouse enter')
+                        }}
+                        onMouseLeave={(e) => {
+                          console.log('🔍 MonthCalendarView: Alert div mouse leave')
+                        }}
+                        title="Click to edit alert"
+                        style={{ 
+                          pointerEvents: 'auto', 
+                          zIndex: 1000,
+                          minHeight: '20px',
+                          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                          position: 'relative'
+                        }}
                       >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
+                        <div
+                          className="w-2 h-2 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: IncidentSeverityColors[alert.severity] }}
+                        />
+                        <span 
+                          className="text-gray-700 truncate flex-1"
+                        >
+                          {alert.title}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteScheduledAlert(alert.id)
+                          }}
+                          className="text-red-600 hover:text-red-800 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-red-200 flex-shrink-0"
+                          title="Delete scheduled alert"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )
+                  })}
                   
                   {/* More indicator */}
                   {(dayEvents.length + dayAlerts.length) > 2 && (
@@ -251,6 +292,27 @@ export default function MonthCalendarView() {
           <span>Today</span>
         </div>
       </div>
+
+      {/* Test Button - Remove this after testing */}
+      {(() => {
+        const { alerts: dayAlerts } = getEventsForDay(selectedDate)
+        return dayAlerts.length > 0 && (
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => {
+                console.log('🔍 Test button clicked - opening edit modal for first alert')
+                const firstAlert = dayAlerts[0]
+                console.log('🔍 Test alert:', firstAlert)
+                setSelectedAlert(firstAlert)
+                setShowEditModal(true)
+              }}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              Test Edit Alert (Click to open edit modal)
+            </button>
+          </div>
+        )
+      })()}
 
       {/* Edit Scheduled Alert Modal */}
       {showEditModal && selectedAlert && (

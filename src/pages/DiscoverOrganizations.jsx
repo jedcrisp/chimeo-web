@@ -89,12 +89,12 @@ export default function DiscoverOrganizations() {
         console.log('✅ Followed organization:', organization.name)
       }
       
-      // Force refresh user profile to sync with mobile app
-      if (window.forceUpdateUserProfile) {
-        window.forceUpdateUserProfile()
-      }
+      // Note: Mobile app sync disabled until mobile app is updated to use new follow logic
+      // if (window.forceUpdateUserProfile) {
+      //   window.forceUpdateUserProfile()
+      // }
       
-      console.log('📱 Organization preferences updated - mobile app will sync automatically')
+      console.log('✅ Organization preferences updated - web app only')
     } catch (error) {
       console.error('❌ Error toggling organization follow:', error)
       alert('Error updating organization follow status. Please try again.')

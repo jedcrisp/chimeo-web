@@ -54,6 +54,8 @@ export default function DayCalendarView() {
   }
 
   const handleAlertClick = (alert) => {
+    console.log('🔍 DayCalendarView: Alert clicked:', alert)
+    console.log('🔍 DayCalendarView: Alert data:', JSON.stringify(alert, null, 2))
     setSelectedAlert(alert)
     setShowEditModal(true)
   }
