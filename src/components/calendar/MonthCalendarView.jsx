@@ -102,10 +102,12 @@ export default function MonthCalendarView() {
     setSelectedDate(today)
   }
 
-  const handleDeleteScheduledAlert = async (alertId) => {
+  const handleDeleteScheduledAlert = async (alertId, organizationId) => {
     if (window.confirm('Are you sure you want to delete this scheduled alert?')) {
       try {
-        await deleteScheduledAlert(alertId)
+        console.log('🗑️ MonthCalendarView: Deleting alert', alertId, 'from organization:', organizationId)
+        await deleteScheduledAlert(alertId, organizationId)
+        console.log('✅ MonthCalendarView: Alert deleted successfully')
       } catch (error) {
         console.error('Error deleting scheduled alert:', error)
         alert('Failed to delete scheduled alert. Please try again.')
@@ -238,7 +240,7 @@ export default function MonthCalendarView() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleDeleteScheduledAlert(alert.id)
+                          handleDeleteScheduledAlert(alert.id, alert.organizationId)
                         }}
                         className="text-red-600 hover:text-red-800 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-red-200 flex-shrink-0"
                         title="Delete scheduled alert"

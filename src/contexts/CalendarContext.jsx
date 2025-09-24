@@ -290,15 +290,20 @@ export function CalendarProvider({ children }) {
     }
   }
 
-  const deleteScheduledAlert = async (alertId) => {
+  const deleteScheduledAlert = async (alertId, organizationId = null) => {
     try {
       dispatch({ type: CALENDAR_ACTIONS.SET_LOADING, payload: true })
       
-      // Get organization ID from user profile
-      const rawOrgId = userProfile?.organizations?.[0] || null
-      const organizationId = rawOrgId && typeof rawOrgId === 'string' ? rawOrgId : null
+      // Get organization ID from parameter or user profile
+      let targetOrgId = organizationId
+      if (!targetOrgId) {
+        const rawOrgId = userProfile?.organizations?.[0] || null
+        targetOrgId = rawOrgId && typeof rawOrgId === 'string' ? rawOrgId : 'velocity_physical_therapy_north_denton'
+      }
       
-      await calendarService.deleteScheduledAlert(alertId, organizationId)
+      console.log('🗑️ CalendarContext: Deleting alert', alertId, 'from organization:', targetOrgId)
+      
+      await calendarService.deleteScheduledAlert(alertId, targetOrgId)
       dispatch({ type: CALENDAR_ACTIONS.DELETE_SCHEDULED_ALERT, payload: alertId })
     } catch (error) {
       dispatch({ type: CALENDAR_ACTIONS.SET_ERROR, payload: error.message })

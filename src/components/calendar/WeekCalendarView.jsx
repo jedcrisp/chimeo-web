@@ -52,10 +52,12 @@ export default function WeekCalendarView() {
     })
   }
 
-  const handleDeleteScheduledAlert = async (alertId) => {
+  const handleDeleteScheduledAlert = async (alertId, organizationId) => {
     if (window.confirm('Are you sure you want to delete this scheduled alert?')) {
       try {
-        await deleteScheduledAlert(alertId)
+        console.log('🗑️ WeekCalendarView: Deleting alert', alertId, 'from organization:', organizationId)
+        await deleteScheduledAlert(alertId, organizationId)
+        console.log('✅ WeekCalendarView: Alert deleted successfully')
       } catch (error) {
         console.error('Error deleting scheduled alert:', error)
         alert('Failed to delete scheduled alert. Please try again.')
@@ -180,7 +182,7 @@ export default function WeekCalendarView() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        handleDeleteScheduledAlert(alert.id)
+                        handleDeleteScheduledAlert(alert.id, alert.organizationId)
                       }}
                       className="text-red-600 hover:text-red-800 p-1 rounded-md hover:bg-red-200 flex-shrink-0"
                       title="Delete scheduled alert"
