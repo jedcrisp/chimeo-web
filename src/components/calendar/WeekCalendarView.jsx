@@ -28,6 +28,18 @@ export default function WeekCalendarView() {
     const dayAlerts = getScheduledAlertsForDate(date).filter(alert => {
       if (!filter.showAlerts) return false
       
+      // Search term filtering
+      if (filter.searchTerm && filter.searchTerm.trim()) {
+        const searchLower = filter.searchTerm.toLowerCase()
+        const matchesSearch = 
+          alert.title?.toLowerCase().includes(searchLower) ||
+          alert.description?.toLowerCase().includes(searchLower) ||
+          alert.groupName?.toLowerCase().includes(searchLower) ||
+          alert.organizationName?.toLowerCase().includes(searchLower)
+        
+        if (!matchesSearch) return false
+      }
+      
       // If no types are selected, show all types
       const typeMatch = filter.selectedTypes.size === 0 || filter.selectedTypes.has(alert.type)
       // If no severities are selected, show all severities

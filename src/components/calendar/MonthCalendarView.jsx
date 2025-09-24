@@ -53,10 +53,32 @@ export default function MonthCalendarView() {
     console.log('🔍 getEventsForDay called for date:', date.toDateString())
     const dayEvents = getEventsForDate(date).filter(event => filter.showEvents)
     const allDayAlerts = getScheduledAlertsForDate(date)
-    // For now, show all alerts without filtering to make sure they appear
-    const dayAlerts = allDayAlerts
     
-    console.log('🔍 Showing all alerts without filtering:', dayAlerts.length)
+    // Apply filtering including search
+    const dayAlerts = allDayAlerts.filter(alert => {
+      if (!filter.showAlerts) return false
+      
+      // Search term filtering
+      if (filter.searchTerm && filter.searchTerm.trim()) {
+        const searchLower = filter.searchTerm.toLowerCase()
+        const matchesSearch = 
+          alert.title?.toLowerCase().includes(searchLower) ||
+          alert.description?.toLowerCase().includes(searchLower) ||
+          alert.groupName?.toLowerCase().includes(searchLower) ||
+          alert.organizationName?.toLowerCase().includes(searchLower)
+        
+        if (!matchesSearch) return false
+      }
+      
+      // Type filtering
+      const typeMatch = filter.selectedTypes.size === 0 || filter.selectedTypes.has(alert.type)
+      // Severity filtering
+      const severityMatch = filter.selectedSeverities.size === 0 || filter.selectedSeverities.has(alert.severity)
+      
+      return typeMatch && severityMatch
+    })
+    
+    console.log('🔍 Filtered alerts:', dayAlerts.length)
     console.log('🔍 All day alerts source:', allDayAlerts)
     console.log('🔍 Calendar service alerts array length:', calendarService?.scheduledAlerts?.length || 'undefined')
     console.log('🔍 Calendar service alerts:', calendarService?.scheduledAlerts || 'undefined')

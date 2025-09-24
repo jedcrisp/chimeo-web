@@ -36,7 +36,8 @@ const initialState = {
     selectedTypes: new Set(),
     selectedSeverities: new Set(),
     selectedGroups: new Set(),
-    dateRange: null
+    dateRange: null,
+    searchTerm: ''
   },
   selectedDate: new Date(),
   viewMode: 'month'

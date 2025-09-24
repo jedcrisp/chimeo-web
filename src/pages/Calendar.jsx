@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useCalendar, CALENDAR_ACTIONS } from '../contexts/CalendarContext'
 import { CalendarViewMode, CalendarViewModeLabels } from '../models/calendarModels'
-import { Calendar, Plus, ChevronLeft, ChevronRight, Filter } from 'lucide-react'
+import { Calendar, Plus, ChevronLeft, ChevronRight, Filter, Search } from 'lucide-react'
 import MonthCalendarView from '../components/calendar/MonthCalendarView'
 import WeekCalendarView from '../components/calendar/WeekCalendarView'
 import DayCalendarView from '../components/calendar/DayCalendarView'
@@ -27,6 +27,7 @@ export default function CalendarPage() {
   const [showCreateAlert, setShowCreateAlert] = useState(false)
   const [prefilledDate, setPrefilledDate] = useState(null)
   const [showFilterModal, setShowFilterModal] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
   // Safety mechanism: Clear loading if it gets stuck for too long
   useEffect(() => {
@@ -141,6 +142,16 @@ export default function CalendarPage() {
     setSelectedDate(new Date())
   }
 
+  // Handle search functionality
+  const handleSearch = (term) => {
+    setSearchTerm(term)
+    // Update the filter with search term
+    setFilter(prev => ({
+      ...prev,
+      searchTerm: term
+    }))
+  }
+
 
 
   const formatDateTitle = () => {
@@ -230,6 +241,22 @@ export default function CalendarPage() {
             <Plus className="h-4 w-4 mr-2" />
             Schedule Alert
           </button>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search alerts and events..."
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+          />
         </div>
       </div>
 
