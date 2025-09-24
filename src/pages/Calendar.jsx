@@ -203,17 +203,6 @@ export default function CalendarPage() {
         
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => {
-              console.log('🔍 Calendar: Schedule Alert button clicked')
-              setShowCreateAlert(true)
-            }}
-            className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Schedule Alert
-          </button>
-          
-          <button
             onClick={() => setShowFilterModal(true)}
             className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
           >
@@ -229,6 +218,17 @@ export default function CalendarPage() {
             className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
           >
             Refresh Calendar
+          </button>
+          
+          <button
+            onClick={() => {
+              console.log('🔍 Calendar: Schedule Alert button clicked')
+              setShowCreateAlert(true)
+            }}
+            className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Schedule Alert
           </button>
         </div>
       </div>
