@@ -211,13 +211,10 @@ export default function AlertDetailsModal({ isOpen, onClose, alert }) {
             </div>
 
             {/* Posted By */}
-            {(alert.postedBy || alert.postedByUserId) && (
+            {alert.postedBy && (
               <div className="border-t border-gray-200 pt-4">
                 <p className="text-sm text-gray-500">
-                  Posted by: {alert.postedBy || 'Unknown User'}
-                  {alert.postedByUserId && alert.postedByUserId !== 'unknown' && (
-                    <span className="ml-2 text-xs text-gray-400">({alert.postedByUserId})</span>
-                  )}
+                  Posted by: {alert.postedBy}
                 </p>
               </div>
             )}
