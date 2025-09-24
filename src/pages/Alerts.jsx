@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAlerts } from '../contexts/AlertContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useCalendar } from '../contexts/CalendarContext'
 import { collection, query, orderBy, getDocs } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import { Plus, Edit, Trash2, X } from 'lucide-react'
@@ -26,6 +27,7 @@ function BellIcon({ className }) {
 export default function Alerts() {
   const { alerts, loading, deleteAlert, createAlert } = useAlerts()
   const { currentUser, userProfile } = useAuth()
+  const { deleteScheduledAlert } = useCalendar()
   const [showNewAlertModal, setShowNewAlertModal] = useState(false)
   const [groups, setGroups] = useState([])
   const [groupsLoading, setGroupsLoading] = useState(true)
@@ -114,7 +116,21 @@ export default function Alerts() {
   const handleDeleteAlert = async (alertId) => {
     if (window.confirm('Are you sure you want to delete this alert?')) {
       try {
-        await deleteAlert(alertId)
+        // Get organization ID for scheduled alert deletion
+        let orgId = userProfile?.organizationId
+        if (!orgId && userProfile?.organizations && userProfile.organizations.length > 0) {
+          orgId = userProfile.organizations[0]
+        }
+        
+        // Try to delete from both regular alerts and scheduled alerts
+        const deletePromises = [deleteAlert(alertId)]
+        
+        if (orgId) {
+          deletePromises.push(deleteScheduledAlert(alertId, orgId))
+        }
+        
+        await Promise.allSettled(deletePromises)
+        console.log('✅ Alert deletion completed (some may have failed if alert type didn\'t match)')
       } catch (error) {
         console.error('Error deleting alert:', error)
       }
