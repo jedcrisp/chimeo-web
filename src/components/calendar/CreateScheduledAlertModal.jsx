@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useCalendar } from '../../contexts/CalendarContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { useOrganizations } from '../../contexts/OrganizationsContext'
+import { useSubscription } from '../../contexts/SubscriptionContext'
+import FeatureGate from '../FeatureGate'
 import groupService from '../../services/groupService'
 import { 
   IncidentType, 
@@ -18,6 +20,7 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
   const { createScheduledAlert } = useCalendar()
   const { currentUser, userProfile } = useAuth()
   const { organizations } = useOrganizations()
+  const { canPerformAction } = useSubscription()
   
   console.log('🔍 CreateScheduledAlertModal: Component rendered', { isOpen, userProfile: !!userProfile })
   
@@ -124,6 +127,14 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
     setError('')
 
     try {
+      // Check subscription limits before creating alert
+      const permission = await canPerformAction('createAlert', formData.organizationId)
+      if (!permission.allowed) {
+        setError(permission.reason || 'You have reached your alert limit for this month. Please upgrade your plan to create more alerts.')
+        setIsLoading(false)
+        return
+      }
+
       const selectedGroup = availableGroups.find(g => g.id === formData.groupId)
       
       const alertData = {

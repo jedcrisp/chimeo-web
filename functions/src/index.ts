@@ -6,6 +6,9 @@ admin.initializeApp()
 
 const db = admin.firestore()
 
+// Export subscription webhooks
+export { stripeWebhook, onUserSubscriptionChange } from './subscriptionWebhooks'
+
 // Scheduled function that runs every minute
 export const processScheduledAlerts = functions.pubsub
   .schedule('every 1 minutes')

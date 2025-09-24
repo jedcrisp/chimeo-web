@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { OrganizationsProvider } from './contexts/OrganizationsContext'
 import { AlertProvider } from './contexts/AlertContext'
 import { CalendarProvider } from './contexts/CalendarContext'
+import { SubscriptionProvider } from './contexts/SubscriptionContext'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -18,6 +19,7 @@ import MyAlerts from './pages/MyAlerts'
 import MyGroups from './pages/MyGroups'
 import DiscoverOrganizations from './pages/DiscoverOrganizations'
 import MyProfile from './pages/MyProfile'
+import Subscription from './pages/Subscription'
 import ProtectedRoute from './components/ProtectedRoute'
 import emailService from './services/emailService'
 import notificationService from './services/notificationService'
@@ -97,7 +99,8 @@ function App() {
       <OrganizationsProvider>
         <AlertProvider>
           <CalendarProvider>
-            <Routes>
+            <SubscriptionProvider>
+              <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/" element={
                 <ProtectedRoute>
@@ -116,8 +119,10 @@ function App() {
                 <Route path="my-groups" element={<MyGroups />} />
                 <Route path="discover" element={<DiscoverOrganizations />} />
                 <Route path="my-profile" element={<MyProfile />} />
+                <Route path="subscription" element={<Subscription />} />
               </Route>
-            </Routes>
+              </Routes>
+            </SubscriptionProvider>
           </CalendarProvider>
         </AlertProvider>
       </OrganizationsProvider>
