@@ -24,12 +24,10 @@ export default function AlertDetailsModal({ isOpen, onClose, alert }) {
         }
       }
 
-      // Find group info if we have organization info
-      if (alert.groupId && organizationInfo) {
-        // This would need to be implemented based on your group service
-        // For now, we'll just use the group name from the alert
+      // Find group info - use alert data directly
+      if (alert.groupId || alert.groupName) {
         setGroupInfo({
-          id: alert.groupId,
+          id: alert.groupId || 'unknown',
           name: alert.groupName || 'Unknown Group'
         })
       }
@@ -164,12 +162,12 @@ export default function AlertDetailsModal({ isOpen, onClose, alert }) {
                 </div>
               )}
 
-              {groupInfo && (
+              {(groupInfo || alert.groupName) && (
                 <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                   <Users className="h-5 w-5 text-gray-600 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-gray-900">Target Group</p>
-                    <p className="text-sm text-gray-600">{groupInfo.name}</p>
+                    <p className="text-sm text-gray-600">{groupInfo?.name || alert.groupName || 'Unknown Group'}</p>
                   </div>
                 </div>
               )}
