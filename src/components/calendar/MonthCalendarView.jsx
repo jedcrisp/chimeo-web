@@ -92,19 +92,27 @@ export default function MonthCalendarView() {
 
   const handleDateDoubleClick = (date) => {
     console.log('🔍 Date double-clicked:', date.toDateString())
+    console.log('🔍 Original date object:', date)
+    console.log('🔍 Date year:', date.getFullYear(), 'month:', date.getMonth(), 'day:', date.getDate())
     
     // Set the selected date first
     setSelectedDate(date)
     
     // Create a date with current time in user's timezone
     const now = new Date()
-    const targetDate = new Date(date)
-    targetDate.setHours(now.getHours())
-    targetDate.setMinutes(now.getMinutes())
-    targetDate.setSeconds(0)
-    targetDate.setMilliseconds(0)
+    const targetDate = new Date(
+      date.getFullYear(),
+      date.getMonth(), 
+      date.getDate(),
+      now.getHours(),
+      now.getMinutes(),
+      0,
+      0
+    )
     
-    console.log('🔍 Opening create alert modal for date:', targetDate.toISOString())
+    console.log('🔍 Created target date:', targetDate.toDateString())
+    console.log('🔍 Target date ISO:', targetDate.toISOString())
+    console.log('🔍 Target date local:', targetDate.toLocaleString())
     
     // Dispatch a custom event to open the create alert modal with the date
     window.dispatchEvent(new CustomEvent('openCreateAlertModal', {
