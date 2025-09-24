@@ -251,6 +251,105 @@ Chimeo Platform Team
     }
   }
 
+  // Send admin access granted email
+  async sendAdminAccessEmail(adminData) {
+    try {
+      const { adminName, adminEmail, organizationName, adminType, organizationId } = adminData
+      
+      const subject = `Admin Access Granted - ${organizationName}`
+      const roleDisplay = adminType === 'organization_admin' ? 'Organization Admin' : 'Admin'
+      
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; color: white;">
+            <h1 style="margin: 0; font-size: 28px;">Admin Access Granted</h1>
+            <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Welcome to the ${organizationName} team!</p>
+          </div>
+          
+          <div style="padding: 30px; background: #f8f9fa;">
+            <h2 style="color: #333; margin-top: 0;">Hello ${adminName},</h2>
+            
+            <p style="color: #555; line-height: 1.6; font-size: 16px;">
+              Great news! You have been granted <strong>${roleDisplay}</strong> access to <strong>${organizationName}</strong>.
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
+              <h3 style="color: #333; margin-top: 0;">Your Admin Access Details:</h3>
+              <ul style="color: #555; line-height: 1.8;">
+                <li><strong>Organization:</strong> ${organizationName}</li>
+                <li><strong>Role:</strong> ${roleDisplay}</li>
+                <li><strong>Access Level:</strong> ${adminType === 'organization_admin' ? 'Full administrative privileges' : 'Standard admin privileges'}</li>
+                <li><strong>Granted On:</strong> ${new Date().toLocaleDateString()}</li>
+              </ul>
+            </div>
+            
+            <div style="background: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="color: #1976d2; margin-top: 0;">What You Can Do Now:</h3>
+              <ul style="color: #555; line-height: 1.8;">
+                <li>Access the organization management dashboard</li>
+                <li>Create and manage alerts for your organization</li>
+                <li>View organization analytics and reports</li>
+                ${adminType === 'organization_admin' ? '<li>Manage other administrators and their roles</li>' : ''}
+                <li>Receive important organization notifications</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="https://chimeo-web.vercel.app/login" 
+                 style="background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                Access Your Admin Dashboard
+              </a>
+            </div>
+            
+            <p style="color: #666; font-size: 14px; line-height: 1.6;">
+              If you have any questions about your new admin access or need assistance getting started, 
+              please don't hesitate to contact the platform administrator.
+            </p>
+          </div>
+          
+          <div style="background: #f1f3f4; padding: 20px; text-align: center; color: #666; font-size: 14px;">
+            <p style="margin: 0;">This email was sent by the Chimeo Platform</p>
+            <p style="margin: 5px 0 0 0;">Organization ID: ${organizationId}</p>
+          </div>
+        </div>
+      `
+      
+      const textContent = `
+        Admin Access Granted - ${organizationName}
+        
+        Hello ${adminName},
+        
+        Great news! You have been granted ${roleDisplay} access to ${organizationName}.
+        
+        Your Admin Access Details:
+        - Organization: ${organizationName}
+        - Role: ${roleDisplay}
+        - Access Level: ${adminType === 'organization_admin' ? 'Full administrative privileges' : 'Standard admin privileges'}
+        - Granted On: ${new Date().toLocaleDateString()}
+        
+        What You Can Do Now:
+        - Access the organization management dashboard
+        - Create and manage alerts for your organization
+        - View organization analytics and reports
+        ${adminType === 'organization_admin' ? '- Manage other administrators and their roles' : ''}
+        - Receive important organization notifications
+        
+        Access your admin dashboard at: https://chimeo-web.vercel.app/login
+        
+        If you have any questions about your new admin access, please contact the platform administrator.
+        
+        Best regards,
+        Chimeo Platform Team
+      `
+      
+      return await this.sendEmail(adminEmail, subject, htmlContent, textContent)
+      
+    } catch (error) {
+      console.error('❌ Failed to send admin access email:', error)
+      return false
+    }
+  }
+
   // Send alert notification email
   async sendAlertEmail(alertData, targetEmail) {
     try {

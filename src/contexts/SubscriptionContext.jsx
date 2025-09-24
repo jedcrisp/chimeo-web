@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { useAuth } from './AuthContext'
+import { AuthContext } from './AuthContext'
 import subscriptionService from '../services/subscriptionService'
 
 const SubscriptionContext = createContext()
@@ -12,7 +12,10 @@ export function SubscriptionProvider({ children }) {
   const [subscription, setSubscription] = useState(null)
   const [usageStats, setUsageStats] = useState(null)
   const [loading, setLoading] = useState(true)
-  const { currentUser, userProfile } = useAuth()
+  // Safely get auth context
+  const authContext = useContext(AuthContext)
+  const currentUser = authContext?.currentUser
+  const userProfile = authContext?.userProfile
 
   // Load subscription data
   const loadSubscription = async () => {

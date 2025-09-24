@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect } from 'react'
-import { useAuth } from './AuthContext'
+import { AuthContext } from './AuthContext'
 import calendarService from '../services/calendarService'
 import scheduledAlertProcessor from '../services/scheduledAlertProcessor'
 
@@ -119,7 +119,10 @@ function calendarReducer(state, action) {
 // Calendar Provider
 export function CalendarProvider({ children }) {
   const [state, dispatch] = useReducer(calendarReducer, initialState)
-  const { currentUser, userProfile } = useAuth()
+  // Safely get auth context
+  const authContext = useContext(AuthContext)
+  const currentUser = authContext?.currentUser
+  const userProfile = authContext?.userProfile
 
   // Load calendar data on mount
   useEffect(() => {

@@ -16,10 +16,12 @@ import Profile from './pages/Profile'
 import OrganizationRequest from './pages/OrganizationRequest'
 // New user pages
 import MyAlerts from './pages/MyAlerts'
+import AdminMyAlerts from './pages/AdminMyAlerts'
 import MyGroups from './pages/MyGroups'
 import DiscoverOrganizations from './pages/DiscoverOrganizations'
 import MyProfile from './pages/MyProfile'
 import Subscription from './pages/Subscription'
+import OrganizationAnalytics from './pages/OrganizationAnalytics'
 import SubscriptionTester from './components/SubscriptionTester'
 import ProtectedRoute from './components/ProtectedRoute'
 import emailService from './services/emailService'
@@ -117,10 +119,12 @@ function App() {
                 <Route path="profile" element={<Profile />} />
                 {/* New user pages */}
                 <Route path="my-alerts" element={<MyAlerts />} />
+                <Route path="admin-my-alerts" element={<AdminMyAlerts />} />
                 <Route path="my-groups" element={<MyGroups />} />
                 <Route path="discover" element={<DiscoverOrganizations />} />
                 <Route path="my-profile" element={<MyProfile />} />
                 <Route path="subscription" element={<Subscription />} />
+                <Route path="analytics" element={<OrganizationAnalytics />} />
                 <Route path="test-subscription" element={<Subscription />} />
                 <Route path="subscription-tester" element={<SubscriptionTester />} />
               </Route>

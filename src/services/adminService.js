@@ -30,32 +30,9 @@ class AdminService {
 
   // Get the correct Firestore user ID for the current user
   async getFirestoreUserId() {
-    if (!this.currentUser?.email) {
-      console.log('⚠️ AdminService: No email available, using Firebase UID:', this.currentUser?.uid)
-      return this.currentUser?.uid
-    }
-
-    try {
-      console.log('🔍 AdminService: Looking up Firestore user ID by email:', this.currentUser.email)
-      const usersQuery = query(collection(db, 'users'), where('email', '==', this.currentUser.email))
-      const usersSnapshot = await getDocs(usersQuery)
-      
-      if (!usersSnapshot.empty) {
-        const userDoc = usersSnapshot.docs[0]
-        const firestoreUserId = userDoc.id
-        console.log('✅ AdminService: Found Firestore user ID by email:', firestoreUserId)
-        console.log('✅ AdminService: This resolves Firebase UID', this.currentUser.uid, 'to Firestore ID', firestoreUserId)
-        return firestoreUserId
-      } else {
-        console.log('⚠️ AdminService: No Firestore user found with email:', this.currentUser.email)
-      }
-    } catch (error) {
-      console.log('⚠️ Error getting Firestore user ID by email:', error)
-    }
-    
-    // Fallback to Firebase UID
-    console.log('⚠️ AdminService: Falling back to Firebase UID:', this.currentUser.uid)
-    return this.currentUser.uid
+    // Since adminIds in organizations use Firebase UIDs directly, just return the Firebase UID
+    console.log('🔍 AdminService: Using Firebase UID directly:', this.currentUser?.uid)
+    return this.currentUser?.uid
   }
 
   // Check if user is admin of a specific organization
@@ -157,8 +134,8 @@ class AdminService {
   }
 
   // Add a user as admin to an organization
-  async addOrganizationAdmin(userId, organizationId) {
-    console.log('👤 Adding admin', userId, 'to organization ID:', organizationId)
+  async addOrganizationAdmin(userId, organizationId, adminType = 'admin') {
+    console.log('👤 Adding', adminType, userId, 'to organization ID:', organizationId)
     
     try {
       // Get the current organization document
@@ -170,24 +147,151 @@ class AdminService {
 
       const orgData = orgDoc.data()
       const adminIds = orgData.adminIds || {}
+      const adminRoles = orgData.adminRoles || {}
       
       // Add the new admin
       adminIds[userId] = true
+      adminRoles[userId] = adminType // 'org_admin' or 'admin'
       
       // Update the organization document
       await updateDoc(doc(db, 'organizations', organizationId), {
         adminIds: adminIds,
+        adminRoles: adminRoles,
         updatedAt: serverTimestamp()
       })
       
-      console.log('✅ Successfully added user', userId, 'as admin to organization', organizationId)
+      console.log('✅ Successfully added user', userId, 'as', adminType, 'to organization', organizationId)
       
-      // Refresh local organizations data
-      // Note: You'll need to implement this based on how you load organizations
+      // Get user data for notifications
+      const userDoc = await getDoc(doc(db, 'users', userId))
+      if (userDoc.exists()) {
+        const userData = userDoc.data()
+        
+        // Update user's profile to reflect admin status
+        await updateDoc(doc(db, 'users', userId), {
+          isOrganizationAdmin: true,
+          organizationId: organizationId,
+          organizationName: orgData.name,
+          updatedAt: serverTimestamp()
+        })
+        
+        console.log('✅ Updated user profile with admin status')
+        
+        // Send notifications
+        await this.sendAdminAddedNotifications(userId, userData, organizationId, orgData, adminType)
+      }
       
     } catch (error) {
       console.error('❌ Error adding organization admin:', error)
       throw error
+    }
+  }
+
+  // Send admin access notification to existing admin
+  async sendAdminAccessNotification(userId, organizationId) {
+    try {
+      console.log('🔔 Sending admin access notification to existing admin...')
+      
+      // Get user data
+      const userDoc = await getDoc(doc(db, 'users', userId))
+      if (!userDoc.exists()) {
+        throw new Error('User not found')
+      }
+      
+      const userData = userDoc.data()
+      
+      // Get organization data
+      const orgDoc = await getDoc(doc(db, 'organizations', organizationId))
+      if (!orgDoc.exists()) {
+        throw new Error('Organization not found')
+      }
+      
+      const orgData = orgDoc.data()
+      const adminRoles = orgData.adminRoles || {}
+      const adminType = adminRoles[userId] || 'admin'
+      
+      // Send notifications
+      await this.sendAdminAddedNotifications(userId, userData, organizationId, orgData, adminType)
+      
+      console.log('✅ Admin access notification sent successfully')
+      return true
+      
+    } catch (error) {
+      console.error('❌ Error sending admin access notification:', error)
+      throw error
+    }
+  }
+
+  // Send notifications when someone is made an admin
+  async sendAdminAddedNotifications(userId, userData, organizationId, orgData, adminType) {
+    try {
+      console.log('🔔 Sending admin added notifications...')
+      
+      // Create notification data
+      const notificationData = {
+        type: 'admin_access_granted',
+        title: 'Admin Access Granted',
+        message: `You have been granted ${adminType === 'organization_admin' ? 'Organization Admin' : 'Admin'} access to ${orgData.name}`,
+        organizationId: organizationId,
+        organizationName: orgData.name,
+        adminType: adminType,
+        grantedBy: this.currentUser?.email || 'System',
+        targetUser: userData.email,
+        createdAt: serverTimestamp(),
+        sent: true
+      }
+      
+      // Save notification to user's notification collection
+      const sanitizedEmail = userData.email.replace(/[^a-zA-Z0-9]/g, '_')
+      const notificationId = `admin_granted_${Date.now()}`
+      await setDoc(doc(db, 'notifications', sanitizedEmail, 'user_notifications', notificationId), notificationData)
+      console.log('✅ Admin notification saved to Firestore')
+      
+      // Send push notification to mobile app (if FCM token exists)
+      if (userData.fcmToken && userData.fcmToken.trim() !== '') {
+        try {
+          const message = {
+            notification: {
+              title: 'Admin Access Granted',
+              body: `You are now ${adminType === 'organization_admin' ? 'Organization Admin' : 'Admin'} of ${orgData.name}`
+            },
+            data: {
+              type: 'admin_access_granted',
+              organizationId: organizationId,
+              organizationName: orgData.name,
+              adminType: adminType
+            },
+            token: userData.fcmToken
+          }
+          
+          // Note: This would need to be implemented in a Cloud Function for production
+          console.log('📱 Push notification prepared for mobile app:', message)
+        } catch (pushError) {
+          console.error('❌ Error preparing push notification:', pushError)
+        }
+      } else {
+        console.log('📱 No FCM token found for user, skipping push notification')
+      }
+      
+      // Send email notification
+      try {
+        const emailService = (await import('./emailService.js')).default
+        await emailService.sendAdminAccessEmail({
+          adminName: userData.displayName || userData.firstName + ' ' + userData.lastName || 'User',
+          adminEmail: userData.email,
+          organizationName: orgData.name,
+          adminType: adminType,
+          organizationId: organizationId
+        })
+        console.log('✅ Admin access email sent')
+      } catch (emailError) {
+        console.error('❌ Error sending admin access email:', emailError)
+      }
+      
+      console.log('✅ All admin notifications sent successfully')
+      
+    } catch (error) {
+      console.error('❌ Error sending admin notifications:', error)
     }
   }
 
@@ -205,13 +309,16 @@ class AdminService {
 
       const orgData = orgDoc.data()
       const adminIds = orgData.adminIds || {}
+      const adminRoles = orgData.adminRoles || {}
       
       // Remove the admin
       delete adminIds[userId]
+      delete adminRoles[userId]
       
       // Update the organization document
       await updateDoc(doc(db, 'organizations', organizationId), {
         adminIds: adminIds,
+        adminRoles: adminRoles,
         updatedAt: serverTimestamp()
       })
       
@@ -220,6 +327,47 @@ class AdminService {
     } catch (error) {
       console.error('❌ Error removing organization admin:', error)
       throw error
+    }
+  }
+
+  // Check if user is organization admin (can add/remove other admins)
+  async isOrganizationAdmin(organizationId) {
+    try {
+      if (!this.currentUser?.uid) return false
+      
+      const orgDoc = await getDoc(doc(db, 'organizations', organizationId))
+      if (!orgDoc.exists()) return false
+      
+      const orgData = orgDoc.data()
+      const adminRoles = orgData.adminRoles || {}
+      
+      return adminRoles[this.currentUser.uid] === 'org_admin'
+    } catch (error) {
+      console.error('❌ Error checking organization admin status:', error)
+      return false
+    }
+  }
+
+  // Check if user can manage admins (organization admin only)
+  async canManageAdmins(organizationId) {
+    return await this.isOrganizationAdmin(organizationId)
+  }
+
+  // Get user's role in an organization
+  async getUserRole(organizationId) {
+    try {
+      if (!this.currentUser?.uid) return null
+      
+      const orgDoc = await getDoc(doc(db, 'organizations', organizationId))
+      if (!orgDoc.exists()) return null
+      
+      const orgData = orgDoc.data()
+      const adminRoles = orgData.adminRoles || {}
+      
+      return adminRoles[this.currentUser.uid] || null
+    } catch (error) {
+      console.error('❌ Error getting user role:', error)
+      return null
     }
   }
 
@@ -253,19 +401,23 @@ class AdminService {
         
         // Check if the user is an admin
         const isAdmin = adminIds[firestoreUserId] === true
+        const userRole = orgData.adminRoles?.[firestoreUserId] || 'admin'
         
         console.log(`🔍 AdminService: Organization ${orgData.name} (${doc.id}):`)
         console.log(`   - Checking admin status for user: ${firestoreUserId}`)
         console.log(`   - Available admin IDs: ${Object.keys(adminIds).join(', ')}`)
         console.log(`   - User ${firestoreUserId} in adminIds: ${adminIds[firestoreUserId]}`)
+        console.log(`   - User role: ${userRole}`)
         console.log(`   - Final result: isAdmin = ${isAdmin}`)
         
         if (isAdmin) {
           adminOrgs.push({
             id: doc.id,
+            userRole: userRole,
+            canManageAdmins: userRole === 'org_admin',
             ...orgData
           })
-          console.log(`✅ AdminService: Added ${orgData.name} to admin organizations`)
+          console.log(`✅ AdminService: Added ${orgData.name} to admin organizations (role: ${userRole})`)
         }
       }
       

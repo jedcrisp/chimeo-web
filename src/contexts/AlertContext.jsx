@@ -1,8 +1,9 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { collection, query, orderBy, onSnapshot, addDoc, updateDoc, doc, deleteDoc, getDocs, getDoc } from 'firebase/firestore'
 import { db } from '../services/firebase'
-import { useAuth } from './AuthContext'
+import { AuthContext } from './AuthContext'
 import emailService from '../services/emailService'
+import analyticsService from '../services/analyticsService'
 import toast from 'react-hot-toast'
 
 const AlertContext = createContext()
@@ -14,7 +15,11 @@ export function useAlerts() {
 export function AlertProvider({ children }) {
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(true)
-  const { currentUser, userProfile } = useAuth()
+  
+  // Safely get auth context
+  const authContext = useContext(AuthContext)
+  const currentUser = authContext?.currentUser
+  const userProfile = authContext?.userProfile
 
   useEffect(() => {
     if (!currentUser || !userProfile) {
@@ -179,6 +184,16 @@ export function AlertProvider({ children }) {
       const webAlertRef = await addDoc(collection(db, 'organizations', organizationId, 'alerts'), alertPayload)
       console.log('✅ Alert created in organization alerts subcollection:', webAlertRef.id)
       console.log('✅ Alert payload for web app:', alertPayload)
+
+      // Track analytics event
+      await analyticsService.trackAlertCreated({
+        id: webAlertRef.id,
+        type: alertData.type,
+        severity: alertPayload.severity,
+        groupId: alertData.groupId,
+        location: alertData.location,
+        postedByUserId: currentUser.uid
+      }, organizationId)
 
       // Prepare notification payload for both push and email notifications
       const notificationPayload = {

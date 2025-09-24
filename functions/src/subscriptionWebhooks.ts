@@ -100,8 +100,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const subscription = await stripe.subscriptions.retrieve(subscriptionId)
   const planType = getPlanTypeFromPriceId(subscription.items.data[0].price.id)
 
-  // Create or update subscription record
-  await db.collection('subscriptions').doc(userId).set({
+  // Create or update subscription record in user subcollection
+  await db.collection('users').doc(userId).collection('subscriptions').doc(subscriptionId).set({
     userId,
     stripeCustomerId: customerId,
     stripeSubscriptionId: subscriptionId,

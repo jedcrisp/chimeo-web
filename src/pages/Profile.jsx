@@ -1,71 +1,70 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useOrganizations } from '../contexts/OrganizationsContext'
-import { User, Mail, Calendar, Shield, Edit, Save, X, Crown, Building, Lock, LogOut, TestTube, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { useSubscription } from '../contexts/SubscriptionContext'
+import { User, Mail, Calendar, Shield, Edit, Save, X, Crown, Building, Lock, LogOut, TestTube, CheckCircle, Clock, AlertCircle, CreditCard, UserCog, Bell, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { doc, updateDoc, serverTimestamp, getDoc, collection, query, getDocs, orderBy } from 'firebase/firestore'
-import { db } from '../services/firebase'
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth'
+import { db, auth } from '../services/firebase'
 import adminService from '../services/adminService'
+import AdminManagementModal from '../components/AdminManagementModal'
 
 export default function Profile() {
   const { userProfile, currentUser, loading } = useAuth()
   const { organizations, loading: orgsLoading } = useOrganizations()
+  const { subscription, usageStats, loading: subscriptionLoading } = useSubscription()
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
     displayName: '',
     email: ''
   })
-  const [userRole, setUserRole] = useState('user')
   const [isOrgAdmin, setIsOrgAdmin] = useState(false)
   const [adminOrganizations, setAdminOrganizations] = useState([])
   const [organizationRequests, setOrganizationRequests] = useState([])
   const [requestsLoading, setRequestsLoading] = useState(false)
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
-
-  // Function to get role display information
-  const getRoleDisplay = (role) => {
-    // If user is platform admin, show as Creator
-    if (isPlatformAdmin) {
-      return {
-        name: 'Creator',
-        icon: Crown,
-        textColor: 'text-purple-700',
-        bgColor: 'bg-purple-50',
-        borderColor: 'border-purple-200',
-        description: 'App creator and platform administrator'
-      }
-    }
+  const [showAdminModal, setShowAdminModal] = useState(false)
+  const [selectedAdminOrg, setSelectedAdminOrg] = useState(null)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [showNotificationModal, setShowNotificationModal] = useState(false)
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false)
+  const [notificationSettings, setNotificationSettings] = useState({
+    // Push notifications
+    pushEnabled: true,
+    pushAlerts: true,
+    pushAdminUpdates: true,
+    pushGroupUpdates: true,
     
-    switch (role) {
-      case 'platform_admin':
-        return {
-          name: 'Platform Administrator',
-          icon: Crown,
-          textColor: 'text-purple-700',
-          bgColor: 'bg-purple-50',
-          borderColor: 'border-purple-200',
-          description: 'Full system access and management capabilities'
-        }
-      case 'organization_admin':
-        return {
-          name: 'Organization Administrator',
-          icon: Building,
-          textColor: 'text-blue-700',
-          bgColor: 'bg-blue-50',
-          borderColor: 'border-blue-200',
-          description: `Administrator of ${adminOrganizations.length} organization${adminOrganizations.length !== 1 ? 's' : ''}`
-        }
-      default:
-        return {
-          name: 'Basic User',
-          icon: Shield,
-          textColor: 'text-gray-700',
-          bgColor: 'bg-gray-50',
-          borderColor: 'border-gray-200',
-          description: 'Standard user access to the platform'
-        }
-    }
-  }
+    // Email notifications
+    emailEnabled: true,
+    emailAlerts: true,
+    emailAdminUpdates: true,
+    emailGroupUpdates: false,
+    
+    // Quiet hours
+    quietHoursEnabled: false,
+    quietStart: '22:00',
+    quietEnd: '08:00',
+    quietDays: ['Saturday', 'Sunday'],
+    
+    // Alert types
+    emergencyAlerts: true,
+    warningAlerts: true,
+    infoAlerts: false,
+    scheduledAlerts: true,
+    
+    // Organization-specific settings
+    orgSettings: {}
+  })
+  const [notificationLoading, setNotificationLoading] = useState(false)
+
 
   // Function to update user's isOrganizationAdmin status in Firestore
   const updateUserOrgAdminStatus = async (isAdmin) => {
@@ -97,14 +96,406 @@ export default function Profile() {
     }
   }
 
-  // Test FCM token functionality
-  const testFCMToken = async () => {
+
+  // Function to open admin management modal
+  const openAdminModal = (org) => {
+    setSelectedAdminOrg(org)
+    setShowAdminModal(true)
+  }
+
+  // Load notification settings from Firestore
+  const loadNotificationSettings = async () => {
     try {
-      console.log('🧪 FCM tokens are now managed by Cloud Functions')
-      toast.info('FCM tokens are managed by Cloud Functions - no client-side testing needed')
+      if (!currentUser?.uid) return
+      
+      const userRef = doc(db, 'users', currentUser.uid)
+      const userDoc = await getDoc(userRef)
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data()
+        const settings = userData.notificationSettings || {}
+        
+        setNotificationSettings(prev => ({
+          ...prev,
+          ...settings
+        }))
+        
+        console.log('✅ Loaded notification settings:', settings)
+      }
     } catch (error) {
-      console.error('❌ Error testing FCM token:', error)
-      toast.error('FCM token test failed')
+      console.error('❌ Error loading notification settings:', error)
+    }
+  }
+
+  // Save notification settings to Firestore
+  const saveNotificationSettings = async () => {
+    try {
+      setNotificationLoading(true)
+      
+      if (!currentUser?.uid) {
+        toast.error('User not authenticated')
+        return
+      }
+      
+      const userRef = doc(db, 'users', currentUser.uid)
+      await updateDoc(userRef, {
+        notificationSettings: notificationSettings,
+        updatedAt: serverTimestamp()
+      })
+      
+      toast.success('Notification preferences saved!')
+      console.log('✅ Saved notification settings:', notificationSettings)
+      
+    } catch (error) {
+      console.error('❌ Error saving notification settings:', error)
+      toast.error('Failed to save notification preferences')
+    } finally {
+      setNotificationLoading(false)
+    }
+  }
+
+  // Update notification setting
+  const updateNotificationSetting = (key, value) => {
+    setNotificationSettings(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+
+  // Update organization-specific setting
+  const updateOrgSetting = (orgId, key, value) => {
+    setNotificationSettings(prev => ({
+      ...prev,
+      orgSettings: {
+        ...prev.orgSettings,
+        [orgId]: {
+          ...prev.orgSettings[orgId],
+          [key]: value
+        }
+      }
+    }))
+  }
+
+  // Function to change password
+  const changePassword = async () => {
+    try {
+      setPasswordLoading(true)
+      
+      // Validate form
+      if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+        toast.error('Please fill in all fields')
+        return
+      }
+      
+      if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+        toast.error('New passwords do not match')
+        return
+      }
+      
+      if (passwordForm.newPassword.length < 6) {
+        toast.error('New password must be at least 6 characters long')
+        return
+      }
+      
+      if (passwordForm.currentPassword === passwordForm.newPassword) {
+        toast.error('New password must be different from current password')
+        return
+      }
+      
+      console.log('🔐 Changing password for user:', currentUser?.email)
+      
+      // Re-authenticate user with current password
+      const credential = EmailAuthProvider.credential(
+        currentUser.email,
+        passwordForm.currentPassword
+      )
+      
+      await reauthenticateWithCredential(currentUser, credential)
+      console.log('✅ User re-authenticated successfully')
+      
+      // Update password in Firebase Auth
+      await updatePassword(currentUser, passwordForm.newPassword)
+      console.log('✅ Password updated in Firebase Auth')
+      
+      // Update password in Firestore user document
+      const userRef = doc(db, 'users', currentUser.uid)
+      await updateDoc(userRef, {
+        passwordUpdatedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      })
+      console.log('✅ Password update timestamp saved to Firestore')
+      
+      // Reset form and close modal
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      })
+      setShowPasswordModal(false)
+      
+      toast.success('Password changed successfully!')
+      console.log('✅ Password change completed successfully')
+      
+    } catch (error) {
+      console.error('❌ Error changing password:', error)
+      
+      if (error.code === 'auth/wrong-password') {
+        toast.error('Current password is incorrect')
+      } else if (error.code === 'auth/weak-password') {
+        toast.error('New password is too weak')
+      } else if (error.code === 'auth/requires-recent-login') {
+        toast.error('Please log out and log back in before changing your password')
+      } else {
+        toast.error('Failed to change password: ' + error.message)
+      }
+    } finally {
+      setPasswordLoading(false)
+    }
+  }
+
+  // Debug function to check organizations
+  const debugOrganizations = async () => {
+    try {
+      console.log('🔍 Debug: Checking organizations...')
+      const orgsQuery = query(collection(db, 'organizations'))
+      const orgsSnapshot = await getDocs(orgsQuery)
+      
+      console.log('🔍 Debug: Found', orgsSnapshot.size, 'organizations')
+      
+      for (const doc of orgsSnapshot.docs) {
+        const orgData = doc.data()
+        const adminIds = orgData.adminIds || {}
+        const adminRoles = orgData.adminRoles || {}
+        
+        console.log(`🔍 Organization: ${orgData.name} (${doc.id})`)
+        console.log(`   - adminIds:`, adminIds)
+        console.log(`   - adminIds keys:`, Object.keys(adminIds))
+        console.log(`   - adminRoles:`, adminRoles)
+        console.log(`   - Current user UID: ${currentUser?.uid}`)
+        console.log(`   - Is current user admin: ${adminIds[currentUser?.uid] === true}`)
+        
+        if (currentUser?.uid && adminIds[currentUser.uid] === true) {
+          const userRole = adminRoles[currentUser.uid] || 'admin'
+          const canManageAdmins = userRole === 'organization_admin' || userRole === 'org_admin'
+          console.log(`   - User role: ${userRole}`)
+          console.log(`   - Can manage admins: ${canManageAdmins}`)
+          console.log(`   ✅ USER IS ADMIN - SHOULD SHOW MANAGE BUTTON`)
+        }
+        console.log('---')
+      }
+    } catch (error) {
+      console.error('❌ Debug error:', error)
+    }
+  }
+
+  // Function to load admin organizations directly from Firestore
+  const loadAdminOrganizationsFromFirestore = async () => {
+    try {
+      console.log('🔍 Loading admin organizations directly from Firestore...')
+      console.log('🔍 Current user UID:', currentUser?.uid)
+      
+      const orgsQuery = query(collection(db, 'organizations'))
+      const orgsSnapshot = await getDocs(orgsQuery)
+      
+      console.log(`🔍 Found ${orgsSnapshot.size} organizations in Firestore`)
+      
+      const adminOrgs = []
+      
+      for (const doc of orgsSnapshot.docs) {
+        const orgData = doc.data()
+        const adminIds = orgData.adminIds || {}
+        const adminRoles = orgData.adminRoles || {}
+        
+        console.log(`\n🏢 Checking organization: ${orgData.name} (${doc.id})`)
+        console.log(`   Admin IDs:`, adminIds)
+        console.log(`   Admin Roles:`, adminRoles)
+        console.log(`   Current user UID: ${currentUser?.uid}`)
+        console.log(`   Is user in adminIds: ${adminIds[currentUser?.uid] === true}`)
+        
+        if (currentUser?.uid && adminIds[currentUser.uid] === true) {
+          const userRole = adminRoles[currentUser.uid] || 'admin'
+          const canManageAdmins = userRole === 'organization_admin' || userRole === 'org_admin'
+          
+          console.log(`   ✅ User is admin of this organization!`)
+          console.log(`   User role: ${userRole}`)
+          console.log(`   Can manage admins: ${canManageAdmins}`)
+          
+          const adminOrg = {
+            id: doc.id,
+            userRole: userRole,
+            canManageAdmins: canManageAdmins,
+            ...orgData
+          }
+          
+          adminOrgs.push(adminOrg)
+          
+          console.log(`✅ Added admin organization:`, adminOrg)
+        } else {
+          console.log(`   ❌ User is not admin of this organization`)
+        }
+      }
+      
+      console.log(`\n🔍 FINAL RESULT:`)
+      console.log(`   Total admin organizations found: ${adminOrgs.length}`)
+      console.log(`   Admin organizations:`, adminOrgs)
+      
+      setAdminOrganizations(adminOrgs)
+      setIsOrgAdmin(adminOrgs.length > 0)
+      
+      console.log(`🔍 State updated - isOrgAdmin: ${adminOrgs.length > 0}`)
+      
+      return adminOrgs
+    } catch (error) {
+      console.error('❌ Error loading admin organizations from Firestore:', error)
+      return []
+    }
+  }
+
+  // Function to update user role to org_admin
+  const updateUserRoleToOrgAdmin = async () => {
+    try {
+      console.log('🔧 Updating user role to org_admin...')
+      
+      // Find the organization where user is admin
+      const orgsQuery = query(collection(db, 'organizations'))
+      const orgsSnapshot = await getDocs(orgsQuery)
+      
+      for (const doc of orgsSnapshot.docs) {
+        const orgData = doc.data()
+        const adminIds = orgData.adminIds || {}
+        
+        if (currentUser?.uid && adminIds[currentUser.uid] === true) {
+          console.log(`🔧 Updating role for organization: ${orgData.name}`)
+          console.log(`🔧 Current adminIds:`, adminIds)
+          console.log(`🔧 Current adminRoles:`, orgData.adminRoles || {})
+          
+          // Update the adminRoles field
+          const orgRef = doc(db, 'organizations', doc.id)
+          await updateDoc(orgRef, {
+            [`adminRoles.${currentUser.uid}`]: 'organization_admin',
+            updatedAt: serverTimestamp()
+          })
+          
+          console.log(`✅ Updated role to org_admin for organization: ${orgData.name}`)
+          toast.success(`Updated role to org_admin for ${orgData.name}`)
+          
+          // Reload admin organizations
+          await loadAdminOrganizationsFromFirestore()
+          break
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error updating user role:', error)
+      toast.error('Failed to update user role')
+    }
+  }
+
+  // Function to check and fix organization data
+  const checkAndFixOrgData = async () => {
+    try {
+      console.log('🔍 Checking organization data...')
+      
+      const orgsQuery = query(collection(db, 'organizations'))
+      const orgsSnapshot = await getDocs(orgsQuery)
+      
+      for (const doc of orgsSnapshot.docs) {
+        const orgData = doc.data()
+        const adminIds = orgData.adminIds || {}
+        const adminRoles = orgData.adminRoles || {}
+        
+        console.log(`\n🏢 Organization: ${orgData.name} (${doc.id})`)
+        console.log(`   Admin IDs:`, adminIds)
+        console.log(`   Admin Roles:`, adminRoles)
+        
+        if (currentUser?.uid && adminIds[currentUser.uid] === true) {
+          console.log(`   ✅ User ${currentUser.uid} is in adminIds`)
+          
+          const currentRole = adminRoles[currentUser.uid] || 'admin'
+          console.log(`   Current role: ${currentRole}`)
+          
+          if (currentRole !== 'organization_admin') {
+            console.log(`   🔧 Need to update role from ${currentRole} to organization_admin`)
+            
+            // Update the role
+            const orgRef = doc(db, 'organizations', doc.id)
+            await updateDoc(orgRef, {
+              [`adminRoles.${currentUser.uid}`]: 'organization_admin',
+              updatedAt: serverTimestamp()
+            })
+            
+            console.log(`   ✅ Updated role to organization_admin`)
+            toast.success(`Fixed role for ${orgData.name}`)
+          } else {
+            console.log(`   ✅ Role is already organization_admin`)
+          }
+        } else {
+          console.log(`   ❌ User ${currentUser?.uid} not found in adminIds`)
+        }
+      }
+      
+      // Reload admin organizations
+      await loadAdminOrganizationsFromFirestore()
+      
+    } catch (error) {
+      console.error('❌ Error checking organization data:', error)
+      toast.error('Failed to check organization data')
+    }
+  }
+
+  // Function to fix admin status mismatch
+  const fixAdminStatusMismatch = async () => {
+    try {
+      console.log('🔧 Fixing admin status mismatch...')
+      console.log('🔧 User profile isOrganizationAdmin:', userProfile?.isOrganizationAdmin)
+      console.log('🔧 User profile organizationId:', userProfile?.organizationId)
+      console.log('🔧 User profile organizationName:', userProfile?.organizationName)
+      
+      if (!userProfile?.isOrganizationAdmin) {
+        console.log('❌ User profile does not indicate organization admin status')
+        return
+      }
+      
+      // If user has organizationId in profile, add them to that organization
+      if (userProfile.organizationId) {
+        console.log('🔧 Adding user to organization based on profile data...')
+        
+        const orgRef = doc(db, 'organizations', userProfile.organizationId)
+        const orgDoc = await getDoc(orgRef)
+        
+        if (orgDoc.exists()) {
+          const orgData = orgDoc.data()
+          const adminIds = orgData.adminIds || {}
+          const adminRoles = orgData.adminRoles || {}
+          
+          // Add user to adminIds if not already there
+          if (!adminIds[currentUser.uid]) {
+            adminIds[currentUser.uid] = true
+            adminRoles[currentUser.uid] = 'organization_admin'
+            
+            await updateDoc(orgRef, {
+              adminIds: adminIds,
+              adminRoles: adminRoles,
+              updatedAt: serverTimestamp()
+            })
+            
+            console.log('✅ Added user to organization admin list')
+            toast.success(`Added you as admin to ${orgData.name}`)
+          } else {
+            console.log('✅ User already in organization admin list')
+          }
+        } else {
+          console.log('❌ Organization not found:', userProfile.organizationId)
+        }
+      } else {
+        console.log('❌ No organizationId in user profile')
+      }
+      
+      // Reload admin organizations
+      await loadAdminOrganizationsFromFirestore()
+      
+    } catch (error) {
+      console.error('❌ Error fixing admin status mismatch:', error)
+      toast.error('Failed to fix admin status mismatch')
     }
   }
 
@@ -185,6 +576,7 @@ export default function Profile() {
   const determineUserRole = async () => {
     try {
       if (!currentUser) {
+        console.log('🔍 Profile: No current user, skipping admin check')
         return
       }
       
@@ -193,55 +585,47 @@ export default function Profile() {
       console.log('🔍 Profile: Current user:', currentUser.uid)
       console.log('🔍 Profile: UserProfile:', userProfile)
       
-      // First, check if userProfile has isOrganizationAdmin field (like mobile app)
-      if (userProfile?.isOrganizationAdmin === true) {
-        console.log('🔍 Profile: User is org admin according to userProfile.isOrganizationAdmin')
-        setIsOrgAdmin(true)
-        setUserRole('organization_admin')
-        setAdminOrganizations([]) // We don't know which orgs yet
-        return
-      }
+      // Force sync admin service with current user
+      adminService.setCurrentUser(currentUser)
       
       console.log('🔍 Profile: Checking admin status via admin service...')
       
-      // Check admin status directly via admin service
-      const hasOrgAdminAccess = await adminService.hasOrganizationAdminAccess()
+      // Load admin organizations directly from Firestore
+      const adminOrgs = await loadAdminOrganizationsFromFirestore()
+      const hasOrgAdminAccess = adminOrgs.length > 0
       console.log('🔍 Profile: Admin check result:', hasOrgAdminAccess)
       
-      setIsOrgAdmin(hasOrgAdminAccess)
-      
-      // Update the user's isOrganizationAdmin status in Firestore if it changed
-      if (userProfile?.isOrganizationAdmin !== hasOrgAdminAccess) {
-        console.log('🔍 Profile: Admin status changed, updating Firestore...')
-        updateUserOrgAdminStatus(hasOrgAdminAccess)
+      // Check for admin status mismatch and fix automatically
+      if (!hasOrgAdminAccess && userProfile?.isOrganizationAdmin) {
+        console.log('🔧 Profile: Detected admin status mismatch - fixing automatically...')
+        await fixAdminStatusMismatch()
+        
+        // Reload admin organizations after fix
+        const fixedAdminOrgs = await loadAdminOrganizationsFromFirestore()
+        const fixedHasOrgAdminAccess = fixedAdminOrgs.length > 0
+        
+        setIsOrgAdmin(fixedHasOrgAdminAccess)
+        setAdminOrganizations(fixedAdminOrgs)
+        
+        console.log('🔧 Profile: Admin status fixed automatically:', {
+          hasOrgAdminAccess: fixedHasOrgAdminAccess,
+          adminOrgsCount: fixedAdminOrgs.length,
+          adminOrgs: fixedAdminOrgs.map(org => org.name)
+        })
+      } else {
+        setIsOrgAdmin(hasOrgAdminAccess)
+        setAdminOrganizations(adminOrgs)
       }
       
-      // Get admin organizations
-      const adminOrgs = await adminService.getAdminOrganizations()
-      console.log('🔍 Profile: Admin organizations:', adminOrgs)
-      setAdminOrganizations(adminOrgs)
-      
-      // Set role based on admin status
-      const role = hasOrgAdminAccess ? 'organization_admin' : 'user'
-      setUserRole(role)
-      
-      // Update the user's organization info if they're an admin
-      if (hasOrgAdminAccess && adminOrgs.length > 0) {
-        console.log('🔍 Profile: User is admin, updating organization info...')
-        updateUserOrgAdminStatus(true)
-      }
-      
-      console.log('🔍 Profile: Role determined:', {
-        role,
+      console.log('🔍 Profile: Admin status determined:', {
         hasOrgAdminAccess,
         adminOrgsCount: adminOrgs.length,
         adminOrgs: adminOrgs.map(org => org.name)
       })
       
-      console.log('🔍 Profile: Final state:', {
-        userRole,
-        isOrgAdmin,
-        adminOrganizations: adminOrganizations.length
+      console.log('🔍 Profile: Final state after update:', {
+        isOrgAdmin: hasOrgAdminAccess,
+        adminOrganizations: adminOrgs.length
       })
       
     } catch (error) {
@@ -286,10 +670,11 @@ export default function Profile() {
       // Check platform admin status
       checkPlatformAdminStatus()
       
-      // Give admin service a moment to process
-      setTimeout(() => {
-        determineUserRole()
-      }, 500)
+      // Automatically determine user role and fix any mismatches
+      determineUserRole()
+      
+      // Load notification settings
+      loadNotificationSettings()
     }
   }, [loading, currentUser, userProfile])
 
@@ -455,42 +840,77 @@ export default function Profile() {
                 </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Role
-                </label>
-                <p className="mt-1 text-sm text-gray-900 flex items-center">
-                  <Shield className="h-4 w-4 mr-2 text-gray-400" />
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {userProfile?.role || 'user'}
-                  </span>
-                </p>
-              </div>
             </div>
           </div>
 
-          {/* Role and Admin Status */}
+          {/* Subscription Information */}
           <div className="card mt-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Role & Access</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Subscription</h2>
             
             <div className="space-y-4">
-              {/* Current Role */}
+              {/* Current Subscription Tier */}
               <div className="flex items-center p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="flex items-center justify-center w-10 h-10 bg-primary-100 rounded-full mr-4">
-                  {(() => {
-                    const IconComponent = getRoleDisplay(userRole).icon
-                    return <IconComponent className="h-5 w-5 text-primary-600" />
-                  })()}
+                  <CreditCard className="h-5 w-5 text-primary-600" />
                 </div>
                 <div className="flex-1">
-                  <div className={`text-lg font-semibold ${getRoleDisplay(userRole).textColor}`}>
-                    {getRoleDisplay(userRole).name}
+                  <div className="text-lg font-semibold text-gray-900">
+                    {subscriptionLoading ? 'Loading...' : subscription?.planType?.toUpperCase() || 'FREE'}
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
-                    {getRoleDisplay(userRole).description}
+                    {subscriptionLoading ? 'Loading subscription details...' : 
+                     subscription?.name || 'Free Plan'}
                   </p>
                 </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-gray-900">
+                    ${subscription?.price || 0}/month
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {subscription?.status || 'active'}
+                  </div>
+                </div>
               </div>
+              
+              {/* Usage Stats */}
+              {usageStats && (
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center">
+                    <Clock className="h-4 w-4 mr-2" />
+                    Current Usage
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {usageStats.usage?.alertsSent || 0}
+                      </div>
+                      <div className="text-sm text-blue-800">Alerts Sent</div>
+                      <div className="text-xs text-blue-600">
+                        of {subscription?.limits?.alerts || '∞'}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {usageStats.usage?.groupsCreated || 0}
+                      </div>
+                      <div className="text-sm text-blue-800">Groups Created</div>
+                      <div className="text-xs text-blue-600">
+                        of {subscription?.limits?.groups || '∞'}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {usageStats.usage?.adminsAdded || 0}
+                      </div>
+                      <div className="text-sm text-blue-800">Admins Added</div>
+                      <div className="text-xs text-blue-600">
+                        of {subscription?.limits?.admins || '∞'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               
               {/* Show admin organizations if user is an org admin */}
               {isOrgAdmin && adminOrganizations.length > 0 && (
@@ -500,14 +920,83 @@ export default function Profile() {
                     Administrator of:
                   </h4>
                   <div className="space-y-2">
-                    {adminOrganizations.map(org => (
-                      <div key={org.id} className="flex items-center space-x-3 p-3 bg-white rounded-lg border border-blue-100 shadow-sm">
-                        <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full">
-                          <Building className="h-4 w-4 text-blue-600" />
+                    {adminOrganizations.map(org => {
+                      console.log('🔍 Profile UI: Rendering org:', {
+                        name: org.name,
+                        canManageAdmins: org.canManageAdmins,
+                        userRole: org.userRole,
+                        id: org.id
+                      })
+                      return (
+                        <div key={org.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-100 shadow-sm">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full">
+                              <Building className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-blue-800">{org.name}</span>
+                              <div className="text-xs text-gray-500">
+                                Role: {org.userRole === 'organization_admin' ? 'Organization Admin' : org.userRole} | Can Manage: {org.canManageAdmins ? 'Yes' : 'No'}
+                              </div>
+                            </div>
+                          </div>
+                          {org.canManageAdmins && (
+                            <button
+                              onClick={() => openAdminModal(org)}
+                              className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center"
+                            >
+                              <UserCog className="h-4 w-4 mr-1" />
+                              Manage Admins
+                            </button>
+                          )}
+                          {!org.canManageAdmins && (
+                            <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-md flex items-center">
+                              <User className="h-4 w-4 mr-1" />
+                              Admin
+                            </span>
+                          )}
                         </div>
-                        <span className="text-sm font-medium text-blue-800">{org.name}</span>
-                      </div>
-                    ))}
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Debug section - show admin status even if no orgs loaded */}
+              {isOrgAdmin && adminOrganizations.length === 0 && (
+                <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <h4 className="text-sm font-semibold text-yellow-900 mb-3 flex items-center">
+                    <Building className="h-4 w-4 mr-2" />
+                    Organization Admin Status
+                  </h4>
+                  <p className="text-sm text-yellow-800 mb-3">
+                    You are detected as an organization admin, but no organizations are loaded yet.
+                  </p>
+                  <div className="text-xs text-yellow-700">
+                    <p>Debug info:</p>
+                    <p>• isOrgAdmin: {isOrgAdmin.toString()}</p>
+                    <p>• adminOrganizations.length: {adminOrganizations.length}</p>
+                    <p>• userProfile.isOrganizationAdmin: {userProfile?.isOrganizationAdmin?.toString() || 'undefined'}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Show if user might be admin but not detected */}
+              {!isOrgAdmin && userProfile?.isOrganizationAdmin && (
+                <div className="mt-6 p-4 bg-orange-50 rounded-lg border border-orange-200">
+                  <h4 className="text-sm font-semibold text-orange-900 mb-3 flex items-center">
+                    <Building className="h-4 w-4 mr-2" />
+                    Admin Status Mismatch
+                  </h4>
+                  <p className="text-sm text-orange-800 mb-3">
+                    Your profile indicates you're an organization admin, but the system hasn't detected any admin organizations.
+                  </p>
+                  <div className="text-xs text-orange-700">
+                    <p>Debug info:</p>
+                    <p>• isOrgAdmin: {isOrgAdmin.toString()}</p>
+                    <p>• userProfile.isOrganizationAdmin: {userProfile?.isOrganizationAdmin?.toString()}</p>
+                    <p>• adminOrganizations.length: {adminOrganizations.length}</p>
+                    <p className="mt-2 text-orange-600 font-medium">This should be fixed automatically on page load.</p>
                   </div>
                 </div>
               )}
@@ -521,19 +1010,24 @@ export default function Profile() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">Account Actions</h3>
             <div className="space-y-3">
               <button 
-                onClick={testFCMToken}
+                onClick={() => setShowPasswordModal(true)}
                 className="w-full btn-secondary text-left flex items-center"
               >
-                <TestTube className="h-4 w-4 mr-2" />
-                Test Push Notifications
-              </button>
-              <button className="w-full btn-secondary text-left">
+                <Lock className="h-4 w-4 mr-2" />
                 Change Password
               </button>
-              <button className="w-full btn-secondary text-left">
+              <button 
+                onClick={() => setShowNotificationModal(true)}
+                className="w-full btn-secondary text-left flex items-center"
+              >
+                <Bell className="h-4 w-4 mr-2" />
                 Notification Preferences
               </button>
-              <button className="w-full btn-secondary text-left">
+              <button 
+                onClick={() => setShowPrivacyModal(true)}
+                className="w-full btn-secondary text-left flex items-center"
+              >
+                <Shield className="h-4 w-4 mr-2" />
                 Privacy Settings
               </button>
             </div>
@@ -641,6 +1135,655 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {/* Notification Preferences Modal */}
+      {showNotificationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Notification Preferences</h2>
+                <p className="text-sm text-gray-600 mt-1">Control how you receive notifications</p>
+              </div>
+              <button
+                onClick={() => setShowNotificationModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              <div className="space-y-8">
+                {/* Push Notifications */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                        <Bell className="h-5 w-5 mr-2 text-blue-500" />
+                        Push Notifications
+                      </h3>
+                      <p className="text-sm text-gray-600">Receive notifications on your device</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={notificationSettings.pushEnabled}
+                        onChange={(e) => updateNotificationSetting('pushEnabled', e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                  
+                  {notificationSettings.pushEnabled && (
+                    <div className="ml-7 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700">Emergency Alerts</span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.pushAlerts}
+                            onChange={(e) => updateNotificationSetting('pushAlerts', e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700">Admin Updates</span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.pushAdminUpdates}
+                            onChange={(e) => updateNotificationSetting('pushAdminUpdates', e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700">Group Updates</span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.pushGroupUpdates}
+                            onChange={(e) => updateNotificationSetting('pushGroupUpdates', e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Email Notifications */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                        <Mail className="h-5 w-5 mr-2 text-green-500" />
+                        Email Notifications
+                      </h3>
+                      <p className="text-sm text-gray-600">Receive notifications via email</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={notificationSettings.emailEnabled}
+                        onChange={(e) => updateNotificationSetting('emailEnabled', e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                    </label>
+                  </div>
+                  
+                  {notificationSettings.emailEnabled && (
+                    <div className="ml-7 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700">Emergency Alerts</span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.emailAlerts}
+                            onChange={(e) => updateNotificationSetting('emailAlerts', e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700">Admin Updates</span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.emailAdminUpdates}
+                            onChange={(e) => updateNotificationSetting('emailAdminUpdates', e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700">Group Updates</span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notificationSettings.emailGroupUpdates}
+                            onChange={(e) => updateNotificationSetting('emailGroupUpdates', e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quiet Hours */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                        <Clock className="h-5 w-5 mr-2 text-purple-500" />
+                        Quiet Hours
+                      </h3>
+                      <p className="text-sm text-gray-600">Set times when you don't want notifications</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={notificationSettings.quietHoursEnabled}
+                        onChange={(e) => updateNotificationSetting('quietHoursEnabled', e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
+                  </div>
+                  
+                  {notificationSettings.quietHoursEnabled && (
+                    <div className="ml-7 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                          <input
+                            type="time"
+                            value={notificationSettings.quietStart}
+                            onChange={(e) => updateNotificationSetting('quietStart', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                          <input
+                            type="time"
+                            value={notificationSettings.quietEnd}
+                            onChange={(e) => updateNotificationSetting('quietEnd', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Quiet Days</label>
+                        <div className="space-y-2">
+                          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
+                            <label key={day} className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={notificationSettings.quietDays.includes(day)}
+                                onChange={(e) => {
+                                  const newDays = e.target.checked
+                                    ? [...notificationSettings.quietDays, day]
+                                    : notificationSettings.quietDays.filter(d => d !== day)
+                                  updateNotificationSetting('quietDays', newDays)
+                                }}
+                                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                              />
+                              <span className="ml-2 text-sm text-gray-700">{day}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Alert Types */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                      <AlertCircle className="h-5 w-5 mr-2 text-red-500" />
+                      Alert Types
+                    </h3>
+                    <p className="text-sm text-gray-600">Choose which types of alerts to receive</p>
+                  </div>
+                  
+                  <div className="ml-7 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700">🚨 Emergency Alerts</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationSettings.emergencyAlerts}
+                          onChange={(e) => updateNotificationSetting('emergencyAlerts', e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700">⚠️ Warning Alerts</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationSettings.warningAlerts}
+                          onChange={(e) => updateNotificationSetting('warningAlerts', e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-600"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700">ℹ️ Info Alerts</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationSettings.infoAlerts}
+                          onChange={(e) => updateNotificationSetting('infoAlerts', e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700">📅 Scheduled Alerts</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notificationSettings.scheduledAlerts}
+                          onChange={(e) => updateNotificationSetting('scheduledAlerts', e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Organization-Specific Settings */}
+                {adminOrganizations.length > 0 && (
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                        <Building className="h-5 w-5 mr-2 text-orange-500" />
+                        Organization Settings
+                      </h3>
+                      <p className="text-sm text-gray-600">Customize notifications per organization</p>
+                    </div>
+                    
+                    <div className="ml-7 space-y-4">
+                      {adminOrganizations.map(org => (
+                        <div key={org.id} className="border border-gray-200 rounded-lg p-4">
+                          <h4 className="font-medium text-gray-900 mb-3">{org.name}</h4>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-700">Mute this organization</span>
+                              <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={notificationSettings.orgSettings[org.id]?.muted || false}
+                                  onChange={(e) => updateOrgSetting(org.id, 'muted', e.target.checked)}
+                                  className="sr-only peer"
+                                />
+                                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-600"></div>
+                              </label>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-700">Priority notifications only</span>
+                              <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={notificationSettings.orgSettings[org.id]?.priorityOnly || false}
+                                  onChange={(e) => updateOrgSetting(org.id, 'priorityOnly', e.target.checked)}
+                                  className="sr-only peer"
+                                />
+                                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-600"></div>
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setShowNotificationModal(false)}
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                disabled={notificationLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveNotificationSettings}
+                disabled={notificationLoading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              >
+                {notificationLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                {notificationLoading ? 'Saving...' : 'Save Settings'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Privacy Settings Modal */}
+      {showPrivacyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Privacy Settings</h2>
+                <p className="text-sm text-gray-600 mt-1">Control your privacy and data settings</p>
+              </div>
+              <button
+                onClick={() => setShowPrivacyModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="space-y-6">
+                {/* Profile Visibility */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                      <User className="h-5 w-5 mr-2 text-blue-500" />
+                      Profile Visibility
+                    </h3>
+                    <p className="text-sm text-gray-600">Control who can see your profile information</p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700">Make profile public</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={userProfile?.isPublic || false}
+                          onChange={(e) => {
+                            console.log('Profile visibility changed:', e.target.checked)
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700">Show email to other users</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={userProfile?.showEmail || false}
+                          onChange={(e) => {
+                            console.log('Email visibility changed:', e.target.checked)
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Data Sharing */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                      <Shield className="h-5 w-5 mr-2 text-green-500" />
+                      Data Sharing
+                    </h3>
+                    <p className="text-sm text-gray-600">Control how your data is shared and used</p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700">Allow analytics tracking</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={userProfile?.allowAnalytics !== false}
+                          onChange={(e) => {
+                            console.log('Analytics tracking changed:', e.target.checked)
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700">Share usage data for improvements</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={userProfile?.shareUsageData !== false}
+                          onChange={(e) => {
+                            console.log('Usage data sharing changed:', e.target.checked)
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Account Security */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                      <Lock className="h-5 w-5 mr-2 text-red-500" />
+                      Account Security
+                    </h3>
+                    <p className="text-sm text-gray-600">Manage your account security settings</p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700">Two-factor authentication</span>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">Coming Soon</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700">Login notifications</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={userProfile?.loginNotifications !== false}
+                          onChange={(e) => {
+                            console.log('Login notifications changed:', e.target.checked)
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Data Management */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                      <Download className="h-5 w-5 mr-2 text-purple-500" />
+                      Data Management
+                    </h3>
+                    <p className="text-sm text-gray-600">Export or manage your data</p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => {
+                        console.log('Export data requested')
+                        toast.success('Data export feature coming soon!')
+                      }}
+                      className="w-full text-left px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700">Export my data</span>
+                        <span className="text-xs text-gray-500">JSON, CSV</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        console.log('Delete account requested')
+                        toast.error('Account deletion feature coming soon!')
+                      }}
+                      className="w-full text-left px-4 py-3 border border-red-200 rounded-lg hover:bg-red-50 transition-colors text-red-700"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Delete my account</span>
+                        <span className="text-xs text-red-500">Permanent</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setShowPrivacyModal(false)}
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  console.log('Privacy settings saved')
+                  toast.success('Privacy settings saved!')
+                  setShowPrivacyModal(false)
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              >
+                Save Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Change Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Change Password</h2>
+                <p className="text-sm text-gray-600 mt-1">Update your account password</p>
+              </div>
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <div className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter current password"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter new password"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Confirm new password"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                disabled={passwordLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={changePassword}
+                disabled={passwordLoading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              >
+                {passwordLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                ) : (
+                  <Lock className="h-4 w-4 mr-2" />
+                )}
+                {passwordLoading ? 'Changing...' : 'Change Password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Management Modal */}
+      {showAdminModal && selectedAdminOrg && (
+        <AdminManagementModal
+          organization={selectedAdminOrg}
+          isOpen={showAdminModal}
+          onClose={() => setShowAdminModal(false)}
+        />
+      )}
     </div>
   )
 }

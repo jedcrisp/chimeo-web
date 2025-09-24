@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Users, User, LogOut, Menu, X, Building, Home, Bell, Calendar, FileText, UserPlus, Search } from 'lucide-react'
+import { Users, User, LogOut, Menu, X, Building, Home, Bell, BellRing, Calendar, FileText, UserPlus, Search, BarChart3 } from 'lucide-react'
 import { useOrganizations } from '../contexts/OrganizationsContext'
 import { useState } from 'react'
 
@@ -37,9 +37,11 @@ export default function Layout() {
   const navigation = isOrganizationAdmin ? [
     // Organization Admin Navigation
     { name: 'Dashboard', href: '/', icon: Home },
-    { name: 'Alerts', href: '/alerts', icon: Bell },
+    { name: 'Alerts', href: '/alerts', icon: BellRing },
+    { name: 'My Alerts', href: '/admin-my-alerts', icon: Bell },
     { name: 'Groups', href: '/groups', icon: UserPlus },
     { name: 'Calendar', href: '/calendar', icon: Calendar },
+    { name: 'Analytics', href: '/analytics', icon: BarChart3 },
     { name: 'Discover', href: '/discover', icon: Search },
     ...(isPlatformAdmin ? [{ name: 'Org Requests', href: '/org-requests', icon: FileText }] : []),
     { name: 'Profile', href: '/profile', icon: User },

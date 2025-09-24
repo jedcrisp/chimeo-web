@@ -17,7 +17,6 @@ import { Link } from 'react-router-dom'
 import adminService from '../services/adminService'
 import groupService from '../services/groupService'
 import emailService from '../services/emailService'
-import NotificationDebug from '../components/NotificationDebug'
 import AlertDetailsModal from '../components/AlertDetailsModal'
 import { useState, useEffect } from 'react'
 import { collection, query, where, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore'
@@ -154,15 +153,30 @@ export default function Dashboard() {
   // Fetch groups for user's organization
   useEffect(() => {
     const fetchGroups = async () => {
+      console.log('🔍 Dashboard: Fetching groups for user profile:', userProfile)
+      console.log('🔍 Dashboard: User organizations:', userProfile?.organizations)
+      
       if (userProfile?.organizations?.length > 0) {
         try {
-          const organizationId = userProfile.organizations[0]
+          const organizationData = userProfile.organizations[0]
+          console.log('🔍 Dashboard: Organization data:', organizationData)
+          
+          // Extract ID from organization object or use as string
+          const organizationId = typeof organizationData === 'string' 
+            ? organizationData 
+            : organizationData?.id || organizationData?.organizationId || organizationData
+          
+          console.log('🔍 Dashboard: Extracted organization ID:', organizationId)
           const groups = await groupService.getGroupsForOrganization(organizationId)
+          console.log('🔍 Dashboard: Found groups:', groups)
           setTotalGroups(groups.length)
         } catch (error) {
           console.error('Error fetching groups:', error)
           setTotalGroups(0)
         }
+      } else {
+        console.log('🔍 Dashboard: No organizations found in user profile')
+        setTotalGroups(0)
       }
     }
 
@@ -510,7 +524,28 @@ export default function Dashboard() {
                 </div>
                 <div className="ml-4 flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-600 truncate">Followers</p>
-                  <p className="text-2xl font-bold text-blue-600">{userProfile?.organizations?.[0] ? organizations.find(org => org.id === userProfile.organizations[0])?.followerCount || 0 : 0}</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {(() => {
+                      const organizationData = userProfile?.organizations?.[0]
+                      console.log('🔍 Dashboard: Organization data for followers:', organizationData)
+                      
+                      // Extract ID from organization object or use as string
+                      const orgId = typeof organizationData === 'string' 
+                        ? organizationData 
+                        : organizationData?.id || organizationData?.organizationId || organizationData
+                      
+                      const org = organizations.find(org => org.id === orgId)
+                      const followerCount = org?.followerCount || 0
+                      console.log('🔍 Dashboard: Followers calculation:', {
+                        organizationData,
+                        orgId,
+                        orgFound: !!org,
+                        orgName: org?.name,
+                        followerCount
+                      })
+                      return followerCount
+                    })()}
+                  </p>
                 </div>
               </div>
             </div>
@@ -629,12 +664,6 @@ export default function Dashboard() {
             </div>
           )}
           
-          {/* Notification Debug Component - Only show for platform admin */}
-          {isPlatformAdmin && (
-            <div className="mt-8">
-              <NotificationDebug />
-            </div>
-          )}
 
           {/* Alert Details Modal */}
           <AlertDetailsModal

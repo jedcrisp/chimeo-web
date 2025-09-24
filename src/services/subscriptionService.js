@@ -1,5 +1,5 @@
 import { db } from './firebase'
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, serverTimestamp, increment } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, orderBy, limit, serverTimestamp, increment } from 'firebase/firestore'
 
 class SubscriptionService {
   constructor() {
@@ -67,7 +67,18 @@ class SubscriptionService {
         updatedAt: serverTimestamp()
       }
 
-      await setDoc(doc(db, 'subscriptions', userId), subscription)
+      // Store in user subcollection
+      const subscriptionRef = doc(db, 'users', userId, 'subscriptions', subscriptionData.subscriptionId || 'current')
+      await setDoc(subscriptionRef, subscription)
+      
+      // Also update user profile for quick access
+      await updateDoc(doc(db, 'users', userId), {
+        planType: subscription.planType,
+        subscriptionId: subscription.stripeSubscriptionId,
+        stripeCustomerId: subscription.stripeCustomerId,
+        updatedAt: serverTimestamp()
+      })
+      
       console.log('✅ SubscriptionService: Subscription created/updated successfully')
       
       return subscription
@@ -82,20 +93,43 @@ class SubscriptionService {
     try {
       console.log('🔧 SubscriptionService: Getting subscription for user:', userId)
       
-      const subscriptionDoc = await getDoc(doc(db, 'subscriptions', userId))
+      // First try to get from user subcollection
+      const subscriptionQuery = query(
+        collection(db, 'users', userId, 'subscriptions'),
+        orderBy('createdAt', 'desc'),
+        limit(1)
+      )
       
-      if (subscriptionDoc.exists()) {
+      const subscriptionSnapshot = await getDocs(subscriptionQuery)
+      
+      if (!subscriptionSnapshot.empty) {
+        const subscriptionDoc = subscriptionSnapshot.docs[0]
         const subscription = subscriptionDoc.data()
-        console.log('✅ SubscriptionService: Found subscription:', subscription.planType)
+        console.log('✅ SubscriptionService: Found subscription in subcollection:', subscription.planType)
         return subscription
-      } else {
-        console.log('ℹ️ SubscriptionService: No subscription found, returning free tier')
-        return {
-          userId,
-          planType: 'free',
-          status: 'active',
-          ...this.pricingTiers.free
+      }
+      
+      // Fallback: check user profile for planType
+      const userDoc = await getDoc(doc(db, 'users', userId))
+      if (userDoc.exists()) {
+        const userData = userDoc.data()
+        if (userData.planType && userData.planType !== 'free') {
+          console.log('✅ SubscriptionService: Found planType in user profile:', userData.planType)
+          return {
+            userId,
+            planType: userData.planType,
+            status: 'active',
+            ...this.pricingTiers[userData.planType] || this.pricingTiers.free
+          }
         }
+      }
+      
+      console.log('ℹ️ SubscriptionService: No subscription found, returning free tier')
+      return {
+        userId,
+        planType: 'free',
+        status: 'active',
+        ...this.pricingTiers.free
       }
     } catch (error) {
       console.error('❌ SubscriptionService: Error getting subscription:', error)

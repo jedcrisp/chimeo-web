@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Anna Crisp Enterprise Subscription</title>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js'
+        import { getFirestore, doc, setDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'
+
+        // Your Firebase config - replace with your actual config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBvQZvQZvQZvQZvQZvQZvQZvQZvQZvQZvQ",
+            authDomain: "chimeo-web.firebaseapp.com",
+            projectId: "chimeo-web",
+            storageBucket: "chimeo-web.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        }
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig)
+        const db = getFirestore(app)
+
+        async function createEnterpriseSubscription() {
+            const userId = '07JNLCtBvYOnDAWxWR5rE7B41qm2'
+            const subscriptionId = 'ent_anna_crisp_' + Date.now()
+            
+            const subscriptionData = {
+                userId,
+                stripeCustomerId: 'cus_anna_crisp_enterprise',
+                stripeSubscriptionId: subscriptionId,
+                planType: 'enterprise',
+                status: 'active',
+                currentPeriodStart: new Date(),
+                currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+                cancelAtPeriodEnd: false,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            }
+
+            try {
+                console.log('🚀 Creating enterprise subscription for Anna Crisp...')
+                
+                // Create subscription in user subcollection
+                await setDoc(doc(db, 'users', userId, 'subscriptions', subscriptionId), subscriptionData)
+                console.log('✅ Created subscription in subcollection')
+                
+                // Update user profile for quick access
+                await updateDoc(doc(db, 'users', userId), {
+                    planType: 'enterprise',
+                    subscriptionId: subscriptionId,
+                    stripeCustomerId: 'cus_anna_crisp_enterprise',
+                    updatedAt: serverTimestamp()
+                })
+                console.log('✅ Updated user profile with enterprise plan')
+                
+                console.log('🎉 Enterprise subscription created successfully!')
+                console.log('📊 Plan: Enterprise')
+                console.log('💰 Price: $50/month')
+                console.log('👥 Max Admins: Unlimited')
+                console.log('📋 Max Groups: Unlimited')
+                console.log('🔔 Max Alerts: Unlimited')
+                
+                document.getElementById('result').innerHTML = `
+                    <div style="color: green; font-weight: bold;">
+                        ✅ Enterprise subscription created successfully!<br>
+                        📊 Plan: Enterprise<br>
+                        💰 Price: $50/month<br>
+                        👥 Max Admins: Unlimited<br>
+                        📋 Max Groups: Unlimited<br>
+                        🔔 Max Alerts: Unlimited
+                    </div>
+                `
+                
+            } catch (error) {
+                console.error('❌ Error creating subscription:', error)
+                document.getElementById('result').innerHTML = `
+                    <div style="color: red; font-weight: bold;">
+                        ❌ Error creating subscription: ${error.message}
+                    </div>
+                `
+            }
+        }
+
+        // Make function available globally
+        window.createEnterpriseSubscription = createEnterpriseSubscription
+    </script>
+</head>
+<body>
+    <h1>Create Anna Crisp Enterprise Subscription</h1>
+    <p>This will create an enterprise subscription for user ID: 07JNLCtBvYOnDAWxWR5rE7B41qm2</p>
+    
+    <button onclick="createEnterpriseSubscription()" style="padding: 10px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        Create Enterprise Subscription
+    </button>
+    
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 5px;"></div>
+    
+    <h2>Instructions:</h2>
+    <ol>
+        <li>Open this file in your browser</li>
+        <li>Open the browser's developer console (F12)</li>
+        <li>Click the "Create Enterprise Subscription" button</li>
+        <li>Check the console for success/error messages</li>
+    </ol>
+</body>
+</html>
