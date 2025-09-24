@@ -11,11 +11,16 @@ export default function DayCalendarView() {
 
   const getEventsForDay = () => {
     const dayEvents = getEventsForDate(selectedDate).filter(event => filter.showEvents)
-    const dayAlerts = getScheduledAlertsForDate(selectedDate).filter(alert => 
-      filter.showAlerts &&
-      filter.selectedTypes.has(alert.type) &&
-      filter.selectedSeverities.has(alert.severity)
-    )
+    const dayAlerts = getScheduledAlertsForDate(selectedDate).filter(alert => {
+      if (!filter.showAlerts) return false
+      
+      // If no types are selected, show all types
+      const typeMatch = filter.selectedTypes.size === 0 || filter.selectedTypes.has(alert.type)
+      // If no severities are selected, show all severities
+      const severityMatch = filter.selectedSeverities.size === 0 || filter.selectedSeverities.has(alert.severity)
+      
+      return typeMatch && severityMatch
+    })
     
     return { events: dayEvents, alerts: dayAlerts }
   }
