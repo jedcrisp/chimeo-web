@@ -280,26 +280,6 @@ export default function MonthCalendarView() {
         </div>
       </div>
 
-      {/* Test Button - Remove this after testing */}
-      {(() => {
-        const { alerts: dayAlerts } = getEventsForDay(selectedDate)
-        return dayAlerts.length > 0 && (
-          <div className="mt-4 text-center">
-            <button
-              onClick={() => {
-                console.log('🔍 Test button clicked - opening edit modal for first alert')
-                const firstAlert = dayAlerts[0]
-                console.log('🔍 Test alert:', firstAlert)
-                setSelectedAlert(firstAlert)
-                setShowEditModal(true)
-              }}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-            >
-              Test Edit Alert (Click to open edit modal)
-            </button>
-          </div>
-        )
-      })()}
 
       {/* Edit Scheduled Alert Modal */}
       {showEditModal && selectedAlert && (

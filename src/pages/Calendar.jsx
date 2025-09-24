@@ -196,60 +196,6 @@ export default function CalendarPage() {
           >
             Refresh Calendar
           </button>
-          
-          <button
-            onClick={async () => {
-              if (window.confirm('Delete all test alerts? This will remove any alerts with "test", "debug", "sample", "hannah", "shane", "hdhdh", or "handhelds" in the title.')) {
-                try {
-                  console.log('🗑️ Deleting test alerts...')
-                  
-                  // Import calendar service
-                  const calendarService = (await import('../services/calendarService')).default
-                  
-                  // Get current alerts
-                  const currentAlerts = calendarService.scheduledAlerts || []
-                  console.log('🔍 Current alerts:', currentAlerts.length)
-                  
-                  let deletedCount = 0
-                  
-                  for (const alert of currentAlerts) {
-                    const title = alert.title.toLowerCase()
-                    const isTestAlert = title.includes('test') || 
-                                      title.includes('debug') || 
-                                      title.includes('sample') || 
-                                      title.includes('hannah') || 
-                                      title.includes('shane') || 
-                                      title.includes('hdhdh') || 
-                                      title.includes('handhelds')
-                    
-                    if (isTestAlert) {
-                      console.log(`🗑️ Deleting test alert: ${alert.title}`)
-                      try {
-                        await calendarService.deleteScheduledAlert(alert.id, alert.organizationId)
-                        deletedCount++
-                        console.log(`✅ Deleted: ${alert.title}`)
-                      } catch (error) {
-                        console.error(`❌ Failed to delete ${alert.title}:`, error)
-                      }
-                    }
-                  }
-                  
-                  console.log(`🎉 Deleted ${deletedCount} test alerts`)
-                  alert(`Deleted ${deletedCount} test alerts!`)
-                  
-                  // Refresh calendar data
-                  await loadCalendarData()
-                  
-                } catch (error) {
-                  console.error('❌ Error deleting test alerts:', error)
-                  alert('Error deleting test alerts: ' + error.message)
-                }
-              }
-            }}
-            className="flex items-center px-3 py-2 text-sm font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700"
-          >
-            Delete Test Alerts
-          </button>
         </div>
       </div>
 
