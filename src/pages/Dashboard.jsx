@@ -18,6 +18,7 @@ import adminService from '../services/adminService'
 import groupService from '../services/groupService'
 import emailService from '../services/emailService'
 import NotificationDebug from '../components/NotificationDebug'
+import AlertDetailsModal from '../components/AlertDetailsModal'
 import { useState, useEffect } from 'react'
 import { collection, query, where, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore'
 import { db } from '../services/firebase'
@@ -50,6 +51,8 @@ export default function Dashboard() {
   const [followedGroups, setFollowedGroups] = useState([])
   const [followedOrgs, setFollowedOrgs] = useState([])
   const [userAlerts, setUserAlerts] = useState([])
+  const [selectedAlert, setSelectedAlert] = useState(null)
+  const [showAlertDetails, setShowAlertDetails] = useState(false)
   
   // Check if user is organization admin
   const isOrganizationAdmin = userProfile?.isOrganizationAdmin || false
@@ -429,6 +432,19 @@ export default function Dashboard() {
   const totalOrganizations = organizations.length
   const totalAlerts = alerts.length
 
+  // Handle alert click to show details
+  const handleAlertClick = (alert) => {
+    console.log('🔍 Dashboard: Alert clicked:', alert)
+    setSelectedAlert(alert)
+    setShowAlertDetails(true)
+  }
+
+  // Handle closing alert details modal
+  const handleCloseAlertDetails = () => {
+    setShowAlertDetails(false)
+    setSelectedAlert(null)
+  }
+
   // Show different dashboard based on user role
   if (isOrganizationAdmin) {
     return (
@@ -528,7 +544,11 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-3">
                   {recentAlerts.map((alert) => (
-                    <div key={alert.id} className="flex items-start space-x-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                    <div 
+                      key={alert.id} 
+                      onClick={() => handleAlertClick(alert)}
+                      className="flex items-start space-x-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                    >
                       <div className="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center flex-shrink-0">
                         <BellIcon className="h-4 w-4 text-slate-600" />
                       </div>
@@ -615,6 +635,13 @@ export default function Dashboard() {
               <NotificationDebug />
             </div>
           )}
+
+          {/* Alert Details Modal */}
+          <AlertDetailsModal
+            isOpen={showAlertDetails}
+            onClose={handleCloseAlertDetails}
+            alert={selectedAlert}
+          />
         </div>
       </div>
     )
@@ -716,7 +743,11 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-3">
               {userAlerts.slice(0, 3).map((alert) => (
-                <div key={alert.id} className="p-3 bg-gray-50 rounded-lg">
+                <div 
+                  key={alert.id} 
+                  onClick={() => handleAlertClick(alert)}
+                  className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                >
                   <p className="font-medium text-gray-900">{alert.title}</p>
                   <p className="text-sm text-gray-600 mt-1">{alert.message}</p>
                   <p className="text-xs text-gray-400 mt-2">
@@ -734,6 +765,13 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Alert Details Modal */}
+      <AlertDetailsModal
+        isOpen={showAlertDetails}
+        onClose={handleCloseAlertDetails}
+        alert={selectedAlert}
+      />
     </div>
     )
   }

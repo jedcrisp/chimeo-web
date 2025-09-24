@@ -4,6 +4,7 @@ import { AlertTriangle, Bell, Users, Building, Clock, MapPin, Search } from 'luc
 import { collection, query, where, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import adminService from '../services/adminService'
+import AlertDetailsModal from '../components/AlertDetailsModal'
 
 export default function MyAlerts() {
   const { currentUser, userProfile, forceUpdate } = useAuth()
@@ -11,6 +12,8 @@ export default function MyAlerts() {
   const [loading, setLoading] = useState(true)
   const [followedGroups, setFollowedGroups] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedAlert, setSelectedAlert] = useState(null)
+  const [showAlertDetails, setShowAlertDetails] = useState(false)
 
   useEffect(() => {
     if (currentUser && userProfile) {
@@ -309,6 +312,19 @@ export default function MyAlerts() {
     return dateB - dateA // Newest first
   })
 
+  // Handle alert click to show details
+  const handleAlertClick = (alert) => {
+    console.log('🔍 MyAlerts: Alert clicked:', alert)
+    setSelectedAlert(alert)
+    setShowAlertDetails(true)
+  }
+
+  // Handle closing alert details modal
+  const handleCloseAlertDetails = () => {
+    setShowAlertDetails(false)
+    setSelectedAlert(null)
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -413,11 +429,15 @@ export default function MyAlerts() {
         ) : (
           <div className="space-y-4">
             {filteredAlerts.map((alert) => (
-              <div key={alert.id} className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow ${
-                alert.type === 'emergency' ? 'border-l-4 border-l-red-500' :
-                alert.type === 'warning' ? 'border-l-4 border-l-yellow-500' :
-                'border-l-4 border-l-blue-500'
-              }`}>
+              <div 
+                key={alert.id} 
+                onClick={() => handleAlertClick(alert)}
+                className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                  alert.type === 'emergency' ? 'border-l-4 border-l-red-500' :
+                  alert.type === 'warning' ? 'border-l-4 border-l-yellow-500' :
+                  'border-l-4 border-l-blue-500'
+                }`}
+              >
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0 mt-1">
                     {getAlertIcon(alert.type)}
@@ -479,6 +499,13 @@ export default function MyAlerts() {
           </div>
         )}
       </div>
+
+      {/* Alert Details Modal */}
+      <AlertDetailsModal
+        isOpen={showAlertDetails}
+        onClose={handleCloseAlertDetails}
+        alert={selectedAlert}
+      />
     </div>
   )
 }

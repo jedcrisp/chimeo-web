@@ -5,6 +5,7 @@ import { collection, query, orderBy, getDocs } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import { Plus, Edit, Trash2, X } from 'lucide-react'
 import notificationService from '../services/notificationService'
+import AlertDetailsModal from '../components/AlertDetailsModal'
 
 // Custom Bell Icon component
 function BellIcon({ className }) {
@@ -28,6 +29,8 @@ export default function Alerts() {
   const [showNewAlertModal, setShowNewAlertModal] = useState(false)
   const [groups, setGroups] = useState([])
   const [groupsLoading, setGroupsLoading] = useState(true)
+  const [selectedAlert, setSelectedAlert] = useState(null)
+  const [showAlertDetails, setShowAlertDetails] = useState(false)
   const [newAlert, setNewAlert] = useState({
     title: '',
     message: '',
@@ -116,6 +119,19 @@ export default function Alerts() {
         console.error('Error deleting alert:', error)
       }
     }
+  }
+
+  // Handle alert click to show details
+  const handleAlertClick = (alert) => {
+    console.log('🔍 Alerts: Alert clicked:', alert)
+    setSelectedAlert(alert)
+    setShowAlertDetails(true)
+  }
+
+  // Handle closing alert details modal
+  const handleCloseAlertDetails = () => {
+    setShowAlertDetails(false)
+    setSelectedAlert(null)
   }
 
   if (loading) {
@@ -337,7 +353,11 @@ export default function Alerts() {
       ) : (
         <div className="space-y-4">
           {alerts.map((alert) => (
-            <div key={alert.id} className="card">
+            <div 
+              key={alert.id} 
+              onClick={() => handleAlertClick(alert)}
+              className="card cursor-pointer hover:shadow-md transition-shadow"
+            >
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
@@ -407,6 +427,13 @@ export default function Alerts() {
           ))}
         </div>
       )}
+
+      {/* Alert Details Modal */}
+      <AlertDetailsModal
+        isOpen={showAlertDetails}
+        onClose={handleCloseAlertDetails}
+        alert={selectedAlert}
+      />
     </div>
   )
 }
