@@ -20,6 +20,7 @@ import MyGroups from './pages/MyGroups'
 import DiscoverOrganizations from './pages/DiscoverOrganizations'
 import MyProfile from './pages/MyProfile'
 import Subscription from './pages/Subscription'
+import SubscriptionTester from './components/SubscriptionTester'
 import ProtectedRoute from './components/ProtectedRoute'
 import emailService from './services/emailService'
 import notificationService from './services/notificationService'
@@ -120,6 +121,8 @@ function App() {
                 <Route path="discover" element={<DiscoverOrganizations />} />
                 <Route path="my-profile" element={<MyProfile />} />
                 <Route path="subscription" element={<Subscription />} />
+                <Route path="test-subscription" element={<Subscription />} />
+                <Route path="subscription-tester" element={<SubscriptionTester />} />
               </Route>
               </Routes>
             </SubscriptionProvider>
