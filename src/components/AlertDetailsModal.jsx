@@ -16,6 +16,11 @@ export default function AlertDetailsModal({ isOpen, onClose, alert }) {
 
   const loadAlertDetails = async () => {
     try {
+      console.log('🔍 AlertDetailsModal: Loading alert details for:', alert)
+      console.log('🔍 AlertDetailsModal: Alert groupId:', alert.groupId)
+      console.log('🔍 AlertDetailsModal: Alert groupName:', alert.groupName)
+      console.log('🔍 AlertDetailsModal: Alert organizationId:', alert.organizationId)
+      
       // Find organization info
       if (alert.organizationId) {
         const org = organizations.find(o => o.id === alert.organizationId)
@@ -25,11 +30,31 @@ export default function AlertDetailsModal({ isOpen, onClose, alert }) {
       }
 
       // Find group info - use alert data directly
-      if (alert.groupId || alert.groupName) {
-        setGroupInfo({
-          id: alert.groupId || 'unknown',
-          name: alert.groupName || 'Unknown Group'
+      // Check for various possible group field names
+      const groupId = alert.groupId || alert.group_id || alert.targetGroupId
+      const groupName = alert.groupName || alert.group_name || alert.targetGroupName || alert.targetGroup
+      
+      console.log('🔍 AlertDetailsModal: All group-related fields:', {
+        groupId: alert.groupId,
+        groupName: alert.groupName,
+        group_id: alert.group_id,
+        group_name: alert.group_name,
+        targetGroupId: alert.targetGroupId,
+        targetGroupName: alert.targetGroupName,
+        targetGroup: alert.targetGroup
+      })
+      
+      if (groupId || groupName) {
+        console.log('🔍 AlertDetailsModal: Setting group info:', {
+          id: groupId || 'unknown',
+          name: groupName || 'Unknown Group'
         })
+        setGroupInfo({
+          id: groupId || 'unknown',
+          name: groupName || 'Unknown Group'
+        })
+      } else {
+        console.log('🔍 AlertDetailsModal: No group info found in alert')
       }
     } catch (error) {
       console.error('Error loading alert details:', error)
@@ -162,12 +187,28 @@ export default function AlertDetailsModal({ isOpen, onClose, alert }) {
                 </div>
               )}
 
-              {(groupInfo || alert.groupName) && (
+              {(groupInfo || alert.groupName || alert.groupId || alert.group_name || alert.targetGroup) && (
                 <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                   <Users className="h-5 w-5 text-gray-600 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-gray-900">Target Group</p>
-                    <p className="text-sm text-gray-600">{groupInfo?.name || alert.groupName || 'Unknown Group'}</p>
+                    <p className="text-sm text-gray-600">
+                      {groupInfo?.name || 
+                       alert.groupName || 
+                       alert.group_name ||
+                       alert.targetGroupName ||
+                       alert.targetGroup ||
+                       alert.groupId || 
+                       'Unknown Group'}
+                    </p>
+                    {console.log('🔍 Displaying group info:', {
+                      groupInfo: groupInfo,
+                      alertGroupName: alert.groupName,
+                      alertGroupId: alert.groupId,
+                      alertGroup_name: alert.group_name,
+                      alertTargetGroup: alert.targetGroup,
+                      finalValue: groupInfo?.name || alert.groupName || alert.group_name || alert.targetGroupName || alert.targetGroup || alert.groupId || 'Unknown Group'
+                    })}
                   </div>
                 </div>
               )}
