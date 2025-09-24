@@ -53,9 +53,16 @@ export default function CreateScheduledAlertModal({ isOpen, onClose, prefilledDa
   useEffect(() => {
     if (isOpen && prefilledDate) {
       console.log('🔍 CreateScheduledAlertModal: Setting prefilled date:', prefilledDate)
+      console.log('🔍 CreateScheduledAlertModal: Prefilled date toDateString:', prefilledDate.toDateString())
+      console.log('🔍 CreateScheduledAlertModal: Prefilled date ISO:', prefilledDate.toISOString())
+      
+      const newDate = new Date(prefilledDate)
+      console.log('🔍 CreateScheduledAlertModal: New date created:', newDate.toDateString())
+      console.log('🔍 CreateScheduledAlertModal: New date ISO:', newDate.toISOString())
+      
       setFormData(prev => ({
         ...prev,
-        scheduledDate: new Date(prefilledDate)
+        scheduledDate: newDate
       }))
     }
   }, [isOpen, prefilledDate])
@@ -363,7 +370,7 @@ export default function CreateScheduledAlertModal({ isOpen, onClose, prefilledDa
                 </label>
                 <input
                   type="date"
-                  value={formData.scheduledDate.toISOString().slice(0, 10)}
+                  value={`${formData.scheduledDate.getFullYear()}-${String(formData.scheduledDate.getMonth() + 1).padStart(2, '0')}-${String(formData.scheduledDate.getDate()).padStart(2, '0')}`}
                   onChange={(e) => {
                     const newDate = new Date(formData.scheduledDate)
                     const [year, month, day] = e.target.value.split('-')
@@ -484,7 +491,7 @@ export default function CreateScheduledAlertModal({ isOpen, onClose, prefilledDa
                     </label>
                     <input
                       type="date"
-                      value={formData.recurrenceEndDate.toISOString().slice(0, 10)}
+                      value={`${formData.recurrenceEndDate.getFullYear()}-${String(formData.recurrenceEndDate.getMonth() + 1).padStart(2, '0')}-${String(formData.recurrenceEndDate.getDate()).padStart(2, '0')}`}
                       onChange={(e) => handleInputChange('recurrenceEndDate', new Date(e.target.value))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
                     />
@@ -516,7 +523,7 @@ export default function CreateScheduledAlertModal({ isOpen, onClose, prefilledDa
                     </label>
                     <input
                       type="date"
-                      value={formData.expiresAt ? formData.expiresAt.toISOString().slice(0, 10) : ''}
+                      value={formData.expiresAt ? `${formData.expiresAt.getFullYear()}-${String(formData.expiresAt.getMonth() + 1).padStart(2, '0')}-${String(formData.expiresAt.getDate()).padStart(2, '0')}` : ''}
                       onChange={(e) => {
                         if (e.target.value) {
                           const newDate = new Date(formData.expiresAt || new Date())
