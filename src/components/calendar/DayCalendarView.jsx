@@ -72,6 +72,28 @@ export default function DayCalendarView() {
     setSelectedAlert(null)
   }
 
+  const handleDateDoubleClick = () => {
+    console.log('🔍 DayCalendarView: Date double-clicked:', selectedDate.toDateString())
+    
+    // Create a date with current time in user's timezone
+    const now = new Date()
+    const targetDate = new Date(selectedDate)
+    targetDate.setHours(now.getHours())
+    targetDate.setMinutes(now.getMinutes())
+    targetDate.setSeconds(0)
+    targetDate.setMilliseconds(0)
+    
+    console.log('🔍 DayCalendarView: Opening create alert modal for date:', targetDate.toISOString())
+    
+    // Dispatch a custom event to open the create alert modal with the date
+    window.dispatchEvent(new CustomEvent('openCreateAlertModal', {
+      detail: { 
+        scheduledDate: targetDate,
+        selectedDate: selectedDate
+      }
+    }))
+  }
+
   const { events: dayEvents, alerts: dayAlerts } = getEventsForDay()
   const allItems = [...dayEvents, ...dayAlerts].sort((a, b) => {
     const aTime = a.startDate || a.scheduledDate
@@ -80,7 +102,11 @@ export default function DayCalendarView() {
   })
 
   return (
-    <div className="space-y-6">
+    <div 
+      className="space-y-6 cursor-pointer hover:bg-gray-50 p-4 rounded-lg transition-colors"
+      onDoubleClick={handleDateDoubleClick}
+      title="Double-click to create alert for this date"
+    >
       {/* Date header */}
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900">

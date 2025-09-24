@@ -16,7 +16,7 @@ import {
 } from '../../models/calendarModels'
 import { X, Bell, Clock, MapPin, Building, Users, Calendar } from 'lucide-react'
 
-export default function CreateScheduledAlertModal({ isOpen, onClose }) {
+export default function CreateScheduledAlertModal({ isOpen, onClose, prefilledDate = null }) {
   const { createScheduledAlert } = useCalendar()
   const { currentUser, userProfile } = useAuth()
   const { organizations } = useOrganizations()
@@ -48,6 +48,17 @@ export default function CreateScheduledAlertModal({ isOpen, onClose }) {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [selectedDates, setSelectedDates] = useState([])
   const [isDuplicating, setIsDuplicating] = useState(false)
+
+  // Set prefilled date when provided
+  useEffect(() => {
+    if (isOpen && prefilledDate) {
+      console.log('🔍 CreateScheduledAlertModal: Setting prefilled date:', prefilledDate)
+      setFormData(prev => ({
+        ...prev,
+        scheduledDate: new Date(prefilledDate)
+      }))
+    }
+  }, [isOpen, prefilledDate])
 
   // Auto-set user's organization and fetch groups when modal opens
   useEffect(() => {

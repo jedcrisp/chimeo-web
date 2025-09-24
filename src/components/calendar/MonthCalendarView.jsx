@@ -90,6 +90,31 @@ export default function MonthCalendarView() {
     console.log('🔍 New selected date set to:', date.toDateString())
   }
 
+  const handleDateDoubleClick = (date) => {
+    console.log('🔍 Date double-clicked:', date.toDateString())
+    
+    // Set the selected date first
+    setSelectedDate(date)
+    
+    // Create a date with current time in user's timezone
+    const now = new Date()
+    const targetDate = new Date(date)
+    targetDate.setHours(now.getHours())
+    targetDate.setMinutes(now.getMinutes())
+    targetDate.setSeconds(0)
+    targetDate.setMilliseconds(0)
+    
+    console.log('🔍 Opening create alert modal for date:', targetDate.toISOString())
+    
+    // Dispatch a custom event to open the create alert modal with the date
+    window.dispatchEvent(new CustomEvent('openCreateAlertModal', {
+      detail: { 
+        scheduledDate: targetDate,
+        selectedDate: date
+      }
+    }))
+  }
+
   const navigateMonth = (direction) => {
     const newMonth = new Date(currentMonth)
     newMonth.setMonth(newMonth.getMonth() + direction)
@@ -185,6 +210,8 @@ export default function MonthCalendarView() {
                 isSelectedDate ? 'bg-blue-100 ring-2 ring-blue-500' : ''
               }`}
               onClick={() => handleDateClick(date)}
+              onDoubleClick={() => handleDateDoubleClick(date)}
+              title="Double-click to create alert for this date"
             >
               {/* Date number */}
               <div className={`text-sm font-medium mb-2 ${

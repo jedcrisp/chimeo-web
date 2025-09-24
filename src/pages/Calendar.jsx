@@ -24,6 +24,7 @@ export default function CalendarPage() {
   } = useCalendar()
 
   const [showCreateAlert, setShowCreateAlert] = useState(false)
+  const [prefilledDate, setPrefilledDate] = useState(null)
 
   // Safety mechanism: Clear loading if it gets stuck for too long
   useEffect(() => {
@@ -36,6 +37,29 @@ export default function CalendarPage() {
       return () => clearTimeout(safetyTimeout)
     }
   }, [isLoading])
+
+  // Listen for double-click events from calendar views
+  useEffect(() => {
+    const handleOpenCreateAlertModal = (event) => {
+      console.log('🔍 Calendar: Received openCreateAlertModal event:', event.detail)
+      const { scheduledDate, selectedDate } = event.detail
+      
+      // Set the selected date
+      setSelectedDate(selectedDate)
+      
+      // Set the prefilled date for the modal
+      setPrefilledDate(scheduledDate)
+      
+      // Open the create alert modal
+      setShowCreateAlert(true)
+    }
+
+    window.addEventListener('openCreateAlertModal', handleOpenCreateAlertModal)
+    
+    return () => {
+      window.removeEventListener('openCreateAlertModal', handleOpenCreateAlertModal)
+    }
+  }, [])
 
   useEffect(() => {
     console.log('🔄 Calendar: Starting loadCalendarData, isLoading:', isLoading)
@@ -270,7 +294,11 @@ export default function CalendarPage() {
       {showCreateAlert && (
         <CreateScheduledAlertModal
           isOpen={showCreateAlert}
-          onClose={() => setShowCreateAlert(false)}
+          onClose={() => {
+            setShowCreateAlert(false)
+            setPrefilledDate(null)
+          }}
+          prefilledDate={prefilledDate}
         />
       )}
       

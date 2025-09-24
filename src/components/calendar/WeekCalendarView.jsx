@@ -70,6 +70,31 @@ export default function WeekCalendarView() {
     setShowEditModal(true)
   }
 
+  const handleDateDoubleClick = (date) => {
+    console.log('🔍 WeekCalendarView: Date double-clicked:', date.toDateString())
+    
+    // Set the selected date first
+    setSelectedDate(date)
+    
+    // Create a date with current time in user's timezone
+    const now = new Date()
+    const targetDate = new Date(date)
+    targetDate.setHours(now.getHours())
+    targetDate.setMinutes(now.getMinutes())
+    targetDate.setSeconds(0)
+    targetDate.setMilliseconds(0)
+    
+    console.log('🔍 WeekCalendarView: Opening create alert modal for date:', targetDate.toISOString())
+    
+    // Dispatch a custom event to open the create alert modal with the date
+    window.dispatchEvent(new CustomEvent('openCreateAlertModal', {
+      detail: { 
+        scheduledDate: targetDate,
+        selectedDate: date
+      }
+    }))
+  }
+
   const handleCloseEditModal = () => {
     setShowEditModal(false)
     setSelectedAlert(null)
@@ -86,9 +111,11 @@ export default function WeekCalendarView() {
         return (
           <div
             key={date.toISOString()}
-            className={`bg-white border border-gray-200 rounded-lg p-4 ${
+            className={`bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
               isToday(date) ? 'border-blue-200 bg-blue-50' : ''
             }`}
+            onDoubleClick={() => handleDateDoubleClick(date)}
+            title="Double-click to create alert for this date"
           >
             {/* Date header */}
             <div className="flex items-center justify-between mb-3">
