@@ -45,13 +45,17 @@ export default function AlertDetailsModal({ isOpen, onClose, alert }) {
       })
       
       if (groupId || groupName) {
+        // If groupId contains a name (not an ID), use it as the name
+        const finalGroupName = groupName || (groupId && !groupId.match(/^[a-zA-Z0-9_-]+$/) ? groupId : 'Unknown Group')
+        const finalGroupId = groupId && groupId.match(/^[a-zA-Z0-9_-]+$/) ? groupId : 'unknown'
+        
         console.log('🔍 AlertDetailsModal: Setting group info:', {
-          id: groupId || 'unknown',
-          name: groupName || 'Unknown Group'
+          id: finalGroupId,
+          name: finalGroupName
         })
         setGroupInfo({
-          id: groupId || 'unknown',
-          name: groupName || 'Unknown Group'
+          id: finalGroupId,
+          name: finalGroupName
         })
       } else {
         console.log('🔍 AlertDetailsModal: No group info found in alert')
@@ -198,8 +202,7 @@ export default function AlertDetailsModal({ isOpen, onClose, alert }) {
                        alert.group_name ||
                        alert.targetGroupName ||
                        alert.targetGroup ||
-                       alert.groupId || 
-                       'Unknown Group'}
+                       (alert.groupId && !alert.groupId.match(/^[a-zA-Z0-9_-]+$/) ? alert.groupId : 'Unknown Group')}
                     </p>
                     {console.log('🔍 Displaying group info:', {
                       groupInfo: groupInfo,
@@ -207,7 +210,8 @@ export default function AlertDetailsModal({ isOpen, onClose, alert }) {
                       alertGroupId: alert.groupId,
                       alertGroup_name: alert.group_name,
                       alertTargetGroup: alert.targetGroup,
-                      finalValue: groupInfo?.name || alert.groupName || alert.group_name || alert.targetGroupName || alert.targetGroup || alert.groupId || 'Unknown Group'
+                      isGroupIdName: alert.groupId && !alert.groupId.match(/^[a-zA-Z0-9_-]+$/),
+                      finalValue: groupInfo?.name || alert.groupName || alert.group_name || alert.targetGroupName || alert.targetGroup || (alert.groupId && !alert.groupId.match(/^[a-zA-Z0-9_-]+$/) ? alert.groupId : 'Unknown Group')
                     })}
                   </div>
                 </div>
