@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useCalendar, CALENDAR_ACTIONS } from '../contexts/CalendarContext'
 import { CalendarViewMode, CalendarViewModeLabels } from '../models/calendarModels'
-import { Calendar, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, Plus, ChevronLeft, ChevronRight, Filter } from 'lucide-react'
 import MonthCalendarView from '../components/calendar/MonthCalendarView'
 import WeekCalendarView from '../components/calendar/WeekCalendarView'
 import DayCalendarView from '../components/calendar/DayCalendarView'
 import AgendaView from '../components/calendar/AgendaView'
 import CreateScheduledAlertModal from '../components/calendar/CreateScheduledAlertModal'
+import CalendarFilterModal from '../components/calendar/CalendarFilterModal'
 
 export default function CalendarPage() {
   const {
@@ -25,6 +26,7 @@ export default function CalendarPage() {
 
   const [showCreateAlert, setShowCreateAlert] = useState(false)
   const [prefilledDate, setPrefilledDate] = useState(null)
+  const [showFilterModal, setShowFilterModal] = useState(false)
 
   // Safety mechanism: Clear loading if it gets stuck for too long
   useEffect(() => {
@@ -212,6 +214,14 @@ export default function CalendarPage() {
           </button>
           
           <button
+            onClick={() => setShowFilterModal(true)}
+            className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filter
+          </button>
+          
+          <button
             onClick={() => {
               console.log('🔄 Manual refresh triggered')
               loadCalendarData()
@@ -299,6 +309,13 @@ export default function CalendarPage() {
             setPrefilledDate(null)
           }}
           prefilledDate={prefilledDate}
+        />
+      )}
+
+      {showFilterModal && (
+        <CalendarFilterModal
+          isOpen={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
         />
       )}
       
