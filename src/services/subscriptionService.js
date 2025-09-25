@@ -1,5 +1,6 @@
 import { db } from './firebase'
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, orderBy, limit, serverTimestamp, increment } from 'firebase/firestore'
+import specialAccessService from './specialAccessService'
 
 class SubscriptionService {
   constructor() {
@@ -175,6 +176,31 @@ class SubscriptionService {
   async canUserPerformAction(userId, action, organizationId = null) {
     try {
       console.log('🔧 SubscriptionService: Checking if user can perform action:', action)
+      
+      // Platform admin bypass - check if user is platform admin
+      const platformAdminUIDs = ['z4a9tShrtmT5W88euqy92ihQiNB3']
+      if (platformAdminUIDs.includes(userId)) {
+        // console.log('✅ SubscriptionService: Platform admin detected - unlimited access granted')
+        return { 
+          allowed: true, 
+          reason: 'Platform admin - unlimited access',
+          platformAdmin: true
+        }
+      }
+      
+      // First check for special access (overrides subscription limits)
+      if (organizationId) {
+        const specialAccess = await specialAccessService.hasSpecialAccess(userId, organizationId, action)
+        if (specialAccess.hasAccess) {
+          console.log('✅ SubscriptionService: User has special access:', specialAccess.reason)
+          return { 
+            allowed: true, 
+            reason: specialAccess.reason,
+            specialAccess: true,
+            accessType: specialAccess.accessType
+          }
+        }
+      }
       
       const subscription = organizationId 
         ? await this.getOrganizationSubscription(organizationId)

@@ -22,6 +22,7 @@ import DiscoverOrganizations from './pages/DiscoverOrganizations'
 import MyProfile from './pages/MyProfile'
 import Subscription from './pages/Subscription'
 import OrganizationAnalytics from './pages/OrganizationAnalytics'
+import PlatformCreator from './pages/PlatformCreator'
 import SubscriptionTester from './components/SubscriptionTester'
 import ProtectedRoute from './components/ProtectedRoute'
 import emailService from './services/emailService'
@@ -125,6 +126,7 @@ function App() {
                 <Route path="my-profile" element={<MyProfile />} />
                 <Route path="subscription" element={<Subscription />} />
                 <Route path="analytics" element={<OrganizationAnalytics />} />
+                <Route path="platform-creator" element={<PlatformCreator />} />
                 <Route path="test-subscription" element={<Subscription />} />
                 <Route path="subscription-tester" element={<SubscriptionTester />} />
               </Route>

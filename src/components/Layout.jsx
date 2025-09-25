@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Users, User, LogOut, Menu, X, Building, Home, Bell, BellRing, Calendar, FileText, UserPlus, Search, BarChart3 } from 'lucide-react'
+import { Users, User, LogOut, Menu, X, Building, Home, Bell, BellRing, Calendar, FileText, UserPlus, Search, BarChart3, Crown } from 'lucide-react'
 import { useOrganizations } from '../contexts/OrganizationsContext'
 import { useState } from 'react'
 
@@ -27,14 +27,27 @@ export default function Layout() {
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // Check if user is platform admin (app creator)
-  const isPlatformAdmin = currentUser?.email === 'jed@onetrack-consulting.com'
+  // Check if user is platform admin (app creator) - Only Jed
+  const isPlatformAdmin = currentUser?.email === 'jed@onetrack-consulting.com' || 
+                         currentUser?.uid === 'z4a9tShrtmT5W88euqy92ihQiNB3'
   
   // Check if user is organization admin
   const isOrganizationAdmin = userProfile?.isOrganizationAdmin || false
 
   // Different navigation based on user role
-  const navigation = isOrganizationAdmin ? [
+  const navigation = isPlatformAdmin ? [
+    // Platform Admin Navigation (Creator) - Full access
+    { name: 'Dashboard', href: '/', icon: Home },
+    { name: 'Alerts', href: '/alerts', icon: BellRing },
+    { name: 'My Alerts', href: '/admin-my-alerts', icon: Bell },
+    { name: 'Groups', href: '/groups', icon: UserPlus },
+    { name: 'Calendar', href: '/calendar', icon: Calendar },
+    { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+    { name: 'Org Requests', href: '/org-requests', icon: FileText },
+    { name: 'Platform Creator', href: '/platform-creator', icon: Crown },
+    { name: 'Discover', href: '/discover', icon: Search },
+    { name: 'Profile', href: '/profile', icon: User },
+  ] : isOrganizationAdmin ? [
     // Organization Admin Navigation
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Alerts', href: '/alerts', icon: BellRing },
@@ -43,7 +56,6 @@ export default function Layout() {
     { name: 'Calendar', href: '/calendar', icon: Calendar },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
     { name: 'Discover', href: '/discover', icon: Search },
-    ...(isPlatformAdmin ? [{ name: 'Org Requests', href: '/org-requests', icon: FileText }] : []),
     { name: 'Profile', href: '/profile', icon: User },
   ] : [
     // Basic User Navigation

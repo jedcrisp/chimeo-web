@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useOrganizations } from '../contexts/OrganizationsContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
-import { User, Mail, Calendar, Shield, Edit, Save, X, Crown, Building, Lock, LogOut, TestTube, CheckCircle, Clock, AlertCircle, CreditCard, UserCog, Bell, Download } from 'lucide-react'
+import { User, Mail, Calendar, Shield, Edit, Save, X, Crown, Building, Lock, LogOut, TestTube, CheckCircle, Clock, AlertCircle, CreditCard, UserCog, Bell, Download, Activity, Zap, Settings, Users, FileText, BarChart3 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { doc, updateDoc, serverTimestamp, getDoc, collection, query, getDocs, orderBy } from 'firebase/firestore'
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth'
 import { db, auth } from '../services/firebase'
 import adminService from '../services/adminService'
+import SpecialAccessManager from '../components/SpecialAccessManager'
 import AdminManagementModal from '../components/AdminManagementModal'
 
 export default function Profile() {
@@ -35,6 +36,7 @@ export default function Profile() {
   const [passwordLoading, setPasswordLoading] = useState(false)
   const [showNotificationModal, setShowNotificationModal] = useState(false)
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
+  const [showSpecialAccessModal, setShowSpecialAccessModal] = useState(false)
   const [notificationSettings, setNotificationSettings] = useState({
     // Push notifications
     pushEnabled: true,
@@ -64,6 +66,7 @@ export default function Profile() {
     orgSettings: {}
   })
   const [notificationLoading, setNotificationLoading] = useState(false)
+  const [grantingAccess, setGrantingAccess] = useState(false)
 
 
   // Function to update user's isOrganizationAdmin status in Firestore
@@ -294,57 +297,95 @@ export default function Profile() {
       console.log('🔍 Loading admin organizations directly from Firestore...')
       console.log('🔍 Current user UID:', currentUser?.uid)
       
-      const orgsQuery = query(collection(db, 'organizations'))
-      const orgsSnapshot = await getDocs(orgsQuery)
+      // Check if user is platform admin first - Only Jed (Platform Creator)
+      const platformAdminUIDs = ['z4a9tShrtmT5W88euqy92ihQiNB3']
+      const isPlatformAdminUser = platformAdminUIDs.includes(currentUser?.uid)
       
-      console.log(`🔍 Found ${orgsSnapshot.size} organizations in Firestore`)
-      
-      const adminOrgs = []
-      
-      for (const doc of orgsSnapshot.docs) {
-        const orgData = doc.data()
-        const adminIds = orgData.adminIds || {}
-        const adminRoles = orgData.adminRoles || {}
+      if (isPlatformAdminUser) {
+        console.log('🔧 Platform Creator detected - loading all organizations for management')
         
-        console.log(`\n🏢 Checking organization: ${orgData.name} (${doc.id})`)
-        console.log(`   Admin IDs:`, adminIds)
-        console.log(`   Admin Roles:`, adminRoles)
-        console.log(`   Current user UID: ${currentUser?.uid}`)
-        console.log(`   Is user in adminIds: ${adminIds[currentUser?.uid] === true}`)
+        const orgsQuery = query(collection(db, 'organizations'))
+        const orgsSnapshot = await getDocs(orgsQuery)
         
-        if (currentUser?.uid && adminIds[currentUser.uid] === true) {
-          const userRole = adminRoles[currentUser.uid] || 'admin'
-          const canManageAdmins = userRole === 'organization_admin' || userRole === 'org_admin'
+        const adminOrgs = []
+        
+        for (const doc of orgsSnapshot.docs) {
+          const orgData = doc.data()
           
-          console.log(`   ✅ User is admin of this organization!`)
-          console.log(`   User role: ${userRole}`)
-          console.log(`   Can manage admins: ${canManageAdmins}`)
-          
+          // Platform creator has management access to ALL organizations
           const adminOrg = {
             id: doc.id,
-            userRole: userRole,
-            canManageAdmins: canManageAdmins,
+            userRole: 'platform_creator',
+            canManageAdmins: true,
+            platformAdmin: true,
+            platformCreator: true,
             ...orgData
           }
           
           adminOrgs.push(adminOrg)
-          
-          console.log(`✅ Added admin organization:`, adminOrg)
-        } else {
-          console.log(`   ❌ User is not admin of this organization`)
+          console.log(`✅ Platform creator management access to: ${orgData.name}`)
         }
+        
+        console.log(`\n🔍 FINAL RESULT (Platform Creator):`)
+        console.log(`   Total organizations: ${adminOrgs.length}`)
+        console.log(`   Admin organizations:`, adminOrgs)
+        
+        setAdminOrganizations(adminOrgs)
+        setIsOrgAdmin(false) // Platform creator is NOT an org admin, but has platform access
+        return adminOrgs
+      } else {
+        // Regular user logic
+        const orgsQuery = query(collection(db, 'organizations'))
+        const orgsSnapshot = await getDocs(orgsQuery)
+        
+        console.log(`🔍 Found ${orgsSnapshot.size} organizations in Firestore`)
+        
+        const adminOrgs = []
+        
+        for (const doc of orgsSnapshot.docs) {
+          const orgData = doc.data()
+          const adminIds = orgData.adminIds || {}
+          const adminRoles = orgData.adminRoles || {}
+          
+          console.log(`\n🏢 Checking organization: ${orgData.name} (${doc.id})`)
+          console.log(`   Admin IDs:`, adminIds)
+          console.log(`   Admin Roles:`, adminRoles)
+          console.log(`   Current user UID: ${currentUser?.uid}`)
+          console.log(`   Is user in adminIds: ${adminIds[currentUser?.uid] === true}`)
+          
+          if (currentUser?.uid && adminIds[currentUser.uid] === true) {
+            const userRole = adminRoles[currentUser.uid] || 'admin'
+            const canManageAdmins = userRole === 'organization_admin' || userRole === 'org_admin'
+            
+            console.log(`   ✅ User is admin of this organization!`)
+            console.log(`   User role: ${userRole}`)
+            console.log(`   Can manage admins: ${canManageAdmins}`)
+            
+            const adminOrg = {
+              id: doc.id,
+              userRole: userRole,
+              canManageAdmins: canManageAdmins,
+              ...orgData
+            }
+            
+            adminOrgs.push(adminOrg)
+            
+            console.log(`✅ Added admin organization:`, adminOrg)
+          } else {
+            console.log(`   ❌ User is not admin of this organization`)
+          }
+        }
+        
+        console.log(`\n🔍 FINAL RESULT:`)
+        console.log(`   Total admin organizations found: ${adminOrgs.length}`)
+        console.log(`   Admin organizations:`, adminOrgs)
+        
+        setAdminOrganizations(adminOrgs)
+        setIsOrgAdmin(adminOrgs.length > 0)
+        
+        console.log(`🔍 State updated - isOrgAdmin: ${adminOrgs.length > 0}`)
+        return adminOrgs
       }
-      
-      console.log(`\n🔍 FINAL RESULT:`)
-      console.log(`   Total admin organizations found: ${adminOrgs.length}`)
-      console.log(`   Admin organizations:`, adminOrgs)
-      
-      setAdminOrganizations(adminOrgs)
-      setIsOrgAdmin(adminOrgs.length > 0)
-      
-      console.log(`🔍 State updated - isOrgAdmin: ${adminOrgs.length > 0}`)
-      
-      return adminOrgs
     } catch (error) {
       console.error('❌ Error loading admin organizations from Firestore:', error)
       return []
@@ -500,12 +541,92 @@ export default function Profile() {
   }
 
   // Check if user is platform admin (app owner)
-  const checkPlatformAdminStatus = () => {
+  const checkPlatformAdminStatus = async () => {
     // You can set this based on your email or user ID
-    const platformAdminEmails = ['jed@onetrack-consulting.com'] // Add your email here
-    const isAdmin = currentUser?.email && platformAdminEmails.includes(currentUser.email)
+    const platformAdminEmails = ['jed@onetrack-consulting.com']
+    const platformAdminUIDs = ['z4a9tShrtmT5W88euqy92ihQiNB3']
+    
+    const isAdmin = (currentUser?.email && platformAdminEmails.includes(currentUser.email)) ||
+                   (currentUser?.uid && platformAdminUIDs.includes(currentUser.uid))
     setIsPlatformAdmin(isAdmin)
+    
+    console.log('🔧 Platform admin check:', { 
+      isAdmin, 
+      email: currentUser?.email, 
+      uid: currentUser?.uid,
+      userProfileIsOrgAdmin: userProfile?.isOrganizationAdmin 
+    })
+    
+    // If platform admin, ensure they have organization admin status
+    if (isAdmin && userProfile && !userProfile.isOrganizationAdmin) {
+      console.log('🔧 Platform admin detected - ensuring organization admin status')
+      // Automatically grant organization admin status to platform admin
+      await grantPlatformAdminOrgAccess()
+    }
+    
     return isAdmin
+  }
+
+  // Grant platform admin access to all organizations
+  const grantPlatformAdminOrgAccess = async () => {
+    if (!currentUser?.uid) return
+    
+    // Prevent multiple simultaneous calls
+    if (grantingAccess) {
+      console.log('⚠️ Already granting access, please wait...')
+      return
+    }
+    
+    try {
+      setGrantingAccess(true)
+      console.log('🔧 Granting platform admin access to all organizations...')
+      
+      // Update user profile to be organization admin
+      const userRef = doc(db, 'users', currentUser.uid)
+      await updateDoc(userRef, {
+        isOrganizationAdmin: true,
+        platformAdmin: true,
+        updatedAt: serverTimestamp()
+      })
+      
+      // Get all organizations and add platform admin to each
+      const orgsQuery = query(collection(db, 'organizations'))
+      const orgsSnapshot = await getDocs(orgsQuery)
+      
+      for (const orgDoc of orgsSnapshot.docs) {
+        const orgData = orgDoc.data()
+        const orgId = orgDoc.id
+        
+        // Add platform admin to organization's admin list
+        const adminIds = orgData.adminIds || {}
+        const adminRoles = orgData.adminRoles || {}
+        
+        if (!adminIds[currentUser.uid]) {
+          adminIds[currentUser.uid] = true
+          adminRoles[currentUser.uid] = 'organization_admin'
+          
+          await updateDoc(orgDoc.ref, {
+            adminIds,
+            adminRoles,
+            updatedAt: serverTimestamp()
+          })
+          
+          // console.log(`✅ Added platform admin to organization: ${orgData.name}`)
+        }
+      }
+      
+      console.log('✅ Platform admin access granted to all organizations')
+      // toast.success('Platform admin access granted!')
+      
+      // Reload admin organizations
+      loadAdminOrganizationsFromFirestore()
+      
+    } catch (error) {
+      console.error('❌ Error granting platform admin access:', error)
+      toast.error('Failed to grant platform admin access')
+    } finally {
+      setGrantingAccess(false)
+    }
   }
 
   // Fetch all organization requests for platform admin
@@ -678,6 +799,29 @@ export default function Profile() {
     }
   }, [loading, currentUser, userProfile])
 
+  // Platform admin organization access check
+  useEffect(() => {
+    const handlePlatformAdminAccess = async () => {
+      if (!currentUser?.uid || !userProfile) return
+      
+      const platformAdminUIDs = ['z4a9tShrtmT5W88euqy92ihQiNB3']
+      const isPlatformAdmin = platformAdminUIDs.includes(currentUser.uid)
+      
+      console.log('🔧 Platform admin access check:', {
+        isPlatformAdmin,
+        userProfileIsOrgAdmin: userProfile.isOrganizationAdmin,
+        adminOrganizationsLength: adminOrganizations.length
+      })
+      
+      if (isPlatformAdmin && userProfile.isOrganizationAdmin && adminOrganizations.length === 0) {
+        console.log('🔧 Platform admin detected with org admin status but no admin organizations - fixing...')
+        await grantPlatformAdminOrgAccess()
+      }
+    }
+    
+    handlePlatformAdminAccess()
+  }, [currentUser, userProfile, adminOrganizations.length])
+
   // Fetch organization requests when platform admin status changes
   useEffect(() => {
     if (isPlatformAdmin) {
@@ -756,6 +900,19 @@ export default function Profile() {
 
   return (
     <div className="space-y-6">
+      {/* Creator Header */}
+      {isPlatformAdmin && (
+        <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-6 text-white">
+          <div className="flex items-center">
+            <Crown className="h-8 w-8 mr-3" />
+            <div>
+              <h1 className="text-2xl font-bold">Platform Creator Dashboard</h1>
+              <p className="text-purple-100">Full administrative access to the Chimeo platform</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
@@ -912,97 +1069,154 @@ export default function Profile() {
               )}
               
               
-              {/* Show admin organizations if user is an org admin */}
-              {isOrgAdmin && adminOrganizations.length > 0 && (
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center">
-                    <Building className="h-4 w-4 mr-2" />
-                    Administrator of:
-                  </h4>
-                  <div className="space-y-2">
-                    {adminOrganizations.map(org => {
-                      console.log('🔍 Profile UI: Rendering org:', {
-                        name: org.name,
-                        canManageAdmins: org.canManageAdmins,
-                        userRole: org.userRole,
-                        id: org.id
-                      })
-                      return (
-                        <div key={org.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-100 shadow-sm">
-                          <div className="flex items-center space-x-3">
-                            <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full">
-                              <Building className="h-4 w-4 text-blue-600" />
-                            </div>
-                            <div>
-                              <span className="text-sm font-medium text-blue-800">{org.name}</span>
-                              <div className="text-xs text-gray-500">
-                                Role: {org.userRole === 'organization_admin' ? 'Organization Admin' : org.userRole} | Can Manage: {org.canManageAdmins ? 'Yes' : 'No'}
-                              </div>
-                            </div>
-                          </div>
-                          {org.canManageAdmins && (
-                            <button
-                              onClick={() => openAdminModal(org)}
-                              className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center"
-                            >
-                              <UserCog className="h-4 w-4 mr-1" />
-                              Manage Admins
-                            </button>
-                          )}
-                          {!org.canManageAdmins && (
-                            <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-md flex items-center">
-                              <User className="h-4 w-4 mr-1" />
-                              Admin
-                            </span>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
 
-              {/* Debug section - show admin status even if no orgs loaded */}
-              {isOrgAdmin && adminOrganizations.length === 0 && (
-                <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <h4 className="text-sm font-semibold text-yellow-900 mb-3 flex items-center">
-                    <Building className="h-4 w-4 mr-2" />
-                    Organization Admin Status
-                  </h4>
-                  <p className="text-sm text-yellow-800 mb-3">
-                    You are detected as an organization admin, but no organizations are loaded yet.
-                  </p>
-                  <div className="text-xs text-yellow-700">
-                    <p>Debug info:</p>
-                    <p>• isOrgAdmin: {isOrgAdmin.toString()}</p>
-                    <p>• adminOrganizations.length: {adminOrganizations.length}</p>
-                    <p>• userProfile.isOrganizationAdmin: {userProfile?.isOrganizationAdmin?.toString() || 'undefined'}</p>
-                  </div>
-                </div>
-              )}
 
-              {/* Show if user might be admin but not detected */}
-              {!isOrgAdmin && userProfile?.isOrganizationAdmin && (
-                <div className="mt-6 p-4 bg-orange-50 rounded-lg border border-orange-200">
-                  <h4 className="text-sm font-semibold text-orange-900 mb-3 flex items-center">
-                    <Building className="h-4 w-4 mr-2" />
-                    Admin Status Mismatch
-                  </h4>
-                  <p className="text-sm text-orange-800 mb-3">
-                    Your profile indicates you're an organization admin, but the system hasn't detected any admin organizations.
-                  </p>
-                  <div className="text-xs text-orange-700">
-                    <p>Debug info:</p>
-                    <p>• isOrgAdmin: {isOrgAdmin.toString()}</p>
-                    <p>• userProfile.isOrganizationAdmin: {userProfile?.isOrganizationAdmin?.toString()}</p>
-                    <p>• adminOrganizations.length: {adminOrganizations.length}</p>
-                    <p className="mt-2 text-orange-600 font-medium">This should be fixed automatically on page load.</p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
+
+        {/* Creator Dashboard - Only for Platform Admin */}
+        {isPlatformAdmin && (
+          <div className="space-y-6">
+            {/* Platform Admin Status */}
+            <div className="card">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Crown className="h-5 w-5 mr-2 text-purple-600" />
+                Platform Admin Dashboard
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600">{organizations?.length || 0}</div>
+                  <div className="text-sm text-purple-600">Total Organizations</div>
+                </div>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">{organizationRequests?.length || 0}</div>
+                  <div className="text-sm text-blue-600">Pending Requests</div>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">Active</div>
+                  <div className="text-sm text-green-600">Platform Status</div>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <button
+                  onClick={() => setShowSpecialAccessModal(true)}
+                  className="w-full btn-primary flex items-center justify-center"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Manage Special Access
+                </button>
+                
+                <button
+                  onClick={grantPlatformAdminOrgAccess}
+                  className="w-full btn-secondary flex items-center justify-center"
+                >
+                  <Crown className="h-4 w-4 mr-2" />
+                  Grant Platform Admin Access
+                </button>
+                
+                <button
+                  onClick={() => window.open('/org-requests', '_blank')}
+                  className="w-full btn-secondary flex items-center justify-center"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Review Organization Requests
+                </button>
+                
+                <button
+                  onClick={() => window.open('/analytics', '_blank')}
+                  className="w-full btn-secondary flex items-center justify-center"
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  View Platform Analytics
+                </button>
+              </div>
+            </div>
+
+            {/* System Information */}
+            <div className="card">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Activity className="h-5 w-5 mr-2 text-blue-600" />
+                System Information
+              </h3>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Platform Version:</span>
+                  <span className="text-sm font-medium">1.0.0</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Last Updated:</span>
+                  <span className="text-sm font-medium">{new Date().toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Environment:</span>
+                  <span className="text-sm font-medium">Production</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Database:</span>
+                  <span className="text-sm font-medium">Firestore</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="card">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Zap className="h-5 w-5 mr-2 text-yellow-600" />
+                Quick Actions
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button
+                  onClick={() => {
+                    console.log('Export all data')
+                    toast.success('Data export feature coming soon!')
+                  }}
+                  className="btn-secondary flex items-center justify-center"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export All Data
+                </button>
+                
+                <button
+                  onClick={() => {
+                    console.log('System maintenance')
+                    toast.success('Maintenance mode feature coming soon!')
+                  }}
+                  className="btn-secondary flex items-center justify-center"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  System Maintenance
+                </button>
+                
+                <button
+                  onClick={() => {
+                    console.log('User management')
+                    toast.success('User management feature coming soon!')
+                  }}
+                  className="btn-secondary flex items-center justify-center"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  User Management
+                </button>
+                
+                <button
+                  onClick={() => {
+                    console.log('System logs')
+                    toast.success('System logs feature coming soon!')
+                  }}
+                  className="btn-secondary flex items-center justify-center"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  System Logs
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Account Actions */}
         <div className="space-y-4">
@@ -1124,15 +1338,18 @@ export default function Profile() {
             </div>
           )}
 
-          <div className="card">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Danger Zone</h3>
-            <button className="w-full btn-danger">
-              Delete Account
-            </button>
-            <p className="mt-2 text-xs text-gray-500">
-              This action cannot be undone. All your data will be permanently deleted.
-            </p>
-          </div>
+          {/* Danger Zone - Only show when editing */}
+          {isEditing && (
+            <div className="card">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Danger Zone</h3>
+              <button className="w-full btn-danger">
+                Delete Account
+              </button>
+              <p className="mt-2 text-xs text-gray-500">
+                This action cannot be undone. All your data will be permanently deleted.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1783,6 +2000,32 @@ export default function Profile() {
           isOpen={showAdminModal}
           onClose={() => setShowAdminModal(false)}
         />
+      )}
+
+      {/* Special Access Manager Modal */}
+      {showSpecialAccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Special Access Manager</h2>
+                <p className="text-sm text-gray-600 mt-1">Manage special access and unlimited features for users</p>
+              </div>
+              <button
+                onClick={() => setShowSpecialAccessModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              <SpecialAccessManager />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
