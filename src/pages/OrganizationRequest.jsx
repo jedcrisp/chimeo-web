@@ -625,6 +625,51 @@ export default function OrganizationRequest() {
         longitudeValue: coordinates.longitude
       })
 
+      // Check if the admin user has a paid subscription
+      console.log('🔧 Checking admin subscription for organization...')
+      let adminSubscription = null
+      let organizationPlanType = 'free'
+      let organizationSubscriptionId = null
+      
+      try {
+        // Check if the admin user has any active subscriptions
+        const userSubscriptionsQuery = query(
+          collection(db, 'users', newUser.uid, 'subscriptions'),
+          where('status', '==', 'active')
+        )
+        const userSubscriptionsSnapshot = await getDocs(userSubscriptionsQuery)
+        
+        if (!userSubscriptionsSnapshot.empty) {
+          // Get the most recent active subscription
+          const subscriptions = userSubscriptionsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          
+          // Sort by creation date to get the most recent
+          subscriptions.sort((a, b) => {
+            const aTime = a.createdAt?.toDate?.() || new Date(0)
+            const bTime = b.createdAt?.toDate?.() || new Date(0)
+            return bTime - aTime
+          })
+          
+          adminSubscription = subscriptions[0]
+          organizationPlanType = adminSubscription.planType || 'free'
+          organizationSubscriptionId = adminSubscription.id
+          
+          console.log('✅ Found admin subscription:', {
+            planType: organizationPlanType,
+            subscriptionId: organizationSubscriptionId,
+            status: adminSubscription.status
+          })
+        } else {
+          console.log('ℹ️ No active subscriptions found for admin user')
+        }
+      } catch (subscriptionError) {
+        console.warn('⚠️ Error checking admin subscription:', subscriptionError)
+        console.log('ℹ️ Proceeding with free plan for organization')
+      }
+
       // Create the organization document
       console.log('🔧 Creating organization with name:', request.organizationName)
       const organizationData = {
@@ -711,13 +756,22 @@ export default function OrganizationRequest() {
           allowFollowers: true,
           allowComments: true,
           allowShares: true
-        }
+        },
+        // Subscription information
+        planType: organizationPlanType,
+        subscriptionId: organizationSubscriptionId,
+        subscriptionStatus: adminSubscription?.status || 'active'
       }
       
       // Create organization with sanitized organization name as document ID
       const orgDocRef = doc(db, 'organizations', sanitizedOrgName)
       await setDoc(orgDocRef, organizationData)
       console.log('✅ Organization created with name as ID:', sanitizedOrgName)
+      console.log('📊 Organization subscription info:', {
+        planType: organizationPlanType,
+        subscriptionId: organizationSubscriptionId,
+        status: adminSubscription?.status || 'active'
+      })
       console.log('✅ Organization data:', organizationData)
       console.log('✅ Organization document path:', `organizations/${sanitizedOrgName}`)
       console.log('✅ Organization verified status:', organizationData.verified)

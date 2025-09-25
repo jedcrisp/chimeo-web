@@ -1000,6 +1000,73 @@ export default function Profile() {
             </div>
           </div>
 
+          {/* Organization Admin Information */}
+          {isOrgAdmin && adminOrganizations.length > 0 && (
+            <div className="card mt-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Building className="h-5 w-5 mr-2 text-blue-600" />
+                Organization Admin
+              </h2>
+              
+              <div className="space-y-4">
+                {adminOrganizations.map((org) => (
+                  <div key={org.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900">{org.name}</h3>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            org.userRole === 'organization_admin' || org.userRole === 'org_admin'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {org.userRole === 'organization_admin' || org.userRole === 'org_admin' ? (
+                              <>
+                                <Crown className="h-3 w-3 mr-1" />
+                                Organization Admin
+                              </>
+                            ) : (
+                              <>
+                                <User className="h-3 w-3 mr-1" />
+                                Admin
+                              </>
+                            )}
+                          </span>
+                        </div>
+                        
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <p><strong>Role:</strong> {org.userRole === 'organization_admin' || org.userRole === 'org_admin' ? 'Organization Administrator' : 'Administrator'}</p>
+                          <p><strong>Can Manage Admins:</strong> {org.canManageAdmins ? 'Yes' : 'No'}</p>
+                          {org.description && (
+                            <p><strong>Description:</strong> {org.description}</p>
+                          )}
+                          {org.memberCount && (
+                            <p><strong>Members:</strong> {org.memberCount}</p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col space-y-2 ml-4">
+                        {org.canManageAdmins && (
+                          <button
+                            onClick={() => {
+                              setSelectedAdminOrg(org)
+                              setShowAdminModal(true)
+                            }}
+                            className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center"
+                          >
+                            <UserCog className="h-4 w-4 mr-1" />
+                            Manage Admins
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Subscription Information */}
           <div className="card mt-6">
             <h2 className="text-lg font-medium text-gray-900 mb-4">Subscription</h2>
@@ -2026,6 +2093,18 @@ export default function Profile() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Admin Management Modal */}
+      {showAdminModal && selectedAdminOrg && (
+        <AdminManagementModal
+          isOpen={showAdminModal}
+          onClose={() => {
+            setShowAdminModal(false)
+            setSelectedAdminOrg(null)
+          }}
+          organization={selectedAdminOrg}
+        />
       )}
     </div>
   )

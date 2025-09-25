@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Users, User, LogOut, Menu, X, Building, Home, Bell, BellRing, Calendar, FileText, UserPlus, Search, BarChart3, Crown } from 'lucide-react'
+import { Users, User, LogOut, Menu, X, Building, Home, Bell, BellRing, Calendar, FileText, UserPlus, Search, BarChart3, Crown, CreditCard } from 'lucide-react'
 import { useOrganizations } from '../contexts/OrganizationsContext'
 import { useState } from 'react'
 
@@ -46,6 +46,7 @@ export default function Layout() {
     { name: 'Org Requests', href: '/org-requests', icon: FileText },
     { name: 'Platform Creator', href: '/platform-creator', icon: Crown },
     { name: 'Discover', href: '/discover', icon: Search },
+    { name: 'Subscription', href: '/subscription', icon: CreditCard },
     { name: 'Profile', href: '/profile', icon: User },
   ] : isOrganizationAdmin ? [
     // Organization Admin Navigation
@@ -56,6 +57,7 @@ export default function Layout() {
     { name: 'Calendar', href: '/calendar', icon: Calendar },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
     { name: 'Discover', href: '/discover', icon: Search },
+    { name: 'Subscription', href: '/subscription', icon: CreditCard },
     { name: 'Profile', href: '/profile', icon: User },
   ] : [
     // Basic User Navigation
@@ -63,6 +65,7 @@ export default function Layout() {
     { name: 'My Alerts', href: '/my-alerts', icon: Bell },
     { name: 'My Groups', href: '/my-groups', icon: UserPlus },
     { name: 'Discover', href: '/discover', icon: Building },
+    { name: 'Subscription', href: '/subscription', icon: CreditCard },
     { name: 'My Profile', href: '/my-profile', icon: User },
   ]
 

@@ -431,7 +431,10 @@ export default function Alerts() {
                 </div>
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => handleDeleteAlert(alert.id)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeleteAlert(alert.id)
+                    }}
                     className="text-red-600 hover:text-red-800"
                     title="Delete alert"
                   >

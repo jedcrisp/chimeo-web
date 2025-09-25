@@ -11,7 +11,7 @@ class SubscriptionService {
         maxAdmins: 1,
         maxGroups: 2,
         maxAlertsPerMonth: 25,
-        features: ['Basic web access', 'Basic push notifications', 'Email support']
+        features: ['Basic push notifications', 'Email support']
       },
       pro: {
         name: 'Pro',
@@ -32,10 +32,10 @@ class SubscriptionService {
       enterprise: {
         name: 'Enterprise',
         price: 50,
-        maxAdmins: 999999,
-        maxGroups: 999999,
+        maxAdmins: 25,
+        maxGroups: 75,
         maxAlertsPerMonth: 999999,
-        features: ['Unlimited admins', 'Unlimited groups', 'Unlimited alerts', 'Full web browser access', 'Premium push notifications', 'Priority phone & email support', 'Custom integrations']
+        features: ['25 organization admins', '75 groups', 'Unlimited alerts', 'Full web browser access', 'Premium push notifications', 'Priority phone & email support', 'Custom integrations']
       }
     }
   }
@@ -147,24 +147,102 @@ class SubscriptionService {
       
       if (orgDoc.exists()) {
         const orgData = orgDoc.data()
-        const subscriptionId = orgData.subscriptionId
+        console.log('🔧 SubscriptionService: Organization data:', {
+          name: orgData.name,
+          subscriptionId: orgData.subscriptionId,
+          planType: orgData.planType,
+          adminIds: orgData.adminIds
+        })
         
+        // Check if organization has a direct planType field (newer approach)
+        if (orgData.planType && orgData.planType !== 'free') {
+          console.log('✅ SubscriptionService: Found organization planType:', orgData.planType)
+          const tier = this.pricingTiers[orgData.planType] || this.pricingTiers.free
+          return {
+            organizationId,
+            planType: orgData.planType,
+            status: 'active',
+            ...tier,
+            limits: {
+              admins: tier.maxAdmins,
+              groups: tier.maxGroups,
+              alerts: tier.maxAlertsPerMonth
+            }
+          }
+        }
+        
+        // Check if organization has a subscriptionId that points to a subscription document
+        const subscriptionId = orgData.subscriptionId
         if (subscriptionId) {
+          // First try to get from subscriptions collection
           const subscriptionDoc = await getDoc(doc(db, 'subscriptions', subscriptionId))
           if (subscriptionDoc.exists()) {
             const subscription = subscriptionDoc.data()
-            console.log('✅ SubscriptionService: Found organization subscription:', subscription.planType)
+            console.log('✅ SubscriptionService: Found organization subscription document:', subscription.planType)
             return subscription
+          }
+          
+          // If not found in subscriptions collection, check if it's a user ID
+          // and get the user's subscription from their subcollection
+          const adminIds = orgData.adminIds || {}
+          const adminUserIds = Object.keys(adminIds).filter(id => adminIds[id] === true)
+          
+          // Check each admin user's subscriptions
+          for (const userId of adminUserIds) {
+            const userSubscriptionDoc = await getDoc(doc(db, 'users', userId, 'subscriptions', subscriptionId))
+            if (userSubscriptionDoc.exists()) {
+              const subscription = userSubscriptionDoc.data()
+              console.log('✅ SubscriptionService: Found user subscription for organization:', subscription.planType)
+              const tier = this.pricingTiers[subscription.planType] || this.pricingTiers.free
+              return {
+                organizationId,
+                planType: subscription.planType,
+                status: subscription.status || 'active',
+                ...tier,
+                limits: {
+                  admins: tier.maxAdmins,
+                  groups: tier.maxGroups,
+                  alerts: tier.maxAlertsPerMonth
+                }
+              }
+            }
+          }
+          
+          // Fallback: check if subscriptionId is actually a user ID and get their current subscription
+          const userDoc = await getDoc(doc(db, 'users', subscriptionId))
+          if (userDoc.exists()) {
+            const userData = userDoc.data()
+            if (userData.planType && userData.planType !== 'free') {
+              console.log('✅ SubscriptionService: Found user subscription for organization:', userData.planType)
+              const tier = this.pricingTiers[userData.planType] || this.pricingTiers.free
+              return {
+                organizationId,
+                planType: userData.planType,
+                status: 'active',
+                ...tier,
+                limits: {
+                  admins: tier.maxAdmins,
+                  groups: tier.maxGroups,
+                  alerts: tier.maxAlertsPerMonth
+                }
+              }
+            }
           }
         }
       }
       
       console.log('ℹ️ SubscriptionService: No organization subscription found, returning free tier')
+      const tier = this.pricingTiers.free
       return {
         organizationId,
         planType: 'free',
         status: 'active',
-        ...this.pricingTiers.free
+        ...tier,
+        limits: {
+          admins: tier.maxAdmins,
+          groups: tier.maxGroups,
+          alerts: tier.maxAlertsPerMonth
+        }
       }
     } catch (error) {
       console.error('❌ SubscriptionService: Error getting organization subscription:', error)
@@ -176,11 +254,13 @@ class SubscriptionService {
   async canUserPerformAction(userId, action, organizationId = null) {
     try {
       console.log('🔧 SubscriptionService: Checking if user can perform action:', action)
+      console.log('🔧 SubscriptionService: User ID:', userId)
+      console.log('🔧 SubscriptionService: Organization ID:', organizationId)
       
       // Platform admin bypass - check if user is platform admin
       const platformAdminUIDs = ['z4a9tShrtmT5W88euqy92ihQiNB3']
       if (platformAdminUIDs.includes(userId)) {
-        // console.log('✅ SubscriptionService: Platform admin detected - unlimited access granted')
+        console.log('✅ SubscriptionService: Platform admin detected - unlimited access granted')
         return { 
           allowed: true, 
           reason: 'Platform admin - unlimited access',
@@ -190,6 +270,7 @@ class SubscriptionService {
       
       // First check for special access (overrides subscription limits)
       if (organizationId) {
+        console.log('🔧 SubscriptionService: Checking special access...')
         const specialAccess = await specialAccessService.hasSpecialAccess(userId, organizationId, action)
         if (specialAccess.hasAccess) {
           console.log('✅ SubscriptionService: User has special access:', specialAccess.reason)
@@ -202,9 +283,16 @@ class SubscriptionService {
         }
       }
       
+      console.log('🔧 SubscriptionService: Getting subscription...')
       const subscription = organizationId 
         ? await this.getOrganizationSubscription(organizationId)
         : await this.getUserSubscription(userId)
+      
+      console.log('🔧 SubscriptionService: Subscription result:', {
+        planType: subscription.planType,
+        status: subscription.status,
+        tier: subscription.name
+      })
       
       // Check if subscription is active
       if (subscription.status !== 'active') {
@@ -219,6 +307,7 @@ class SubscriptionService {
       }
       
       const tier = this.getPricingTier(subscription.planType)
+      console.log('🔧 SubscriptionService: Pricing tier:', tier.name)
       
       // Check specific limits
       switch (action) {
@@ -259,6 +348,23 @@ class SubscriptionService {
               tier: tier.name
             }
           }
+          break
+          
+        case 'manageAdmins':
+          console.log('🔧 SubscriptionService: Checking manageAdmins permission...')
+          console.log('🔧 SubscriptionService: Plan type:', subscription.planType)
+          console.log('🔧 SubscriptionService: Is plan free?', subscription.planType === 'free')
+          
+          // Allow admin management for any non-free subscription
+          if (subscription.planType === 'free') {
+            console.log('❌ SubscriptionService: Admin management not allowed for free plan')
+            return { 
+              allowed: false, 
+              reason: 'Admin management requires a paid subscription', 
+              tier: tier.name
+            }
+          }
+          console.log('✅ SubscriptionService: Admin management allowed for plan:', subscription.planType)
           break
       }
       

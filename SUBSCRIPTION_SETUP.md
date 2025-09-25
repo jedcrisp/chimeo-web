@@ -15,7 +15,7 @@ The subscription system includes:
 
 | Plan | Price | Admins | Groups | Alerts/Month | Features |
 |------|-------|--------|--------|--------------|----------|
-| Free | $0 | 1 | 2 | 25 | Basic web access, Basic push notifications, Email support |
+| Free | $0 | 1 | 2 | 25 | Basic push notifications, Email support |
 | Pro | $10 | 2 | 5 | 100 | Full web access, Advanced push notifications, Priority email support, Mobile app access |
 | Premium | $25 | 10 | 25 | 500 | 10+ admins, 25 groups, 500 alerts, Premium push notifications, Priority phone & email support |
 | Enterprise | $50 | Unlimited | Unlimited | Unlimited | All features, Custom integrations |

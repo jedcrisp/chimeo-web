@@ -202,6 +202,34 @@ async function processSingleScheduledAlert(
         processedAlertId: activeAlertRef.id
       })
 
+    // Increment usage counter for subscription tracking
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7)
+      const usageId = `${organizationId}_${currentMonth}`
+      
+      const usageRef = db.collection('usage').doc(usageId)
+      const usageDoc = await usageRef.get()
+      
+      if (usageDoc.exists) {
+        await usageRef.update({
+          alerts: admin.firestore.FieldValue.increment(1),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        })
+      } else {
+        await usageRef.set({
+          userId: organizationId,
+          month: currentMonth,
+          alerts: 1,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        })
+      }
+      
+      console.log(`✅ Cloud Function: Incremented alert usage counter for organization ${organizationId}`)
+    } catch (usageError) {
+      console.warn('⚠️ Cloud Function: Could not increment usage counter:', usageError)
+    }
+
     // Send push notification
     try {
       await sendPushNotification(activeAlertData)

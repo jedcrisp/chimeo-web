@@ -1,23 +1,64 @@
 import { useState, useEffect } from 'react'
-import { X, Search, UserPlus, Trash2, Crown, Mail, User, AlertCircle, CheckCircle, Bell } from 'lucide-react'
+import { X, Search, UserPlus, Trash2, Crown, Mail, User, AlertCircle, CheckCircle, Bell, Lock } from 'lucide-react'
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import adminService from '../services/adminService'
+import subscriptionService from '../services/subscriptionService'
+import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
 export default function AdminManagementModal({ isOpen, onClose, organization }) {
+  const { currentUser } = useAuth()
   const [searchEmail, setSearchEmail] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searchLoading, setSearchLoading] = useState(false)
   const [currentAdmins, setCurrentAdmins] = useState([])
   const [loading, setLoading] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
+  const [canManageAdmins, setCanManageAdmins] = useState(false)
+  const [subscriptionCheckLoading, setSubscriptionCheckLoading] = useState(true)
 
   useEffect(() => {
     if (isOpen && organization) {
+      checkSubscriptionPermissions()
       loadCurrentAdmins()
     }
   }, [isOpen, organization])
+
+  const checkSubscriptionPermissions = async () => {
+    try {
+      setSubscriptionCheckLoading(true)
+      console.log('🔍 Checking subscription permissions for admin management...')
+      console.log('🔍 Current user:', currentUser?.uid)
+      console.log('🔍 Organization ID:', organization.id)
+      
+      if (!currentUser?.uid) {
+        console.log('❌ No current user, denying admin management')
+        setCanManageAdmins(false)
+        return
+      }
+
+      // First, let's check the organization subscription directly
+      console.log('🔍 Checking organization subscription directly...')
+      const orgSubscription = await subscriptionService.getOrganizationSubscription(organization.id)
+      console.log('🔍 Organization subscription result:', orgSubscription)
+
+      const permission = await subscriptionService.canUserPerformAction(
+        currentUser.uid, 
+        'manageAdmins', 
+        organization.id
+      )
+      
+      console.log('🔍 Admin management permission check result:', permission)
+      setCanManageAdmins(permission.allowed)
+      
+    } catch (error) {
+      console.error('❌ Error checking subscription permissions:', error)
+      setCanManageAdmins(false)
+    } finally {
+      setSubscriptionCheckLoading(false)
+    }
+  }
 
   const loadCurrentAdmins = async () => {
     try {
@@ -241,12 +282,34 @@ export default function AdminManagementModal({ isOpen, onClose, organization }) 
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          {/* Add Admin Section */}
-          <div className="mb-8">
-            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-              <UserPlus className="h-5 w-5 mr-2" />
-              Add New Admin
-            </h3>
+          {/* Subscription Check */}
+          {subscriptionCheckLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-sm text-gray-500">Checking permissions...</p>
+            </div>
+          ) : !canManageAdmins ? (
+            <div className="text-center py-8">
+              <Lock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Admin Management Not Available</h3>
+              <p className="text-gray-600 mb-4">
+                Admin management requires a Pro, Premium, or Enterprise subscription.
+              </p>
+              <button
+                onClick={() => window.open('/subscription', '_blank')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Upgrade Subscription
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Add Admin Section */}
+              <div className="mb-8">
+                <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                  <UserPlus className="h-5 w-5 mr-2" />
+                  Add New Admin
+                </h3>
             
             <form onSubmit={handleSearchSubmit} className="mb-4">
               <div className="flex space-x-2">
@@ -394,6 +457,8 @@ export default function AdminManagementModal({ isOpen, onClose, organization }) 
               </div>
             )}
           </div>
+            </>
+          )}
         </div>
 
         {/* Footer */}

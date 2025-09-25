@@ -31,6 +31,8 @@ import {
 } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import toast from 'react-hot-toast'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 
 export default function OrganizationAnalytics() {
   const { currentUser, userProfile } = useAuth()
@@ -345,29 +347,249 @@ export default function OrganizationAnalytics() {
       .map(([date, count]) => ({ date, count }))
   }
 
-  // Export analytics data
-  const exportAnalytics = () => {
+  // Export analytics data as PDF
+  const exportAnalytics = async () => {
     if (!analytics) return
 
-    const data = {
-      organization: selectedOrg?.name,
-      dateRange,
-      timeframe,
-      generatedAt: analytics.generatedAt,
-      ...analytics
+    try {
+      // Show loading toast
+      toast.loading('Generating PDF...', { id: 'pdf-export' })
+
+      // Create a new PDF document
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      
+      // Professional Header with gradient effect
+      pdf.setFillColor(59, 130, 246) // Blue background
+      pdf.rect(0, 0, pageWidth, 35, 'F')
+      
+      // White text on blue background
+      pdf.setTextColor(255, 255, 255)
+      pdf.setFontSize(24)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('CHIMEO', 20, 18)
+      
+      pdf.setFontSize(14)
+      pdf.setFont('helvetica', 'normal')
+      pdf.text('Analytics Dashboard', 20, 26)
+      
+      // Reset text color for content
+      pdf.setTextColor(0, 0, 0)
+      
+      // Report title section
+      pdf.setFontSize(18)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Organization Analytics Report', 20, 50)
+      
+      // Add a subtle line under title
+      pdf.setDrawColor(200, 200, 200)
+      pdf.line(20, 55, pageWidth - 20, 55)
+      
+      // Organization and date info in a styled box
+      pdf.setFillColor(248, 250, 252) // Light gray background
+      pdf.rect(20, 60, pageWidth - 40, 20, 'F')
+      
+      pdf.setFontSize(10)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setTextColor(100, 100, 100)
+      pdf.text(`Organization: ${selectedOrg?.name || 'Unknown'}`, 25, 70)
+      pdf.text(`Date Range: ${dateRange} | Generated: ${analytics.generatedAt.toLocaleDateString()}`, 25, 77)
+      
+      // Key Metrics section with colorful cards
+      pdf.setFontSize(16)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(0, 0, 0)
+      pdf.text('Key Performance Indicators', 20, 95)
+      
+      // Create colorful metric cards
+      const metrics = [
+        { label: 'Total Alerts', value: analytics.alerts?.total || 0, color: [239, 68, 68], subtext: `${analytics.alerts?.averagePerDay?.toFixed(1) || 0} per day` },
+        { label: 'Active Users', value: analytics.users?.active || 0, color: [59, 130, 246], subtext: `${analytics.users?.activityRate?.toFixed(1) || 0}% activity rate` },
+        { label: 'Total Groups', value: analytics.groups?.total || 0, color: [34, 197, 94], subtext: `${analytics.groups?.active || 0} active groups` },
+        { label: 'Usage', value: `${analytics.usage?.alerts || 0}/${analytics.usage?.limits?.alerts || 0}`, color: [168, 85, 247], subtext: 'alerts used this month' }
+      ]
+      
+      const cardWidth = 85
+      const cardHeight = 30
+      const startX = 20
+      const startY = 105
+      
+      metrics.forEach((metric, index) => {
+        const row = Math.floor(index / 2)
+        const col = index % 2
+        const x = startX + col * (cardWidth + 10)
+        const y = startY + row * (cardHeight + 10)
+        
+        // Card background with subtle shadow effect
+        pdf.setFillColor(255, 255, 255)
+        pdf.rect(x, y, cardWidth, cardHeight, 'F')
+        
+        // Colored accent line at top
+        pdf.setFillColor(metric.color[0], metric.color[1], metric.color[2])
+        pdf.rect(x, y, cardWidth, 4, 'F')
+        
+        // Card border
+        pdf.setDrawColor(220, 220, 220)
+        pdf.rect(x, y, cardWidth, cardHeight)
+        
+        // Metric label
+        pdf.setFontSize(9)
+        pdf.setFont('helvetica', 'bold')
+        pdf.setTextColor(100, 100, 100)
+        pdf.text(metric.label, x + 8, y + 12)
+        
+        // Metric value in brand color
+        pdf.setFontSize(18)
+        pdf.setFont('helvetica', 'bold')
+        pdf.setTextColor(metric.color[0], metric.color[1], metric.color[2])
+        pdf.text(metric.value.toString(), x + 8, y + 22)
+        
+        // Subtext
+        pdf.setFontSize(7)
+        pdf.setFont('helvetica', 'normal')
+        pdf.setTextColor(150, 150, 150)
+        pdf.text(metric.subtext, x + 8, y + 27)
+      })
+      
+      // Reset text color
+      pdf.setTextColor(0, 0, 0)
+      
+      // Two-column layout for detailed analytics - moved down to avoid overlap
+      const leftColX = 20
+      const rightColX = 110
+      const startDetailY = 190
+      
+      // Left column - Detailed metrics with colored bullets
+      pdf.setFontSize(14)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Detailed Analytics', leftColX, startDetailY)
+      
+      pdf.setFontSize(10)
+      pdf.setFont('helvetica', 'normal')
+      let yPos = startDetailY + 15
+      
+      // Add colored bullet points
+      const details = [
+        { text: `Average alerts per day: ${analytics.alerts?.averagePerDay?.toFixed(1) || 0}`, color: [239, 68, 68] },
+        { text: `User activity rate: ${analytics.users?.activityRate?.toFixed(1) || 0}%`, color: [59, 130, 246] },
+        { text: `Active groups: ${analytics.groups?.active || 0}`, color: [34, 197, 94] },
+        { text: `Group activity rate: ${analytics.groups?.activityRate?.toFixed(1) || 0}%`, color: [168, 85, 247] }
+      ]
+      
+      details.forEach((detail, index) => {
+        // Colored bullet point
+        pdf.setFillColor(detail.color[0], detail.color[1], detail.color[2])
+        pdf.circle(leftColX + 3, yPos - 2, 1.5, 'F')
+        
+        // Text
+        pdf.setTextColor(0, 0, 0)
+        pdf.text(detail.text, leftColX + 8, yPos)
+        yPos += 12
+      })
+      
+      // Right column - Alert breakdown with colored indicators
+      pdf.setFontSize(14)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Alert Distribution by Type', rightColX, startDetailY)
+      
+      pdf.setFontSize(10)
+      pdf.setFont('helvetica', 'normal')
+      yPos = startDetailY + 15
+      
+      const alertTypes = analytics.alerts?.byType || { emergency: 0, warning: 0, info: 0 }
+      const totalAlerts = analytics.alerts?.total || 0
+      const alertColors = {
+        emergency: [239, 68, 68],
+        warning: [245, 158, 11],
+        info: [59, 130, 246]
+      }
+      
+      Object.entries(alertTypes).forEach(([type, count]) => {
+        const percentage = totalAlerts > 0 ? ((count / totalAlerts) * 100).toFixed(1) : 0
+        const color = alertColors[type] || [100, 100, 100]
+        
+        // Colored indicator
+        pdf.setFillColor(color[0], color[1], color[2])
+        pdf.rect(rightColX, yPos - 4, 8, 3, 'F')
+        
+        // Type label
+        pdf.setFont('helvetica', 'bold')
+        pdf.setTextColor(0, 0, 0)
+        pdf.text(`${type.charAt(0).toUpperCase() + type.slice(1)}:`, rightColX + 12, yPos)
+        
+        // Count and percentage
+        pdf.setFont('helvetica', 'normal')
+        pdf.setTextColor(100, 100, 100)
+        pdf.text(`${count} alerts (${percentage}%)`, rightColX + 35, yPos)
+        
+        yPos += 12
+      })
+      
+      // Recent activity section with timeline - moved further down
+      pdf.setFontSize(14)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(0, 0, 0)
+      pdf.text('Recent Activity Timeline', leftColX, 250)
+      
+      pdf.setFontSize(9)
+      pdf.setFont('helvetica', 'normal')
+      yPos = 262
+      
+      if (analytics.alerts?.timeSeries && analytics.alerts.timeSeries.length > 0) {
+        const recentData = analytics.alerts.timeSeries.slice(-4) // Reduced to fit better
+        recentData.forEach((point, index) => {
+          if (yPos < 290) {
+            // Timeline dot
+            pdf.setFillColor(59, 130, 246)
+            pdf.circle(leftColX + 2, yPos - 1, 1, 'F')
+            
+            // Date and count
+            const date = new Date(point.date).toLocaleDateString()
+            pdf.setTextColor(0, 0, 0)
+            pdf.text(`${date}:`, leftColX + 6, yPos)
+            pdf.setTextColor(59, 130, 246)
+            pdf.setFont('helvetica', 'bold')
+            pdf.text(`${point.count} alerts`, leftColX + 25, yPos)
+            
+            yPos += 10
+          }
+        })
+      } else {
+        pdf.setTextColor(150, 150, 150)
+        pdf.text('No recent activity data available', leftColX, yPos)
+      }
+      
+      // Professional Footer with gradient
+      const footerY = pageHeight - 25
+      
+      // Footer background
+      pdf.setFillColor(31, 41, 55) // Dark gray
+      pdf.rect(0, footerY, pageWidth, 25, 'F')
+      
+      // Footer content
+      pdf.setTextColor(255, 255, 255)
+      pdf.setFontSize(10)
+      pdf.setFont('helvetica', 'normal')
+      pdf.text('Created with Chimeo', 20, footerY + 12)
+      
+      // Page number
+      pdf.text(`Page 1 of 1`, pageWidth - 40, footerY + 12)
+      
+      // Add Chimeo logo area
+      pdf.setFontSize(8)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('CHIMEO', pageWidth - 30, footerY + 6)
+      
+      // Save the PDF
+      const fileName = `analytics-${selectedOrg?.name?.replace(/\s+/g, '-') || 'unknown'}-${new Date().toISOString().split('T')[0]}.pdf`
+      pdf.save(fileName)
+      
+      toast.success('PDF exported successfully!', { id: 'pdf-export' })
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      toast.error('Failed to generate PDF', { id: 'pdf-export' })
     }
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `analytics-${selectedOrg?.name}-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-
-    toast.success('Analytics data exported!')
   }
 
   // Load admin organizations on mount
@@ -451,7 +673,7 @@ export default function OrganizationAnalytics() {
                 className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
               >
                 <Download className="h-4 w-4 mr-2" />
-                Export
+                Export PDF
               </button>
             </div>
           </div>

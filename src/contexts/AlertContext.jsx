@@ -195,6 +195,15 @@ export function AlertProvider({ children }) {
         postedByUserId: currentUser.uid
       }, organizationId)
 
+      // Increment usage counter for subscription tracking
+      try {
+        const subscriptionService = (await import('../services/subscriptionService')).default
+        await subscriptionService.incrementUsage(currentUser.uid, 'alerts', organizationId)
+        console.log('✅ AlertContext: Incremented alert usage counter')
+      } catch (usageError) {
+        console.warn('⚠️ AlertContext: Could not increment usage counter:', usageError.message)
+      }
+
       // Prepare notification payload for both push and email notifications
       const notificationPayload = {
         id: webAlertRef.id,
