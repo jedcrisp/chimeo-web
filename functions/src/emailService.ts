@@ -70,6 +70,9 @@ async function sendEmail(emailData: EmailData): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('❌ Failed to send email via SendGrid:', error);
+    if (error.response && error.response.body) {
+      console.error('❌ SendGrid error details:', JSON.stringify(error.response.body, null, 2));
+    }
     return false;
   }
 }
