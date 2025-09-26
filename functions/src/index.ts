@@ -14,6 +14,7 @@ export {
   sendOrganizationRequestEmail, 
   sendOrganizationApprovalEmail, 
   sendAdminAccessEmail, 
+  sendGenericEmail,
   sendTestEmail 
 } from './emailService'
 

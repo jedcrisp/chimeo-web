@@ -330,6 +330,22 @@ Chimeo Platform Team
   }
 });
 
+// Cloud Function: Send generic email
+export const sendGenericEmail = functions.https.onCall(async (data: EmailData, context) => {
+  try {
+    // Verify authentication
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    const result = await sendEmail(data);
+    return { success: result };
+  } catch (error) {
+    console.error('❌ Error in sendGenericEmail:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to send generic email');
+  }
+});
+
 // Cloud Function: Send test email
 export const sendTestEmail = functions.https.onCall(async (data, context) => {
   try {
