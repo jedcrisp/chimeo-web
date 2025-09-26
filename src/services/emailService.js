@@ -73,29 +73,47 @@ class EmailService {
         emailjs: this.emailjs ? 'Available' : 'Not available',
         publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'j28o4jy0k33AztI9C',
         serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_edoh2hs',
-        templateId: import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_9sa845v',
+        templateId: 'template_9sa845v',
         shouldUseEmailJS: this.emailjs && (import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'j28o4jy0k33AztI9C') !== 'YOUR_EMAILJS_PUBLIC_KEY'
       })
       
       if (this.emailjs && (import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'j28o4jy0k33AztI9C') !== 'YOUR_EMAILJS_PUBLIC_KEY') {
         try {
           console.log('📧 Sending email via EmailJS fallback...')
+          console.log('📧 EmailJS Service ID:', import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_edoh2hs')
+          console.log('📧 EmailJS Template ID:', import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_9sa845v')
+          console.log('📧 Environment Template ID:', import.meta.env.VITE_EMAILJS_TEMPLATE_ID)
+          console.log('📧 Fallback Template ID:', 'template_9sa845v')
           const templateParams = {
-            to_email: to,
-            from_name: 'Chimeo Platform',
-            subject: subject,
+            name: 'Platform Admin',
+            title: subject,
             message: textContent || htmlContent,
-            html_message: htmlContent
+            email: to  // This is the key parameter that matches {{email}} in the template
           }
+          console.log('📧 Template parameters:', templateParams)
+          console.log('📧 EmailJS object:', this.emailjs)
+          console.log('📧 EmailJS send method:', typeof this.emailjs.send)
+          console.log('📧 About to call EmailJS.send with:')
+          console.log('  - Service ID:', import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_edoh2hs')
+          console.log('  - Template ID:', 'template_9sa845v')
+          console.log('  - Parameters:', templateParams)
+          console.log('📧 Available EmailJS methods:', Object.keys(this.emailjs))
+          console.log('📧 EmailJS version:', this.emailjs.version)
+          // Send with clean parameters that match the template exactly
           const result = await this.emailjs.send(
             import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_edoh2hs',
-            import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_9sa845v', // Use a generic template or specific one
+            'template_9sa845v',
             templateParams
           )
           console.log('✅ Email sent successfully via EmailJS:', result)
           return true
         } catch (emailjsError) {
           console.warn('⚠️ EmailJS fallback failed, falling back to console logging:', emailjsError)
+          console.warn('⚠️ EmailJS Error Details:', {
+            status: emailjsError.status,
+            text: emailjsError.text,
+            message: emailjsError.message
+          })
         }
       }
 
