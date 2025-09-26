@@ -7,7 +7,10 @@ class EmailService {
     this.fromEmail = 'noreply@chimeo.com'
     this.platformAdminEmail = 'jed@onetrack-consulting.com'
     this.emailjs = null // EmailJS is now a fallback, not primary
-    this.useCloudService = true // Use Cloud Functions + SendGrid by default
+    this.useCloudService = false // Use EmailJS by default due to SendGrid issues
+    
+    // Initialize EmailJS immediately
+    this.initializeEmailJS()
   }
 
   // Reset cloud service to try again
