@@ -2,19 +2,10 @@
 // This service handles sending email notifications for important events
 
 import { getFunctions, httpsCallable } from 'firebase/functions'
-import { initializeApp } from 'firebase/app'
+import { getApp } from 'firebase/app'
 
-// Initialize Firebase for Cloud Functions
-const firebaseConfig = {
-  apiKey: "AIzaSyBvQvQvQvQvQvQvQvQvQvQvQvQvQvQvQvQ",
-  authDomain: "chimeo-96dfc.firebaseapp.com",
-  projectId: "chimeo-96dfc",
-  storageBucket: "chimeo-96dfc.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
-}
-
-const app = initializeApp(firebaseConfig)
+// Use existing Firebase app instead of creating a new one
+const app = getApp()
 const functions = getFunctions(app)
 
 class EmailService {
