@@ -34,7 +34,7 @@ class EmailService {
       script.onload = () => {
         console.log('✅ EmailJS loaded successfully')
         this.emailjs = window.emailjs
-        this.emailjs.init(import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'YOUR_EMAILJS_PUBLIC_KEY')
+        this.emailjs.init(import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'j28o4jy0k33AztI9C')
         console.log('✅ EmailJS service initialized successfully')
       }
       script.onerror = () => {
@@ -43,7 +43,7 @@ class EmailService {
       document.head.appendChild(script)
     } else if (window.emailjs) {
       this.emailjs = window.emailjs
-      this.emailjs.init(import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'YOUR_EMAILJS_PUBLIC_KEY')
+      this.emailjs.init(import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'j28o4jy0k33AztI9C')
       console.log('✅ EmailJS service initialized successfully')
     } else {
       console.warn('⚠️ EmailJS not available, falling back to console logging')
@@ -71,13 +71,13 @@ class EmailService {
       // Fallback to EmailJS if initialized and configured
       console.log('🔧 EmailJS Debug:', {
         emailjs: this.emailjs ? 'Available' : 'Not available',
-        publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY,
-        serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID,
-        templateId: import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-        shouldUseEmailJS: this.emailjs && (import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'YOUR_EMAILJS_PUBLIC_KEY') !== 'YOUR_EMAILJS_PUBLIC_KEY'
+        publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'j28o4jy0k33AztI9C',
+        serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_edoh2hs',
+        templateId: import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_9sa845v',
+        shouldUseEmailJS: this.emailjs && (import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'j28o4jy0k33AztI9C') !== 'YOUR_EMAILJS_PUBLIC_KEY'
       })
       
-      if (this.emailjs && (import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'YOUR_EMAILJS_PUBLIC_KEY') !== 'YOUR_EMAILJS_PUBLIC_KEY') {
+      if (this.emailjs && (import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'j28o4jy0k33AztI9C') !== 'YOUR_EMAILJS_PUBLIC_KEY') {
         try {
           console.log('📧 Sending email via EmailJS fallback...')
           const templateParams = {
@@ -88,8 +88,8 @@ class EmailService {
             html_message: htmlContent
           }
           const result = await this.emailjs.send(
-            import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_chimeo',
-            import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_org_request', // Use a generic template or specific one
+            import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_edoh2hs',
+            import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_9sa845v', // Use a generic template or specific one
             templateParams
           )
           console.log('✅ Email sent successfully via EmailJS:', result)
