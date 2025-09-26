@@ -35,9 +35,17 @@ console.log('🔧 Firebase: Initializing firestore...')
 export const db = getFirestore(app)
 console.log('✅ Firebase: Firestore initialized successfully')
 
-console.log('🔧 Firebase: Initializing functions...')
-export const functions = getFunctions(app)
-console.log('✅ Firebase: Functions initialized successfully')
+// Initialize Functions service (only if available)
+let functions = null
+try {
+  console.log('🔧 Firebase: Initializing functions...')
+  functions = getFunctions(app)
+  console.log('✅ Firebase: Functions initialized successfully')
+} catch (error) {
+  console.warn('⚠️ Firebase: Functions not available in this environment:', error.message)
+  functions = null
+}
+export { functions }
 
 // Lazy messaging initialization with refresh handling
 let messaging = null

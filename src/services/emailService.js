@@ -14,6 +14,12 @@ class EmailService {
 
   // Send email using Cloud Functions + SendGrid
   async sendEmail(to, subject, textContent, htmlContent) {
+    // Check if Functions service is available
+    if (!functions) {
+      console.warn('⚠️ Firebase Functions not available, using console fallback')
+      return this.fallbackToConsole(to, subject, textContent, htmlContent)
+    }
+
     try {
       console.log('📧 Sending email via Cloud Functions + SendGrid...')
       console.log('📧 To:', to)
@@ -35,27 +41,29 @@ class EmailService {
         return true
       } else {
         console.error('❌ Email sending failed:', result.data.error)
-        return false
+        return this.fallbackToConsole(to, subject, textContent, htmlContent)
       }
     } catch (error) {
       console.error('❌ Cloud Function error:', error)
-      console.log('📧 Falling back to console logging...')
-      
-      // Fallback to console logging
-      console.log('📧 ===== EMAIL NOTIFICATION (CONSOLE FALLBACK) =====')
-      console.log('📧 To:', to)
-      console.log('📧 Subject:', subject)
-      console.log('📧 From:', this.fromEmail)
-      console.log('📧 =================================================')
-      console.log('📧 Text Content:')
-      console.log(textContent)
-      console.log('📧 HTML Content:')
-      console.log(htmlContent)
-      console.log('📧 =================================================')
-      console.log('✅ Email logged successfully (manual sending required)')
-      
-      return true // Return true for fallback
+      return this.fallbackToConsole(to, subject, textContent, htmlContent)
     }
+  }
+
+  // Fallback to console logging when Functions are not available
+  fallbackToConsole(to, subject, textContent, htmlContent) {
+    console.log('📧 ===== EMAIL NOTIFICATION (CONSOLE FALLBACK) =====')
+    console.log('📧 To:', to)
+    console.log('📧 Subject:', subject)
+    console.log('📧 From:', this.fromEmail)
+    console.log('📧 =================================================')
+    console.log('📧 Text Content:')
+    console.log(textContent)
+    console.log('📧 HTML Content:')
+    console.log(htmlContent)
+    console.log('📧 =================================================')
+    console.log('✅ Email logged successfully (manual sending required)')
+    
+    return true // Return true for fallback
   }
 
   // Send organization request email
