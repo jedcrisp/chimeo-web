@@ -3,7 +3,8 @@ import { AuthContext } from '../contexts/AuthContext'
 import { Bell } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, setDoc } from 'firebase/firestore'
-import { db } from '../services/firebase'
+import { db, auth } from '../services/firebase'
+import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword } from 'firebase/auth'
 import notificationService from '../services/notificationService'
 import emailService from '../services/emailService'
 import { Building, CheckCircle, X } from 'lucide-react'
@@ -153,6 +154,94 @@ export default function Login() {
       const docRef = doc(db, 'organizationRequests', sanitizedOrgName)
       await setDoc(docRef, requestData)
       console.log('✅ Organization request submitted with ID:', sanitizedOrgName)
+      
+      // Create user account immediately for standard access
+      console.log('🔧 Creating user account for immediate access...')
+      let newUser = null
+      try {
+        // Check if user already exists
+        try {
+          await signInWithEmailAndPassword(auth, requestForm.adminEmail, 'dummy-password')
+          throw new Error('An account with this email already exists. Please use a different email address.')
+        } catch (signInError) {
+          if (signInError.code === 'auth/wrong-password') {
+            throw new Error('An account with this email already exists. Please use a different email address.')
+          } else if (signInError.code === 'auth/user-not-found') {
+            console.log('✅ Email is available for registration')
+          } else {
+            console.log('🔧 Email check completed, proceeding with registration')
+          }
+        }
+        
+        // Create the user account
+        const userCredential = await createUserWithEmailAndPassword(
+          auth, 
+          requestForm.adminEmail, 
+          requestForm.adminPassword
+        )
+        newUser = userCredential.user
+        
+        // Update the user's display name
+        const fullName = `${requestForm.adminFirstName} ${requestForm.adminLastName}`.trim()
+        await updateProfile(newUser, {
+          displayName: fullName
+        })
+        
+        console.log('✅ User account created successfully:', newUser.uid)
+        
+        // Create user profile in Firestore with standard access
+        const userProfileData = {
+          uid: newUser.uid,
+          email: requestForm.adminEmail,
+          displayName: fullName,
+          firstName: requestForm.adminFirstName,
+          lastName: requestForm.adminLastName,
+          name: fullName,
+          creatorName: fullName,
+          isOrganizationAdmin: false, // Will be true after approval
+          organizationName: requestForm.organizationName,
+          organizationId: sanitizedOrgName,
+          organizationType: requestForm.organizationType,
+          phone: requestForm.phone,
+          address: requestForm.address,
+          city: requestForm.city,
+          state: requestForm.state,
+          zipCode: requestForm.zipCode,
+          website: requestForm.website,
+          description: requestForm.description,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          // Access level - standard until approved
+          accessLevel: 'standard',
+          subscriptionStatus: 'none',
+          adminStatus: 'pending_approval',
+          adminRole: 'pending_organization_admin',
+          adminPermissions: ['view_basic'], // Limited permissions until approved
+          // Request tracking
+          createdFromRequest: sanitizedOrgName,
+          requestStatus: 'pending_approval'
+        }
+        
+        await setDoc(doc(db, 'users', newUser.uid), userProfileData)
+        console.log('✅ User profile created with standard access')
+        
+        // Update the organization request with the user ID
+        await setDoc(docRef, {
+          ...requestData,
+          userId: newUser.uid,
+          userEmail: newUser.email,
+          userCreated: true,
+          userAccessLevel: 'standard'
+        }, { merge: true })
+        
+        console.log('✅ Organization request updated with user information')
+        
+      } catch (userCreationError) {
+        console.error('❌ Failed to create user account:', userCreationError)
+        // Don't fail the request if user creation fails, but log it
+        toast.error(`User account creation failed: ${userCreationError.message}`)
+      }
+      
       console.log('🔧 About to send notifications...')
       
       // Send notification to platform admin
@@ -203,7 +292,11 @@ export default function Login() {
         // Don't fail the request if email fails
       }
       
-      toast.success('Organization request submitted successfully! We will review your request and contact you soon.')
+      if (newUser) {
+        toast.success('Organization request submitted and user account created! You now have standard access. We will review your request for premium features.')
+      } else {
+        toast.success('Organization request submitted successfully! We will review your request and contact you soon.')
+      }
       setShowRequestForm(false)
       
       // Refresh user requests to show the new request

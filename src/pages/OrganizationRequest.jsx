@@ -474,12 +474,9 @@ export default function OrganizationRequest() {
       console.log('🔧 Original org name:', request.organizationName)
       console.log('🔧 Sanitized org name:', sanitizedOrgName)
       
-      console.log('🔧 Creating admin user account for:', request.adminEmail)
+      console.log('🔧 Processing admin user account for:', request.adminEmail)
       console.log('🔧 Password length:', request.adminPassword?.length)
       console.log('🔧 Current auth user:', auth.currentUser?.email)
-      console.log('🔧 Auth object:', auth)
-      console.log('🔧 Auth config:', auth.config)
-      console.log('🔧 Auth app:', auth.app)
       
       // Validate required fields
       if (!request.adminEmail || !request.adminPassword) {
@@ -490,90 +487,92 @@ export default function OrganizationRequest() {
         throw new Error('Password must be at least 6 characters')
       }
       
-      // Check if email already exists by trying to create the user
-      console.log('🔧 Attempting to create Firebase Auth user...')
-      console.log('🔧 Auth domain:', auth.config.authDomain)
-      console.log('🔧 Auth API key:', auth.config.apiKey)
-      console.log('🔧 Auth app name:', auth.app.name)
-      
       // Test if auth is properly configured
       if (!auth.config.apiKey) {
         throw new Error('Firebase Auth is not properly configured - missing API key')
       }
       
-      // Check if email already exists by attempting to sign in first
-      console.log('🔧 Checking if email already exists:', request.adminEmail)
-      try {
-        const { signInWithEmailAndPassword } = await import('firebase/auth')
-        await signInWithEmailAndPassword(auth, request.adminEmail, 'dummy-password')
-        // If we get here, the email exists but password is wrong
-        throw new Error('An account with this email already exists. Please use a different email address.')
-      } catch (signInError) {
-        if (signInError.code === 'auth/user-not-found') {
-          console.log('✅ Email is available for registration')
-        } else if (signInError.code === 'auth/wrong-password') {
+      // Check if user already exists in Firestore
+      console.log('🔧 Checking if user already exists in Firestore...')
+      const userDocRef = doc(db, 'users', request.userId || 'temp')
+      const userDoc = await getDoc(userDocRef)
+      
+      let newUser
+      let isExistingUser = false
+      
+      if (userDoc.exists() && request.userId) {
+        console.log('✅ User already exists in Firestore, updating profile...')
+        isExistingUser = true
+        // For existing users, we'll update their profile instead of creating a new one
+        newUser = { uid: request.userId, email: request.adminEmail }
+      } else {
+        // Check if email already exists by attempting to sign in first
+        console.log('🔧 Checking if email already exists in Auth:', request.adminEmail)
+        try {
+          const { signInWithEmailAndPassword } = await import('firebase/auth')
+          await signInWithEmailAndPassword(auth, request.adminEmail, 'dummy-password')
+          // If we get here, the email exists but password is wrong
           throw new Error('An account with this email already exists. Please use a different email address.')
-        } else if (signInError.code === 'auth/invalid-email') {
-          throw new Error('Invalid email address format.')
-        } else {
-          console.log('🔧 Email check completed, proceeding with registration')
+        } catch (signInError) {
+          if (signInError.code === 'auth/user-not-found') {
+            console.log('✅ Email is available for registration')
+          } else if (signInError.code === 'auth/wrong-password') {
+            throw new Error('An account with this email already exists. Please use a different email address.')
+          } else if (signInError.code === 'auth/invalid-email') {
+            throw new Error('Invalid email address format.')
+          } else {
+            console.log('🔧 Email check completed, proceeding with registration')
+          }
         }
-      }
-      
-      // Check if user already exists by trying to create
-      console.log('🔧 Attempting to create user with email:', request.adminEmail)
-      console.log('🔧 Firebase Auth config check:', {
-        apiKey: auth.config?.apiKey ? 'Present' : 'Missing',
-        authDomain: auth.config?.authDomain,
-        projectId: auth.config?.projectId
-      })
-      
-      let userCredential
-      try {
-        userCredential = await createUserWithEmailAndPassword(
-          auth, 
-          request.adminEmail, 
-          request.adminPassword
-        )
-      } catch (authError) {
-        console.error('❌ Firebase Auth Error Details:', {
-          code: authError.code,
-          message: authError.message,
-          email: request.adminEmail,
-          authConfig: auth.config
+        
+        // Create new user account
+        console.log('🔧 Creating new Firebase Auth user...')
+        try {
+          const userCredential = await createUserWithEmailAndPassword(
+            auth, 
+            request.adminEmail, 
+            request.adminPassword
+          )
+          newUser = userCredential.user
+          console.log('✅ Firebase Auth user created successfully:', newUser.uid)
+        } catch (authError) {
+          console.error('❌ Firebase Auth Error Details:', {
+            code: authError.code,
+            message: authError.message,
+            email: request.adminEmail
+          })
+          
+          if (authError.code === 'auth/email-already-in-use') {
+            throw new Error('An account with this email already exists. Please use a different email address.')
+          } else if (authError.code === 'auth/invalid-email') {
+            throw new Error('Invalid email address format.')
+          } else if (authError.code === 'auth/weak-password') {
+            throw new Error('Password is too weak. Please choose a stronger password.')
+          } else if (authError.code === 'auth/operation-not-allowed') {
+            throw new Error('Email/password accounts are not enabled. Please contact support.')
+          } else if (authError.code === 'auth/network-request-failed') {
+            throw new Error('Network error. Please check your internet connection and try again.')
+          } else {
+            throw new Error(`Authentication failed: ${authError.message} (Code: ${authError.code})`)
+          }
+        }
+        
+        // Update the user's display name for new users
+        const fullName = `${request.adminFirstName} ${request.adminLastName}`.trim()
+        console.log('🔧 Setting display name to:', fullName)
+        
+        await updateProfile(newUser, {
+          displayName: fullName
         })
         
-        // Provide more specific error messages
-        if (authError.code === 'auth/email-already-in-use') {
-          throw new Error('An account with this email already exists. Please use a different email address.')
-        } else if (authError.code === 'auth/invalid-email') {
-          throw new Error('Invalid email address format.')
-        } else if (authError.code === 'auth/weak-password') {
-          throw new Error('Password is too weak. Please choose a stronger password.')
-        } else if (authError.code === 'auth/operation-not-allowed') {
-          throw new Error('Email/password accounts are not enabled. Please contact support.')
-        } else if (authError.code === 'auth/network-request-failed') {
-          throw new Error('Network error. Please check your internet connection and try again.')
-        } else {
-          throw new Error(`Authentication failed: ${authError.message} (Code: ${authError.code})`)
-        }
+        console.log('✅ Display name updated successfully')
       }
       
-      const newUser = userCredential.user
-      console.log('✅ Firebase Auth user created successfully:', newUser.uid)
-      console.log('✅ User email:', newUser.email)
+      // Calculate 30-day trial end date
+      const trialEndDate = new Date()
+      trialEndDate.setDate(trialEndDate.getDate() + 30)
       
-      // Update the user's display name
-      const fullName = `${request.adminFirstName} ${request.adminLastName}`.trim()
-      console.log('🔧 Setting display name to:', fullName)
-      
-      await updateProfile(newUser, {
-        displayName: fullName
-      })
-      
-      console.log('✅ Display name updated successfully')
-      
-      // Create user profile in Firestore
+      // Prepare user profile data with 30-day premium trial
       const userProfileData = {
         uid: newUser.uid,
         email: request.adminEmail,
@@ -593,20 +592,34 @@ export default function OrganizationRequest() {
         zipCode: request.zipCode,
         website: request.website,
         description: request.description,
-        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         // Admin-specific fields
         adminStatus: 'active',
         adminRole: 'organization_admin',
         adminPermissions: ['manage_organization', 'manage_users', 'manage_alerts', 'manage_calendar'],
+        // Premium trial fields
+        accessLevel: 'premium',
+        subscriptionStatus: 'trial',
+        subscriptionType: 'premium_trial',
+        trialStartDate: serverTimestamp(),
+        trialEndDate: trialEndDate,
+        trialDaysRemaining: 30,
         // Request tracking
         createdFromRequest: request.id,
         approvedBy: currentUser.uid,
         approvedAt: serverTimestamp()
       }
       
-      await setDoc(doc(db, 'users', newUser.uid), userProfileData)
-      console.log('✅ User profile created in Firestore')
+      if (isExistingUser) {
+        // Update existing user profile
+        await updateDoc(doc(db, 'users', newUser.uid), userProfileData)
+        console.log('✅ User profile updated with premium trial access')
+      } else {
+        // Create new user profile
+        userProfileData.createdAt = serverTimestamp()
+        await setDoc(doc(db, 'users', newUser.uid), userProfileData)
+        console.log('✅ User profile created with premium trial access')
+      }
       
       // Get coordinates from address using geocoding
       console.log('🌍 Getting coordinates for organization address...')
