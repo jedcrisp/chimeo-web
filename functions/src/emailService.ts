@@ -333,11 +333,9 @@ Chimeo Platform Team
 // Cloud Function: Send generic email
 export const sendGenericEmail = functions.https.onCall(async (data: EmailData, context) => {
   try {
-    // Verify authentication
-    if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
-    }
-
+    // Note: Authentication is optional for email sending to allow unauthenticated requests
+    // This is needed for organization requests and other public-facing email notifications
+    
     const result = await sendEmail(data);
     return { success: result };
   } catch (error) {
@@ -349,10 +347,7 @@ export const sendGenericEmail = functions.https.onCall(async (data: EmailData, c
 // Cloud Function: Send test email
 export const sendTestEmail = functions.https.onCall(async (data, context) => {
   try {
-    // Verify authentication
-    if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
-    }
+    // Note: Authentication is optional for test emails to allow easy testing
 
     const subject = 'Test Email from Chimeo Platform';
     const htmlContent = `
