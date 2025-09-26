@@ -118,6 +118,223 @@ class EmailService {
     }
   }
 
+  // Send organization request email
+  async sendOrganizationRequestEmail(requestData) {
+    console.log('📧 Sending organization request email...')
+    
+    const subject = `New Organization Request - ${requestData.organizationName}`
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">New Organization Request</h2>
+        <p>Hello Platform Admin,</p>
+        <p>A new organization request has been submitted:</p>
+        
+        <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #555;">Organization Details</h3>
+          <p><strong>Name:</strong> ${requestData.organizationName}</p>
+          <p><strong>Type:</strong> ${requestData.organizationType}</p>
+          <p><strong>Admin:</strong> ${requestData.adminFirstName} ${requestData.adminLastName}</p>
+          <p><strong>Admin Email:</strong> ${requestData.adminEmail}</p>
+          <p><strong>Address:</strong> ${requestData.address}, ${requestData.city}, ${requestData.state} ${requestData.zipCode}</p>
+          <p><strong>Phone:</strong> ${requestData.phone}</p>
+          <p><strong>Website:</strong> ${requestData.website}</p>
+          <p><strong>Description:</strong> ${requestData.description}</p>
+        </div>
+        
+        <p><strong>Request Date:</strong> ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+        
+        <p>Please review and approve/reject this request in the admin panel.</p>
+        
+        <p>Best regards,<br>Chimeo Web App</p>
+      </div>
+    `
+
+    const textContent = `
+New Organization Request
+
+Organization: ${requestData.organizationName}
+Type: ${requestData.organizationType}
+Admin: ${requestData.adminFirstName} ${requestData.adminLastName} (${requestData.adminEmail})
+Address: ${requestData.address}, ${requestData.city}, ${requestData.state} ${requestData.zipCode}
+Phone: ${requestData.phone}
+Website: ${requestData.website}
+Description: ${requestData.description}
+
+Request Date: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
+
+Please review and approve/reject this request in the admin panel.
+
+Best regards,
+Chimeo Web App
+    `
+
+    const result = await this.sendEmail(this.platformAdminEmail, subject, htmlContent, textContent)
+    console.log('📧 Organization request email result:', result)
+    return result
+  }
+
+  // Send organization approval email
+  async sendOrganizationApprovalEmail(organizationData, adminEmail) {
+    console.log('📧 Sending organization approval email...')
+    
+    const subject = `Organization Request Approved - ${organizationData.name}`
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #28a745;">Organization Request Approved</h2>
+        <p>Hello ${organizationData.adminName},</p>
+        <p>Great news! Your organization request for <strong>"${organizationData.name}"</strong> has been approved.</p>
+        
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745;">
+          <h3 style="margin-top: 0; color: #555;">Organization Details</h3>
+          <p><strong>Name:</strong> ${organizationData.name}</p>
+          <p><strong>Type:</strong> ${organizationData.type}</p>
+          <p><strong>Address:</strong> ${organizationData.address}, ${organizationData.city}, ${organizationData.state} ${organizationData.zipCode}</p>
+          <p><strong>Phone:</strong> ${organizationData.phone}</p>
+          <p><strong>Website:</strong> ${organizationData.website}</p>
+          <p><strong>Description:</strong> ${organizationData.description}</p>
+        </div>
+        
+        <div style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #1976d2;">Next Steps</h3>
+          <p>You can now log in to the platform using your registered credentials.</p>
+          <p><a href="https://chimeo-web.vercel.app/login" style="background-color: #1976d2; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Login to Platform</a></p>
+        </div>
+        
+        <p><strong>Approval Date:</strong> ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+        
+        <p>Welcome to Chimeo!</p>
+        <p>Best regards,<br>Chimeo Platform Team</p>
+      </div>
+    `
+
+    const textContent = `
+Organization Request Approved
+
+Hello ${organizationData.adminName},
+
+Great news! Your organization request for "${organizationData.name}" has been approved.
+
+Organization Details:
+- Name: ${organizationData.name}
+- Type: ${organizationData.type}
+- Address: ${organizationData.address}, ${organizationData.city}, ${organizationData.state} ${organizationData.zipCode}
+- Phone: ${organizationData.phone}
+- Website: ${organizationData.website}
+- Description: ${organizationData.description}
+
+Next Steps:
+You can now log in to the platform using your registered credentials.
+
+Login URL: https://chimeo-web.vercel.app/login
+
+Approval Date: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
+
+Welcome to Chimeo!
+
+Best regards,
+Chimeo Platform Team
+    `
+
+    const result = await this.sendEmail(adminEmail, subject, htmlContent, textContent)
+    console.log('📧 Organization approval email result:', result)
+    return result
+  }
+
+  // Send admin access email
+  async sendAdminAccessEmail(adminData) {
+    console.log('📧 Sending admin access email...')
+    
+    const subject = `Admin Access Granted - ${adminData.organizationName}`
+    const roleDisplay = adminData.adminType === 'organization_admin' ? 'Organization Admin' : 'Admin'
+    
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; color: white;">
+          <h1 style="margin: 0; font-size: 28px;">Admin Access Granted</h1>
+          <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Welcome to the ${adminData.organizationName} team!</p>
+        </div>
+        
+        <div style="padding: 30px; background: #f8f9fa;">
+          <h2 style="color: #333; margin-top: 0;">Hello ${adminData.adminName},</h2>
+          
+          <p style="color: #555; line-height: 1.6; font-size: 16px;">
+            Great news! You have been granted <strong>${roleDisplay}</strong> access to <strong>${adminData.organizationName}</strong>.
+          </p>
+          
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
+            <h3 style="color: #333; margin-top: 0;">Your Admin Access Details:</h3>
+            <ul style="color: #555; line-height: 1.8;">
+              <li><strong>Organization:</strong> ${adminData.organizationName}</li>
+              <li><strong>Role:</strong> ${roleDisplay}</li>
+              <li><strong>Access Level:</strong> ${adminData.adminType === 'organization_admin' ? 'Full administrative privileges' : 'Standard admin privileges'}</li>
+              <li><strong>Granted On:</strong> ${new Date().toLocaleDateString()}</li>
+            </ul>
+          </div>
+          
+          <div style="background: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #1976d2; margin-top: 0;">What You Can Do Now:</h3>
+            <ul style="color: #555; line-height: 1.8;">
+              <li>Access the organization management dashboard</li>
+              <li>Create and manage alerts for your organization</li>
+              <li>View organization analytics and reports</li>
+              ${adminData.adminType === 'organization_admin' ? '<li>Manage other administrators and their roles</li>' : ''}
+              <li>Receive important organization notifications</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://chimeo-web.vercel.app/login" 
+               style="background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+              Access Your Admin Dashboard
+            </a>
+          </div>
+          
+          <p style="color: #666; font-size: 14px; line-height: 1.6;">
+            If you have any questions about your new admin access or need assistance getting started, 
+            please don't hesitate to contact the platform administrator.
+          </p>
+        </div>
+        
+        <div style="background: #f1f3f4; padding: 20px; text-align: center; color: #666; font-size: 14px;">
+          <p style="margin: 0;">This email was sent by the Chimeo Platform</p>
+          <p style="margin: 5px 0 0 0;">Organization ID: ${adminData.organizationId}</p>
+        </div>
+      </div>
+    `
+    
+    const textContent = `
+Admin Access Granted - ${adminData.organizationName}
+
+Hello ${adminData.adminName},
+
+Great news! You have been granted ${roleDisplay} access to ${adminData.organizationName}.
+
+Your Admin Access Details:
+- Organization: ${adminData.organizationName}
+- Role: ${roleDisplay}
+- Access Level: ${adminData.adminType === 'organization_admin' ? 'Full administrative privileges' : 'Standard admin privileges'}
+- Granted On: ${new Date().toLocaleDateString()}
+
+What You Can Do Now:
+- Access the organization management dashboard
+- Create and manage alerts for your organization
+- View organization analytics and reports
+${adminData.adminType === 'organization_admin' ? '- Manage other administrators and their roles' : ''}
+- Receive important organization notifications
+
+Access your admin dashboard at: https://chimeo-web.vercel.app/login
+
+If you have any questions about your new admin access, please contact the platform administrator.
+
+Best regards,
+Chimeo Platform Team
+    `
+    
+    const result = await this.sendEmail(adminData.adminEmail, subject, htmlContent, textContent)
+    console.log('📧 Admin access email result:', result)
+    return result
+  }
+
   // Send test email
   async sendTestEmail() {
     console.log('🧪 Starting test email send...')
