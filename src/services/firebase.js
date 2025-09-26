@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getMessaging } from 'firebase/messaging'
+import { getFunctions } from 'firebase/functions'
 
 // Firebase config from Firebase Console web app
 const firebaseConfig = {
@@ -33,6 +34,10 @@ console.log('🔧 Firebase: Auth app:', auth.app)
 console.log('🔧 Firebase: Initializing firestore...')
 export const db = getFirestore(app)
 console.log('✅ Firebase: Firestore initialized successfully')
+
+console.log('🔧 Firebase: Initializing functions...')
+export const functions = getFunctions(app)
+console.log('✅ Firebase: Functions initialized successfully')
 
 // Lazy messaging initialization with refresh handling
 let messaging = null

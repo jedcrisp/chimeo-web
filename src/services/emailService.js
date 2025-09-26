@@ -1,12 +1,8 @@
 // Email notification service using Cloud Functions + SendGrid
 // This service handles sending email notifications for important events
 
-import { getFunctions, httpsCallable } from 'firebase/functions'
-import { getApp } from 'firebase/app'
-
-// Use existing Firebase app instead of creating a new one
-const app = getApp()
-const functions = getFunctions(app)
+import { httpsCallable } from 'firebase/functions'
+import { functions } from './firebase'
 
 class EmailService {
   constructor() {
