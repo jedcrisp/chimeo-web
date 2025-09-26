@@ -5,38 +5,46 @@ import specialAccessService from './specialAccessService'
 class SubscriptionService {
   constructor() {
     this.pricingTiers = {
-      free: {
-        name: 'Free',
-        price: 0,
-        maxAdmins: 1,
-        maxGroups: 2,
-        maxAlertsPerMonth: 25,
-        features: ['Basic push notifications', 'Email support']
-      },
-      pro: {
-        name: 'Pro',
-        price: 10,
-        maxAdmins: 2,
-        maxGroups: 5,
-        maxAlertsPerMonth: 100,
-        features: ['Full web browser access', 'Advanced push notifications', 'Priority email support', 'Mobile app access']
-      },
-      premium: {
-        name: 'Premium',
-        price: 25,
-        maxAdmins: 10,
-        maxGroups: 25,
-        maxAlertsPerMonth: 500,
-        features: ['10+ organization admins', '25 groups', '500 alerts per month', 'Full web browser access', 'Premium push notifications', 'Priority phone & email support']
-      },
-      enterprise: {
-        name: 'Enterprise',
-        price: 50,
-        maxAdmins: 25,
-        maxGroups: 75,
-        maxAlertsPerMonth: 999999,
-        features: ['25 organization admins', '75 groups', 'Unlimited alerts', 'Full web browser access', 'Premium push notifications', 'Priority phone & email support', 'Custom integrations']
-      }
+        free: {
+          name: 'Free',
+          price: 0,
+          maxAdmins: 1,
+          maxRegularAdmins: 0,
+          maxGroups: 2,
+          maxSubGroups: 0,
+          maxAlertsPerMonth: 25,
+          features: ['1 organization admin', '2 groups', '25 alerts per month', 'Basic push notifications', 'Email support']
+        },
+        pro: {
+          name: 'Pro',
+          price: 10,
+          maxAdmins: 2,
+          maxRegularAdmins: 0,
+          maxGroups: 5,
+          maxSubGroups: 0,
+          maxAlertsPerMonth: 100,
+          features: ['2 organization admins', '5 groups', '100 alerts per month', 'Full web browser access', 'Advanced push notifications', 'Priority email support', 'Mobile app access']
+        },
+        premium: {
+          name: 'Premium',
+          price: 25,
+          maxAdmins: 3,
+          maxRegularAdmins: 10,
+          maxGroups: 25,
+          maxSubGroups: 1,
+          maxAlertsPerMonth: 500,
+          features: ['3 organization admins', '10 regular admins', '25 groups', '1 sub-group per group', '500 alerts per month', 'Full web browser access', 'Premium push notifications', 'Priority phone & email support']
+        },
+        enterprise: {
+          name: 'Enterprise',
+          price: 50,
+          maxAdmins: 'custom',
+          maxRegularAdmins: 'custom',
+          maxGroups: 'custom',
+          maxSubGroups: 'custom',
+          maxAlertsPerMonth: 999999,
+          features: ['Custom organization admins', 'Custom regular admins', 'Custom groups', 'Custom sub-groups', 'Unlimited alerts', 'Full web browser access', 'Premium push notifications', 'Priority phone & email support', 'Custom integrations']
+        }
     }
   }
 
@@ -52,21 +60,30 @@ class SubscriptionService {
 
   // Create or update user subscription
   async createOrUpdateSubscription(userId, subscriptionData) {
-    try {
-      console.log('🔧 SubscriptionService: Creating/updating subscription for user:', userId)
-      
-      const subscription = {
-        userId,
-        stripeCustomerId: subscriptionData.customerId,
-        stripeSubscriptionId: subscriptionData.subscriptionId,
-        planType: subscriptionData.planType || 'free',
-        status: subscriptionData.status || 'active',
-        currentPeriodStart: subscriptionData.currentPeriodStart,
-        currentPeriodEnd: subscriptionData.currentPeriodEnd,
-        cancelAtPeriodEnd: subscriptionData.cancelAtPeriodEnd || false,
-        createdAt: subscriptionData.createdAt || serverTimestamp(),
-        updatedAt: serverTimestamp()
-      }
+      try {
+        console.log('🔧 SubscriptionService: Creating/updating subscription for user:', userId)
+        
+        const planType = subscriptionData.planType || 'free'
+        const tier = this.pricingTiers[planType] || this.pricingTiers.free
+        
+        const subscription = {
+          userId,
+          stripeCustomerId: subscriptionData.customerId,
+          stripeSubscriptionId: subscriptionData.subscriptionId,
+          planType,
+          status: subscriptionData.status || 'active',
+          currentPeriodStart: subscriptionData.currentPeriodStart,
+          currentPeriodEnd: subscriptionData.currentPeriodEnd,
+          cancelAtPeriodEnd: subscriptionData.cancelAtPeriodEnd || false,
+          // Include subscription limits
+          maxAdmins: tier.maxAdmins,
+          maxRegularAdmins: tier.maxRegularAdmins || 0,
+          maxGroups: tier.maxGroups,
+          maxSubGroups: tier.maxSubGroups || 0,
+          maxAlertsPerMonth: tier.maxAlertsPerMonth,
+          createdAt: subscriptionData.createdAt || serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }
 
       // Store in user subcollection
       const subscriptionRef = doc(db, 'users', userId, 'subscriptions', subscriptionData.subscriptionId || 'current')
@@ -157,24 +174,82 @@ class SubscriptionService {
         // Check if organization has a direct planType field (newer approach)
         if (orgData.planType && orgData.planType !== 'free') {
           console.log('✅ SubscriptionService: Found organization planType:', orgData.planType)
+          
+          // First check if there's a subscription subcollection with custom limits
+          const subscriptionId = orgData.subscriptionId
+          if (subscriptionId) {
+            const orgSubscriptionDoc = await getDoc(doc(db, 'organizations', organizationId, 'subscriptions', subscriptionId))
+            if (orgSubscriptionDoc.exists()) {
+              const subscription = orgSubscriptionDoc.data()
+              console.log('✅ SubscriptionService: Found organization subscription subcollection with custom limits:', subscription.planType)
+              
+              const tier = this.pricingTiers[subscription.planType] || this.pricingTiers.free
+              const limits = {
+                admins: subscription.maxAdmins !== undefined ? subscription.maxAdmins : (tier.maxAdmins === 'custom' ? 'custom' : tier.maxAdmins),
+                regularAdmins: subscription.maxRegularAdmins !== undefined ? subscription.maxRegularAdmins : (tier.maxRegularAdmins === 'custom' ? 'custom' : (tier.maxRegularAdmins || 0)),
+                groups: subscription.maxGroups !== undefined ? subscription.maxGroups : (tier.maxGroups === 'custom' ? 'custom' : tier.maxGroups),
+                subGroups: subscription.maxSubGroups !== undefined ? subscription.maxSubGroups : (tier.maxSubGroups === 'custom' ? 'custom' : (tier.maxSubGroups || 0)),
+                alerts: subscription.maxAlertsPerMonth !== undefined ? subscription.maxAlertsPerMonth : tier.maxAlertsPerMonth
+              }
+              
+              return {
+                organizationId,
+                planType: subscription.planType,
+                status: subscription.status || 'active',
+                ...tier,
+                limits
+              }
+            }
+          }
+          
+          // Fallback to organization document limits or tier defaults
           const tier = this.pricingTiers[orgData.planType] || this.pricingTiers.free
+          const limits = {
+            admins: orgData.maxAdmins !== undefined ? orgData.maxAdmins : (tier.maxAdmins === 'custom' ? 'custom' : tier.maxAdmins),
+            regularAdmins: orgData.maxRegularAdmins !== undefined ? orgData.maxRegularAdmins : (tier.maxRegularAdmins === 'custom' ? 'custom' : (tier.maxRegularAdmins || 0)),
+            groups: orgData.maxGroups !== undefined ? orgData.maxGroups : (tier.maxGroups === 'custom' ? 'custom' : tier.maxGroups),
+            subGroups: orgData.maxSubGroups !== undefined ? orgData.maxSubGroups : (tier.maxSubGroups === 'custom' ? 'custom' : (tier.maxSubGroups || 0)),
+            alerts: orgData.maxAlertsPerMonth !== undefined ? orgData.maxAlertsPerMonth : tier.maxAlertsPerMonth
+          }
+          
           return {
             organizationId,
             planType: orgData.planType,
             status: 'active',
             ...tier,
-            limits: {
-              admins: tier.maxAdmins,
-              groups: tier.maxGroups,
-              alerts: tier.maxAlertsPerMonth
-            }
+            limits
           }
         }
         
         // Check if organization has a subscriptionId that points to a subscription document
         const subscriptionId = orgData.subscriptionId
         if (subscriptionId) {
-          // First try to get from subscriptions collection
+          // First try to get from organization's subscription subcollection
+          const orgSubscriptionDoc = await getDoc(doc(db, 'organizations', organizationId, 'subscriptions', subscriptionId))
+          if (orgSubscriptionDoc.exists()) {
+            const subscription = orgSubscriptionDoc.data()
+            console.log('✅ SubscriptionService: Found organization subscription subcollection:', subscription.planType)
+            
+            // Use stored limits if they exist, otherwise use tier defaults
+            const tier = this.pricingTiers[subscription.planType] || this.pricingTiers.free
+            const limits = {
+              admins: subscription.maxAdmins !== undefined ? subscription.maxAdmins : (tier.maxAdmins === 'custom' ? 'custom' : tier.maxAdmins),
+              regularAdmins: subscription.maxRegularAdmins !== undefined ? subscription.maxRegularAdmins : (tier.maxRegularAdmins === 'custom' ? 'custom' : (tier.maxRegularAdmins || 0)),
+              groups: subscription.maxGroups !== undefined ? subscription.maxGroups : (tier.maxGroups === 'custom' ? 'custom' : tier.maxGroups),
+              subGroups: subscription.maxSubGroups !== undefined ? subscription.maxSubGroups : (tier.maxSubGroups === 'custom' ? 'custom' : (tier.maxSubGroups || 0)),
+              alerts: subscription.maxAlertsPerMonth !== undefined ? subscription.maxAlertsPerMonth : tier.maxAlertsPerMonth
+            }
+            
+            return {
+              organizationId,
+              planType: subscription.planType,
+              status: subscription.status || 'active',
+              ...tier,
+              limits
+            }
+          }
+          
+          // Then try to get from subscriptions collection
           const subscriptionDoc = await getDoc(doc(db, 'subscriptions', subscriptionId))
           if (subscriptionDoc.exists()) {
             const subscription = subscriptionDoc.data()
@@ -200,8 +275,10 @@ class SubscriptionService {
                 status: subscription.status || 'active',
                 ...tier,
                 limits: {
-                  admins: tier.maxAdmins,
-                  groups: tier.maxGroups,
+                  admins: tier.maxAdmins === 'custom' ? 'custom' : tier.maxAdmins,
+                  regularAdmins: tier.maxRegularAdmins === 'custom' ? 'custom' : (tier.maxRegularAdmins || 0),
+                  groups: tier.maxGroups === 'custom' ? 'custom' : tier.maxGroups,
+                  subGroups: tier.maxSubGroups === 'custom' ? 'custom' : (tier.maxSubGroups || 0),
                   alerts: tier.maxAlertsPerMonth
                 }
               }
@@ -221,8 +298,10 @@ class SubscriptionService {
                 status: 'active',
                 ...tier,
                 limits: {
-                  admins: tier.maxAdmins,
-                  groups: tier.maxGroups,
+                  admins: tier.maxAdmins === 'custom' ? 'custom' : tier.maxAdmins,
+                  regularAdmins: tier.maxRegularAdmins === 'custom' ? 'custom' : (tier.maxRegularAdmins || 0),
+                  groups: tier.maxGroups === 'custom' ? 'custom' : tier.maxGroups,
+                  subGroups: tier.maxSubGroups === 'custom' ? 'custom' : (tier.maxSubGroups || 0),
                   alerts: tier.maxAlertsPerMonth
                 }
               }
@@ -239,8 +318,10 @@ class SubscriptionService {
         status: 'active',
         ...tier,
         limits: {
-          admins: tier.maxAdmins,
-          groups: tier.maxGroups,
+          admins: tier.maxAdmins === 'custom' ? 'custom' : tier.maxAdmins,
+          regularAdmins: tier.maxRegularAdmins === 'custom' ? 'custom' : (tier.maxRegularAdmins || 0),
+          groups: tier.maxGroups === 'custom' ? 'custom' : tier.maxGroups,
+          subGroups: tier.maxSubGroups === 'custom' ? 'custom' : (tier.maxSubGroups || 0),
           alerts: tier.maxAlertsPerMonth
         }
       }
@@ -455,6 +536,18 @@ class SubscriptionService {
     }
   }
 
+  // Get sub-group count for organization
+  async getSubGroupCount(organizationId) {
+    try {
+      const subGroupsQuery = query(collection(db, 'organizations', organizationId, 'subGroups'))
+      const subGroupsSnapshot = await getDocs(subGroupsQuery)
+      return subGroupsSnapshot.size
+    } catch (error) {
+      console.error('❌ SubscriptionService: Error getting sub-group count:', error)
+      return 0
+    }
+  }
+
   // Get comprehensive usage stats
   async getUsageStats(userId, organizationId = null) {
     try {
@@ -467,6 +560,7 @@ class SubscriptionService {
       const alertUsage = await this.getUsageForMonth(userId, 'alerts', organizationId)
       const groupCount = organizationId ? await this.getGroupCount(organizationId) : 0
       const adminCount = organizationId ? await this.getAdminCount(organizationId) : 0
+      const subGroupCount = organizationId ? await this.getSubGroupCount(organizationId) : 0
       
       return {
         subscription: {
@@ -476,24 +570,10 @@ class SubscriptionService {
           price: tier.price
         },
         usage: {
-          alerts: {
-            used: alertUsage,
-            limit: tier.maxAlertsPerMonth,
-            remaining: Math.max(0, tier.maxAlertsPerMonth - alertUsage),
-            percentage: Math.round((alertUsage / tier.maxAlertsPerMonth) * 100)
-          },
-          groups: {
-            used: groupCount,
-            limit: tier.maxGroups,
-            remaining: Math.max(0, tier.maxGroups - groupCount),
-            percentage: Math.round((groupCount / tier.maxGroups) * 100)
-          },
-          admins: {
-            used: adminCount,
-            limit: tier.maxAdmins,
-            remaining: Math.max(0, tier.maxAdmins - adminCount),
-            percentage: Math.round((adminCount / tier.maxAdmins) * 100)
-          }
+          alertsSent: alertUsage,
+          groupsCreated: groupCount,
+          adminsAdded: adminCount,
+          subGroupsCreated: subGroupCount
         },
         features: tier.features
       }

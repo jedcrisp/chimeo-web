@@ -9,6 +9,14 @@ const db = admin.firestore()
 // Export subscription webhooks
 export { stripeWebhook, onUserSubscriptionChange } from './subscriptionWebhooks'
 
+// Export email functions
+export { 
+  sendOrganizationRequestEmail, 
+  sendOrganizationApprovalEmail, 
+  sendAdminAccessEmail, 
+  sendTestEmail 
+} from './emailService'
+
 // Scheduled function that runs every minute
 export const processScheduledAlerts = functions.pubsub
   .schedule('every 1 minutes')

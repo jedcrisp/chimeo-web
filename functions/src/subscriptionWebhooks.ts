@@ -25,7 +25,8 @@ export const stripeWebhook = onRequest(
       event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret)
     } catch (err) {
       console.error('Webhook signature verification failed:', err)
-      return res.status(400).send('Webhook Error')
+      res.status(400).send('Webhook Error')
+      return
     }
 
     console.log('Processing webhook event:', event.type)
@@ -75,7 +76,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
   // Get customer details
   const customer = await stripe.customers.retrieve(customerId)
-  const email = customer.email || metadata.email
+  const email = (customer as Stripe.Customer).email || metadata.email
 
   if (!email) {
     console.error('No email found for customer:', customerId)

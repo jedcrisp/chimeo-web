@@ -232,7 +232,7 @@ export default function Subscription() {
         {displayUsageStats && displaySubscription && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Current Usage</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">Alerts</h3>
@@ -252,7 +252,9 @@ export default function Subscription() {
                     ></div>
                   </div>
                   <div className="text-xs text-gray-500">
-                    {displaySubscription.limits?.alerts === 999999 ? '∞' : `of ${displaySubscription.limits?.alerts || 25}`}
+                    {displaySubscription.limits?.alerts === 999999 ? '∞' : 
+                     displaySubscription.limits?.alerts === 'custom' ? 'Custom' : 
+                     `of ${displaySubscription.limits?.alerts || 25}`}
                   </div>
                 </div>
               </div>
@@ -276,7 +278,9 @@ export default function Subscription() {
                     ></div>
                   </div>
                   <div className="text-xs text-gray-500">
-                    {displaySubscription.limits?.groups === 999999 ? '∞' : `of ${displaySubscription.limits?.groups || 2}`}
+                    {displaySubscription.limits?.groups === 999999 ? '∞' : 
+                     displaySubscription.limits?.groups === 'custom' ? 'Custom' : 
+                     `of ${displaySubscription.limits?.groups || 2}`}
                   </div>
                 </div>
               </div>
@@ -300,10 +304,41 @@ export default function Subscription() {
                     ></div>
                   </div>
                   <div className="text-xs text-gray-500">
-                    {displaySubscription.limits?.admins === 999999 ? '∞' : `of ${displaySubscription.limits?.admins || 1}`}
+                    {displaySubscription.limits?.admins === 999999 ? '∞' : 
+                     displaySubscription.limits?.admins === 'custom' ? 'Custom' : 
+                     `of ${displaySubscription.limits?.admins || 1}`}
                   </div>
                 </div>
               </div>
+
+              {/* Sub-Groups box - only show for Pro and Enterprise */}
+              {(displaySubscription?.planType === 'pro' || displaySubscription?.planType === 'premium' || displaySubscription?.planType === 'enterprise') && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Sub-Groups</h3>
+                    <Users className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Created</span>
+                      <span className="font-medium">{displayUsageStats.usage?.subGroupsCreated || 0}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${getUsageColor(getUsagePercentage(displayUsageStats.usage?.subGroupsCreated || 0, displaySubscription.limits?.subGroups || 0))}`}
+                        style={{ 
+                          width: `${getUsagePercentage(displayUsageStats.usage?.subGroupsCreated || 0, displaySubscription.limits?.subGroups || 0)}%` 
+                        }}
+                      ></div>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {displaySubscription.limits?.subGroups === 999999 ? '∞' : 
+                       displaySubscription.limits?.subGroups === 'custom' ? 'Custom' : 
+                       `of ${displaySubscription.limits?.subGroups || 0}`}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
