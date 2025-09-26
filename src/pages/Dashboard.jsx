@@ -59,7 +59,7 @@ export default function Dashboard() {
   // Check if user is platform admin
   useEffect(() => {
     if (currentUser) {
-      const isPlatformAdminUser = currentUser.email === 'jed@onetrack-consulting.com'
+      const isPlatformAdminUser = currentUser.email === 'jed@chimeo.app'
       setIsPlatformAdmin(isPlatformAdminUser)
       
       if (isPlatformAdminUser) {
@@ -71,7 +71,7 @@ export default function Dashboard() {
   const fetchNotifications = async () => {
     try {
       // Fetch notifications from the user-specific path
-      const sanitizedEmail = 'jed@onetrack-consulting.com'.replace(/[^a-zA-Z0-9]/g, '_')
+      const sanitizedEmail = 'jed@chimeo.app'.replace(/[^a-zA-Z0-9]/g, '_')
       const notificationPath = `notifications/${sanitizedEmail}/user_notifications`
       console.log('🔍 Dashboard: Fetching notifications from path:', notificationPath)
       

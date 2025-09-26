@@ -352,11 +352,11 @@ class NotificationService {
         requestId: requestData.id || 'pending',
         createdAt: serverTimestamp(),
         sent: true,
-        targetUser: 'jed@onetrack-consulting.com' // Only notify platform admin
+        targetUser: 'jed@chimeo.app' // Only notify platform admin
       }
 
       // Add to notifications collection under the target user's email
-      const sanitizedEmail = 'jed@onetrack-consulting.com'.replace(/[^a-zA-Z0-9]/g, '_')
+      const sanitizedEmail = 'jed@chimeo.app'.replace(/[^a-zA-Z0-9]/g, '_')
       const notificationId = `org_request_${Date.now()}`
       const notificationPath = `notifications/${sanitizedEmail}/user_notifications/${notificationId}`
       console.log('🔍 Saving notification to path:', notificationPath)
@@ -395,11 +395,11 @@ class NotificationService {
         organizationId: alertData.organizationId,
         createdAt: serverTimestamp(),
         sent: true,
-        targetUser: 'jed@onetrack-consulting.com' // Only notify platform admin
+        targetUser: 'jed@chimeo.app' // Only notify platform admin
       }
 
       // Add to notifications collection under the target user's email
-      const sanitizedEmail = 'jed@onetrack-consulting.com'.replace(/[^a-zA-Z0-9]/g, '_')
+      const sanitizedEmail = 'jed@chimeo.app'.replace(/[^a-zA-Z0-9]/g, '_')
       const notificationId = `alert_${Date.now()}`
       await setDoc(doc(db, 'notifications', sanitizedEmail, 'user_notifications', notificationId), notificationData)
       console.log('✅ Alert notification record saved to Firestore under user email')

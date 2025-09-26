@@ -44,7 +44,7 @@ export default function PlatformCreator() {
 
   // Platform admin UIDs - Only Jed (Platform Creator)
   const platformAdminUIDs = ['z4a9tShrtmT5W88euqy92ihQiNB3']
-  const platformAdminEmails = ['jed@onetrack-consulting.com']
+  const platformAdminEmails = ['jed@chimeo.app']
 
   // Check if user is platform admin
   const checkPlatformAdminStatus = () => {

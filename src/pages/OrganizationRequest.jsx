@@ -69,7 +69,7 @@ export default function OrganizationRequest() {
     
     try {
       // Check if user is platform admin
-      const isPlatformAdmin = currentUser.email === 'jed@onetrack-consulting.com'
+      const isPlatformAdmin = currentUser.email === 'jed@chimeo.app'
       
       let requestsQuery
       if (isPlatformAdmin) {
@@ -359,6 +359,28 @@ export default function OrganizationRequest() {
       }
 
       await updateDoc(requestRef, updateData)
+      
+      // Send approval email if request was approved
+      if (actionType === 'approve') {
+        try {
+          console.log('📧 Sending approval email...')
+          const userData = {
+            firstName: selectedRequest.adminFirstName,
+            lastName: selectedRequest.adminLastName,
+            email: selectedRequest.adminEmail
+          }
+          const organizationData = {
+            organizationName: selectedRequest.organizationName,
+            organizationType: selectedRequest.organizationType
+          }
+          
+          await emailService.sendOrganizationApprovalEmail(userData, organizationData)
+          console.log('✅ Approval email sent successfully')
+        } catch (emailError) {
+          console.error('❌ Failed to send approval email:', emailError)
+          // Don't fail the whole process if email fails
+        }
+      }
       
       const successMessage = actionType === 'approve' 
         ? 'Request approved and admin account created successfully!' 
@@ -832,7 +854,7 @@ export default function OrganizationRequest() {
       // Send multiple notifications to trigger mobile app refresh
       try {
         // Save notifications under the platform admin's subcollection
-        const sanitizedEmail = 'jed@onetrack-consulting.com'.replace(/[^a-zA-Z0-9]/g, '_')
+        const sanitizedEmail = 'jed@chimeo.app'.replace(/[^a-zA-Z0-9]/g, '_')
         
         // General organization created notification
         const orgCreatedId = `org_created_${Date.now()}`
@@ -844,7 +866,7 @@ export default function OrganizationRequest() {
           organizationName: request.organizationName,
           adminId: newUser.uid,
           adminEmail: request.adminEmail,
-          targetUser: 'jed@onetrack-consulting.com',
+          targetUser: 'jed@chimeo.app',
           createdAt: serverTimestamp(),
           sent: true
         })
@@ -977,7 +999,7 @@ export default function OrganizationRequest() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Organization Requests</h1>
           <p className="mt-1 text-sm text-gray-500">
-            {currentUser?.email === 'jed@onetrack-consulting.com' 
+            {currentUser?.email === 'jed@chimeo.app' 
               ? 'Manage all organization requests and create new ones'
               : 'Request to create a new organization with admin account setup'
             }
@@ -1281,7 +1303,7 @@ export default function OrganizationRequest() {
       {/* User's Requests */}
       <div className="card">
         <h2 className="text-lg font-medium text-gray-900 mb-4">
-          {currentUser?.email === 'jed@onetrack-consulting.com' ? 'All Organization Requests' : 'Your Requests'}
+          {currentUser?.email === 'jed@chimeo.app' ? 'All Organization Requests' : 'Your Requests'}
         </h2>
         
         {userRequests.length === 0 ? (
@@ -1351,7 +1373,7 @@ export default function OrganizationRequest() {
                   </div>
                   
                   {/* Action buttons for platform admins */}
-                  {currentUser?.email === 'jed@onetrack-consulting.com' && request.status === 'pending' && !request.adminAccountCreated && (
+                  {currentUser?.email === 'jed@chimeo.app' && request.status === 'pending' && !request.adminAccountCreated && (
                     <div className="flex space-x-2 ml-4">
                       <button
                         onClick={() => handleAction(request, 'approve')}

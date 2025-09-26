@@ -197,7 +197,7 @@ export default function SpecialAccessManager() {
 
   // Check if user is platform admin or organization admin - Only Jed
   const isPlatformAdmin = currentUser?.uid === 'z4a9tShrtmT5W88euqy92ihQiNB3' || 
-                         currentUser?.email === 'jed@onetrack-consulting.com'
+                         currentUser?.email === 'jed@chimeo.app'
 
   // Load special access when organization changes
   useEffect(() => {

@@ -28,7 +28,7 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Check if user is platform admin (app creator) - Only Jed
-  const isPlatformAdmin = currentUser?.email === 'jed@onetrack-consulting.com' || 
+  const isPlatformAdmin = currentUser?.email === 'jed@chimeo.app' || 
                          currentUser?.uid === 'z4a9tShrtmT5W88euqy92ihQiNB3'
   
   // Check if user is organization admin

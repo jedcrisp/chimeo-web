@@ -57,7 +57,7 @@ async function sendEmail(emailData: EmailData): Promise<boolean> {
     const msg = {
       to: emailData.to,
       from: {
-        email: emailData.fromEmail || 'jed@onetrack-consulting.com', // Use verified email
+        email: emailData.fromEmail || 'jed@chimeo.app', // Use verified email
         name: emailData.fromName || 'Chimeo Platform'
       },
       subject: emailData.subject,
@@ -132,7 +132,7 @@ Chimeo Web App
     `;
 
     const result = await sendEmail({
-      to: 'jed@onetrack-consulting.com',
+      to: 'jed@chimeo.app',
       subject,
       htmlContent,
       textContent
@@ -212,7 +212,7 @@ Chimeo Platform Team
     `;
 
     const result = await sendEmail({
-      to: data.adminEmail || 'jed@onetrack-consulting.com',
+      to: data.adminEmail || 'jed@chimeo.app',
       subject,
       htmlContent,
       textContent
@@ -395,7 +395,7 @@ Chimeo Platform
     `;
 
     const result = await sendEmail({
-      to: 'jed@onetrack-consulting.com',
+      to: 'jed@chimeo.app',
       subject,
       htmlContent,
       textContent

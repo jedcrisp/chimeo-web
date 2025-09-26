@@ -543,7 +543,7 @@ export default function Profile() {
   // Check if user is platform admin (app owner)
   const checkPlatformAdminStatus = async () => {
     // You can set this based on your email or user ID
-    const platformAdminEmails = ['jed@onetrack-consulting.com']
+    const platformAdminEmails = ['jed@chimeo.app']
     const platformAdminUIDs = ['z4a9tShrtmT5W88euqy92ihQiNB3']
     
     const isAdmin = (currentUser?.email && platformAdminEmails.includes(currentUser.email)) ||

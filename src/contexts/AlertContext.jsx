@@ -224,7 +224,7 @@ export function AlertProvider({ children }) {
 
       // Send email notification to platform admin
       try {
-        await emailService.sendAlertEmail(notificationPayload, 'jed@onetrack-consulting.com')
+        await emailService.sendAlertEmail(notificationPayload, 'jed@chimeo.app')
         console.log('✅ Alert email notification sent to platform admin')
       } catch (emailError) {
         console.error('❌ Failed to send alert email notification:', emailError)
