@@ -57,7 +57,7 @@ async function sendEmail(emailData: EmailData): Promise<boolean> {
     const msg = {
       to: emailData.to,
       from: {
-        email: emailData.fromEmail || 'noreply@chimeo.com',
+        email: emailData.fromEmail || 'jed@onetrack-consulting.com', // Use verified email
         name: emailData.fromName || 'Chimeo Platform'
       },
       subject: emailData.subject,
