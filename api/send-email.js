@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     console.log('📧 From:', from || process.env.ZOHO_EMAIL);
 
     // Create transporter with Zoho SMTP
-    let transporter = nodemailer.createTransporter({
+    let transporter = nodemailer.createTransport({
       host: "smtp.zoho.com",
       port: 465,
       secure: true,
