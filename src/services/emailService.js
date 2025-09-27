@@ -1,50 +1,46 @@
-// Email notification service using Cloud Functions + Zoho
+// Email notification service using Vercel API + Zoho SMTP
 // This service handles sending email notifications for important events
-
-import { httpsCallable } from 'firebase/functions'
-import { functions } from './firebase'
 
 class EmailService {
   constructor() {
     this.isInitialized = true
-    this.fromEmail = 'noreply@chimeo.com'
+    this.fromEmail = 'jed@chimeo.app'
     this.platformAdminEmail = 'jed@chimeo.app'
-    this.useCloudService = true // Use Zoho Cloud Functions as primary
+    this.useCloudService = true // Use Vercel API + Zoho SMTP as primary
   }
 
-  // Send email using Cloud Functions + Zoho
+  // Send email using Vercel API + Zoho SMTP
   async sendEmail(to, subject, textContent, htmlContent) {
-    // Check if Functions service is available
-    if (!functions) {
-      console.warn('⚠️ Firebase Functions not available, using console fallback')
-      return this.fallbackToConsole(to, subject, textContent, htmlContent)
-    }
-
     try {
-      console.log('📧 Sending email via Cloud Functions + Zoho...')
+      console.log('📧 Sending email via Vercel API + Zoho SMTP...')
       console.log('📧 To:', to)
       console.log('📧 Subject:', subject)
       
-      const sendGenericEmail = httpsCallable(functions, 'sendGenericEmail')
-      
-      const result = await sendGenericEmail({
-        to: to,
-        subject: subject,
-        textContent: textContent,
-        htmlContent: htmlContent,
-        fromEmail: this.fromEmail,
-        fromName: 'Chimeo Platform'
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to,
+          subject,
+          text: textContent,
+          html: htmlContent,
+          from: this.fromEmail
+        })
       })
-      
-      if (result.data.success) {
-        console.log('✅ Email sent successfully via Zoho')
-        return true
-      } else {
-        console.error('❌ Email sending failed:', result.data.error)
-        return this.fallbackToConsole(to, subject, textContent, htmlContent)
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
+
+      const result = await response.json()
+      console.log('✅ Email sent successfully via Vercel API:', result)
+      return true
+
     } catch (error) {
-      console.error('❌ Cloud Function error:', error)
+      console.error('❌ Error sending email via Vercel API:', error)
+      console.warn('⚠️ Falling back to console logging')
       return this.fallbackToConsole(to, subject, textContent, htmlContent)
     }
   }
@@ -258,7 +254,7 @@ Created: ${new Date().toLocaleString()}
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #28a745;">✅ Email Service Test Successful</h2>
         <p>This is a test email from the Chimeo platform.</p>
-        <p><strong>Service:</strong> Zoho Cloud Functions</p>
+        <p><strong>Service:</strong> Vercel API + Zoho SMTP</p>
         <p><strong>Status:</strong> Working correctly</p>
         <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
       </div>
