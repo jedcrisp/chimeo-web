@@ -56,26 +56,6 @@ export default function Subscription() {
 
   const pricingTiers = [
     {
-      name: 'Standard',
-      price: 0,
-      period: 'month',
-      description: 'Basic access for individual users',
-      features: [
-        'View alerts from followed organizations',
-        'Join groups as a member',
-        'Discover organizations',
-        'Basic push notifications',
-        'Email support'
-      ],
-      limits: {
-        admins: 0,
-        groups: 0,
-        alerts: 0
-      },
-      popular: false,
-      current: displaySubscription?.planType === 'standard' || displaySubscription?.accessLevel === 'standard'
-    },
-    {
       name: 'Free',
       price: 0,
       period: 'month',
@@ -93,7 +73,7 @@ export default function Subscription() {
         alerts: 25
       },
       popular: false,
-      current: displaySubscription?.planType === 'free'
+      current: displaySubscription?.planType === 'free' && displaySubscription?.accessLevel !== 'standard'
     },
     {
       name: 'Pro',
