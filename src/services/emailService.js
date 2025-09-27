@@ -63,52 +63,46 @@ class EmailService {
   }
 
   // Send organization request email
-  async sendOrganizationRequestEmail(requestData) {
-    console.log('📧 Sending organization request email...')
-    
-    const subject = `New Organization Request - ${requestData.organizationName}`
-    const htmlContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333;">New Organization Request</h2>
-        <p>Hello Platform Admin,</p>
-        <p>A new organization request has been submitted:</p>
-        <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
-          <h3 style="margin-top: 0; color: #555;">Organization Details</h3>
-          <p><strong>Name:</strong> ${requestData.organizationName}</p>
-          <p><strong>Type:</strong> ${requestData.organizationType}</p>
-          <p><strong>Admin:</strong> ${requestData.adminName}</p>
-          <p><strong>Admin Email:</strong> ${requestData.adminEmail}</p>
-          <p><strong>Address:</strong> ${requestData.address}, ${requestData.city}, ${requestData.state} ${requestData.zipCode}</p>
-          <p><strong>Phone:</strong> ${requestData.phone}</p>
-          <p><strong>Website:</strong> ${requestData.website || 'Not provided'}</p>
-          <p><strong>Description:</strong> ${requestData.description || 'Not provided'}</p>
-        </div>
-        <p><strong>Request Date:</strong> ${new Date().toLocaleString()}</p>
-        <p>Please review and approve/reject this request in the admin panel.</p>
-        <p>Best regards,<br>Chimeo Web App</p>
-      </div>
-    `
-    
-    const textContent = `
+  async sendOrganizationRequestEmail(data) {
+    try {
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: "jed@chimeo.app",  // platform admin email
+          subject: `New Organization Request - ${data.organizationName}`,
+          text: `
 New Organization Request
 
-Organization: ${requestData.organizationName}
-Type: ${requestData.organizationType}
-Admin: ${requestData.adminName} (${requestData.adminEmail})
-Address: ${requestData.address}, ${requestData.city}, ${requestData.state} ${requestData.zipCode}
-Phone: ${requestData.phone}
-Website: ${requestData.website || 'Not provided'}
-Description: ${requestData.description || 'Not provided'}
-
+Organization: ${data.organizationName}
+Type: ${data.organizationType}
+Admin: ${data.adminName} (${data.adminEmail})
+Address: ${data.address}, ${data.city}, ${data.state}
+Phone: ${data.phone}
 Request Date: ${new Date().toLocaleString()}
+          `,
+          html: `
+            <h2>New Organization Request</h2>
+            <p><strong>Name:</strong> ${data.organizationName}</p>
+            <p><strong>Type:</strong> ${data.organizationType}</p>
+            <p><strong>Admin:</strong> ${data.adminName} (${data.adminEmail})</p>
+            <p><strong>Address:</strong> ${data.address}, ${data.city}, ${data.state}</p>
+            <p><strong>Phone:</strong> ${data.phone}</p>
+            <p><strong>Request Date:</strong> ${new Date().toLocaleString()}</p>
+          `,
+        }),
+      });
 
-Please review and approve/reject this request in the admin panel.
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
 
-Best regards,
-Chimeo Web App
-    `
-    
-    return await this.sendEmail(this.platformAdminEmail, subject, textContent, htmlContent)
+      console.log("✅ Email sent successfully", result);
+      return true;
+
+    } catch (error) {
+      console.error("❌ Failed to send email:", error);
+      return false;
+    }
   }
 
   // Send organization approval email
