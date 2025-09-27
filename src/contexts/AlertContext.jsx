@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { collection, query, orderBy, onSnapshot, addDoc, updateDoc, doc, deleteDoc, getDocs, getDoc } from 'firebase/firestore'
+import { collection, query, orderBy, onSnapshot, addDoc, updateDoc, doc, deleteDoc, getDocs, getDoc, where } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import { AuthContext } from './AuthContext'
 import emailService from '../services/emailService'
@@ -72,6 +72,55 @@ export function AlertProvider({ children }) {
 
     return unsubscribe
   }, [currentUser, userProfile])
+
+  // Check if platform admin should be notified of this alert
+  const shouldNotifyPlatformAdmin = async (alertData, organizationId) => {
+    try {
+      // Option 1: Only notify for critical alerts (you can customize this logic)
+      const criticalKeywords = ['emergency', 'urgent', 'critical', 'immediate', 'help', 'assistance']
+      const isCritical = criticalKeywords.some(keyword => 
+        alertData.title?.toLowerCase().includes(keyword) || 
+        alertData.message?.toLowerCase().includes(keyword)
+      )
+      
+      if (isCritical) {
+        console.log('🚨 Critical alert detected - notifying platform admin')
+        return true
+      }
+      
+      // Option 2: Check if platform admin follows this organization
+      // Note: This assumes jed@chimeo.app has a user document - you may need to adjust this
+      const adminEmail = 'jed@chimeo.app'
+      const usersQuery = query(collection(db, 'users'), where('email', '==', adminEmail))
+      const usersSnapshot = await getDocs(usersQuery)
+      
+      if (!usersSnapshot.empty) {
+        const adminDoc = usersSnapshot.docs[0]
+        const adminData = adminDoc.data()
+        const followedOrganizations = adminData.followedOrganizations || []
+        
+        if (followedOrganizations.includes(organizationId)) {
+          console.log('📧 Platform admin follows this organization - sending notification')
+          return true
+        }
+      }
+      
+      // Option 3: Only notify for specific organizations (add your important orgs here)
+      const importantOrganizations = ['velocity_physical_therapy_north_denton'] // Add org IDs here
+      if (importantOrganizations.includes(organizationId)) {
+        console.log('📧 Important organization alert - notifying platform admin')
+        return true
+      }
+      
+      console.log('📧 Alert does not meet criteria for platform admin notification')
+      return false
+      
+    } catch (error) {
+      console.error('❌ Error checking if should notify platform admin:', error)
+      // Default to not notifying on error to avoid spam
+      return false
+    }
+  }
 
   const createAlert = async (alertData) => {
     try {
@@ -222,10 +271,15 @@ export function AlertProvider({ children }) {
       // The web app only creates the alert in Firestore
       console.log('📝 Alert created in Firestore - Cloud Functions will handle push notifications')
 
-      // Send email notification to platform admin
+      // Send email notification to platform admin only for critical alerts or specific conditions
       try {
-        await emailService.sendAlertEmail(notificationPayload, 'jed@chimeo.app')
-        console.log('✅ Alert email notification sent to platform admin')
+        const shouldNotifyAdmin = await shouldNotifyPlatformAdmin(alertData, organizationId)
+        if (shouldNotifyAdmin) {
+          await emailService.sendAlertEmail(notificationPayload, 'jed@chimeo.app')
+          console.log('✅ Alert email notification sent to platform admin')
+        } else {
+          console.log('📧 Skipping platform admin notification - not critical or admin not following org')
+        }
       } catch (emailError) {
         console.error('❌ Failed to send alert email notification:', emailError)
         // Don't fail the alert creation if email fails
