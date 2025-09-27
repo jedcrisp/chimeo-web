@@ -56,6 +56,26 @@ export default function Subscription() {
 
   const pricingTiers = [
     {
+      name: 'Standard',
+      price: 0,
+      period: 'month',
+      description: 'Basic access for individual users',
+      features: [
+        'View alerts from followed organizations',
+        'Join groups as a member',
+        'Discover organizations',
+        'Basic push notifications',
+        'Email support'
+      ],
+      limits: {
+        admins: 0,
+        groups: 0,
+        alerts: 0
+      },
+      popular: false,
+      current: displaySubscription?.planType === 'standard' || displaySubscription?.accessLevel === 'standard'
+    },
+    {
       name: 'Free',
       price: 0,
       period: 'month',
@@ -207,10 +227,10 @@ export default function Subscription() {
                   </div>
                   <div className="ml-4">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      Current Plan: {displaySubscription.planType?.toUpperCase() || 'FREE'}
+                      Current Plan: {displaySubscription.accessLevel === 'standard' ? 'STANDARD' : displaySubscription.planType?.toUpperCase() || 'FREE'}
                     </h3>
                     <p className="text-gray-600">
-                      {displaySubscription.name || 'Free Plan'} - {displaySubscription.planType === 'enterprise' ? 'Custom Quote' : `$${displaySubscription.price || 0}/month`}
+                      {displaySubscription.accessLevel === 'standard' ? 'Standard Plan' : displaySubscription.name || 'Free Plan'} - {displaySubscription.planType === 'enterprise' ? 'Custom Quote' : `$${displaySubscription.price || 0}/month`}
                     </p>
                   </div>
                 </div>
@@ -228,8 +248,8 @@ export default function Subscription() {
           </div>
         )}
 
-        {/* Usage Statistics */}
-        {displayUsageStats && displaySubscription && (
+        {/* Usage Statistics - Only show for non-standard users */}
+        {displayUsageStats && displaySubscription && displaySubscription.accessLevel !== 'standard' && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Current Usage</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -339,6 +359,33 @@ export default function Subscription() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Standard User Message */}
+        {displaySubscription && displaySubscription.accessLevel === 'standard' && (
+          <div className="mb-8">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Shield className="h-5 w-5 text-blue-600" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-semibold text-blue-900 mb-2">
+                    Standard Access
+                  </h3>
+                  <p className="text-blue-800 mb-3">
+                    You currently have standard access, which allows you to view alerts from organizations you follow and join groups as a member. 
+                    You don't have admin privileges to create alerts, groups, or manage organizations.
+                  </p>
+                  <p className="text-blue-700 text-sm">
+                    To get admin access, you'll need to be approved as an organization administrator or upgrade to a paid plan.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}
