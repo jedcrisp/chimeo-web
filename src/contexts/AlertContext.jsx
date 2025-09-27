@@ -231,40 +231,69 @@ export function AlertProvider({ children }) {
         // Don't fail the alert creation if email fails
       }
 
-      // Send email notifications to group members
+      // Send email notifications to group followers
       try {
         if (alertData.groupId) {
-          console.log('📧 Sending alert emails to group members...')
+          console.log('📧 Sending alert emails to group followers...')
           
-          // Get group members
+          // Get group data to find group name
           const groupRef = doc(db, 'organizations', organizationId, 'groups', alertData.groupId)
           const groupDoc = await getDoc(groupRef)
           
           if (groupDoc.exists()) {
             const groupData = groupDoc.data()
-            const members = groupData.members || []
+            const groupName = groupData.name
             
-            console.log(`📧 Found ${members.length} group members to notify`)
+            console.log(`📧 Looking for followers of group: ${groupName}`)
             
-            // Send email to each group member
-            for (const member of members) {
-              if (member.email && member.email !== currentUser.email) {
+            // Find all users who follow this group
+            const usersQuery = query(collection(db, 'users'))
+            const usersSnapshot = await getDocs(usersQuery)
+            
+            const groupFollowers = []
+            
+            for (const userDoc of usersSnapshot.docs) {
+              const userData = userDoc.data()
+              
+              // Check if user follows this group via groupPreferences
+              if (userData.groupPreferences && userData.groupPreferences[groupName] === true) {
+                groupFollowers.push({
+                  id: userDoc.id,
+                  email: userData.email,
+                  displayName: userData.displayName
+                })
+              }
+              // Also check old followedGroups structure for backward compatibility
+              else if (userData.followedGroups && userData.followedGroups.includes(alertData.groupId)) {
+                groupFollowers.push({
+                  id: userDoc.id,
+                  email: userData.email,
+                  displayName: userData.displayName
+                })
+              }
+            }
+            
+            console.log(`📧 Found ${groupFollowers.length} group followers to notify`)
+            
+            // Send email to each group follower
+            for (const follower of groupFollowers) {
+              if (follower.email && follower.email !== currentUser.email) {
                 try {
-                  await emailService.sendAlertEmail(notificationPayload, member.email)
-                  console.log(`✅ Alert email sent to group member: ${member.email}`)
+                  await emailService.sendAlertEmail(notificationPayload, follower.email)
+                  console.log(`✅ Alert email sent to group follower: ${follower.email}`)
                 } catch (memberEmailError) {
-                  console.error(`❌ Failed to send alert email to ${member.email}:`, memberEmailError)
+                  console.error(`❌ Failed to send alert email to ${follower.email}:`, memberEmailError)
                 }
               }
             }
           } else {
-            console.warn('⚠️ Group not found, skipping group member email notifications')
+            console.warn('⚠️ Group not found, skipping group follower email notifications')
           }
         } else {
-          console.log('📧 No specific group targeted, skipping group member email notifications')
+          console.log('📧 No specific group targeted, skipping group follower email notifications')
         }
       } catch (groupEmailError) {
-        console.error('❌ Failed to send group member email notifications:', groupEmailError)
+        console.error('❌ Failed to send group follower email notifications:', groupEmailError)
         // Don't fail the alert creation if group emails fail
       }
 
