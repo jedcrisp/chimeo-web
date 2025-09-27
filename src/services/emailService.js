@@ -228,6 +228,58 @@ The Chimeo Team
     );
   }
 
+  // Send alert notification email
+  async sendAlertEmail(alertData, recipientEmail) {
+    // Use alerts@chimeo.app as sender for alert emails
+    const originalFromEmail = this.fromEmail;
+    this.fromEmail = "alerts@chimeo.app";
+    
+    const result = await this.sendEmail(
+      recipientEmail,
+      `New Alert: ${alertData.title}`,
+      `
+New Alert from ${alertData.organizationName}
+
+Title: ${alertData.title}
+Message: ${alertData.message}
+Organization: ${alertData.organizationName}
+Created by: ${alertData.createdBy || 'Unknown'}
+Created: ${new Date().toLocaleString()}
+
+Please check your Chimeo dashboard for more details.
+
+Best regards,
+Chimeo Alerts
+      `,
+      `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #dc3545;">🚨 New Alert</h2>
+          
+          <p>You have received a new alert from <strong>${alertData.organizationName}</strong></p>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #dc3545;">
+            <h3 style="margin-top: 0; color: #dc3545;">Alert Details</h3>
+            <p><strong>Title:</strong> ${alertData.title}</p>
+            <p><strong>Message:</strong> ${alertData.message}</p>
+            <p><strong>Organization:</strong> ${alertData.organizationName}</p>
+            <p><strong>Created by:</strong> ${alertData.createdBy || 'Unknown'}</p>
+            <p><strong>Created:</strong> ${new Date().toLocaleString()}</p>
+          </div>
+          
+          <div style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p>Please check your Chimeo dashboard for more details and to respond to this alert.</p>
+          </div>
+          
+          <p>Best regards,<br><strong>Chimeo Alerts</strong></p>
+        </div>
+      `
+    );
+    
+    // Restore original fromEmail
+    this.fromEmail = originalFromEmail;
+    return result;
+  }
+
   // Example: Test Email
   async testEmail() {
     return this.sendEmail(

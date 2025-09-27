@@ -231,6 +231,43 @@ export function AlertProvider({ children }) {
         // Don't fail the alert creation if email fails
       }
 
+      // Send email notifications to group members
+      try {
+        if (alertData.groupId) {
+          console.log('📧 Sending alert emails to group members...')
+          
+          // Get group members
+          const groupRef = doc(db, 'organizations', organizationId, 'groups', alertData.groupId)
+          const groupDoc = await getDoc(groupRef)
+          
+          if (groupDoc.exists()) {
+            const groupData = groupDoc.data()
+            const members = groupData.members || []
+            
+            console.log(`📧 Found ${members.length} group members to notify`)
+            
+            // Send email to each group member
+            for (const member of members) {
+              if (member.email && member.email !== currentUser.email) {
+                try {
+                  await emailService.sendAlertEmail(notificationPayload, member.email)
+                  console.log(`✅ Alert email sent to group member: ${member.email}`)
+                } catch (memberEmailError) {
+                  console.error(`❌ Failed to send alert email to ${member.email}:`, memberEmailError)
+                }
+              }
+            }
+          } else {
+            console.warn('⚠️ Group not found, skipping group member email notifications')
+          }
+        } else {
+          console.log('📧 No specific group targeted, skipping group member email notifications')
+        }
+      } catch (groupEmailError) {
+        console.error('❌ Failed to send group member email notifications:', groupEmailError)
+        // Don't fail the alert creation if group emails fail
+      }
+
       toast.success('Alert created successfully! Push notifications sent to web users.')
       console.log('🎉 Alert creation complete!')
       return webAlertRef
