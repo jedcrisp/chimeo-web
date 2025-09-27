@@ -31,9 +31,11 @@ npm install
 echo "🔨 Building TypeScript..."
 npm run build
 
-# Set SendGrid API key as environment variable
-echo "🔑 Setting SendGrid API key..."
-firebase functions:config:set sendgrid.api_key="[YOUR_SENDGRID_API_KEY]"
+# Set Zoho API credentials as environment variables
+echo "🔑 Setting Zoho API credentials..."
+# Zoho configuration (set these in Firebase Functions config)
+# firebase functions:config:set zoho.client_id="[YOUR_ZOHO_CLIENT_ID]"
+# firebase functions:config:set zoho.client_secret="[YOUR_ZOHO_CLIENT_SECRET]"
 
 # Deploy functions
 echo "🚀 Deploying Cloud Functions..."

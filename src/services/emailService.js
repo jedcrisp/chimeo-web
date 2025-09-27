@@ -1,4 +1,4 @@
-// Email notification service using Cloud Functions + SendGrid
+// Email notification service using Cloud Functions + Zoho
 // This service handles sending email notifications for important events
 
 import { httpsCallable } from 'firebase/functions'
@@ -9,10 +9,10 @@ class EmailService {
     this.isInitialized = true
     this.fromEmail = 'noreply@chimeo.com'
     this.platformAdminEmail = 'jed@chimeo.app'
-    this.useCloudService = true // Use SendGrid Cloud Functions as primary
+    this.useCloudService = true // Use Zoho Cloud Functions as primary
   }
 
-  // Send email using Cloud Functions + SendGrid
+  // Send email using Cloud Functions + Zoho
   async sendEmail(to, subject, textContent, htmlContent) {
     // Check if Functions service is available
     if (!functions) {
@@ -21,7 +21,7 @@ class EmailService {
     }
 
     try {
-      console.log('📧 Sending email via Cloud Functions + SendGrid...')
+      console.log('📧 Sending email via Cloud Functions + Zoho...')
       console.log('📧 To:', to)
       console.log('📧 Subject:', subject)
       
@@ -37,7 +37,7 @@ class EmailService {
       })
       
       if (result.data.success) {
-        console.log('✅ Email sent successfully via SendGrid')
+        console.log('✅ Email sent successfully via Zoho')
         return true
       } else {
         console.error('❌ Email sending failed:', result.data.error)
@@ -258,7 +258,7 @@ Created: ${new Date().toLocaleString()}
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #28a745;">✅ Email Service Test Successful</h2>
         <p>This is a test email from the Chimeo platform.</p>
-        <p><strong>Service:</strong> SendGrid Cloud Functions</p>
+        <p><strong>Service:</strong> Zoho Cloud Functions</p>
         <p><strong>Status:</strong> Working correctly</p>
         <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
       </div>
@@ -269,7 +269,7 @@ Email Service Test Successful
 
 This is a test email from the Chimeo platform.
 
-Service: SendGrid Cloud Functions
+Service: Zoho Cloud Functions
 Status: Working correctly
 Time: ${new Date().toLocaleString()}
     `

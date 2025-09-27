@@ -274,7 +274,8 @@ export default function Login() {
         
         const emailResult = await emailService.sendOrganizationRequestEmail({
           ...requestData,
-          id: sanitizedOrgName
+          id: sanitizedOrgName,
+          adminName: `${requestForm.adminFirstName} ${requestForm.adminLastName}`.trim()
         })
         console.log('📧 Email send result:', emailResult)
         
