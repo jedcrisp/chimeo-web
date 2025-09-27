@@ -20,6 +20,8 @@ export default function Login() {
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false)
+  const [submittedRequest, setSubmittedRequest] = useState(null)
   
   // Organization request states
   const [showRequestForm, setShowRequestForm] = useState(false)
@@ -314,11 +316,16 @@ export default function Login() {
         // Don't fail the request if email fails
       }
       
-      if (newUser) {
-        toast.success('Organization request submitted and user account created! You now have standard access. We will review your request for premium features.')
-      } else {
-        toast.success('Organization request submitted successfully! We will review your request and contact you soon.')
-      }
+      // Store the submitted request data for the confirmation modal
+      setSubmittedRequest({
+        organizationName: requestData.organizationName,
+        adminName: `${requestForm.adminFirstName} ${requestForm.adminLastName}`.trim(),
+        adminEmail: requestData.adminEmail,
+        isNewUser: !!newUser
+      })
+      
+      // Show confirmation modal instead of toast
+      setShowConfirmationModal(true)
       setShowRequestForm(false)
       
       // Refresh user requests to show the new request
@@ -1041,6 +1048,80 @@ The Chimeo Team`,
           )}
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmationModal && submittedRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-center w-12 h-12 mx-auto bg-green-100 rounded-full mb-4">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            </div>
+            
+            <h3 className="text-lg font-medium text-gray-900 text-center mb-2">
+              Organization Request Submitted!
+            </h3>
+            
+            <div className="text-center mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                <strong>{submittedRequest.organizationName}</strong> has been submitted for review.
+              </p>
+              <p className="text-sm text-gray-600">
+                Admin: <strong>{submittedRequest.adminName}</strong>
+              </p>
+              <p className="text-sm text-gray-600">
+                Email: <strong>{submittedRequest.adminEmail}</strong>
+              </p>
+            </div>
+
+            {submittedRequest.isNewUser && (
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Account Created:</strong> You now have standard access. We will review your request for premium features.
+                </p>
+              </div>
+            )}
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-6">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <Bell className="h-5 w-5 text-yellow-400" />
+                </div>
+                <div className="ml-3">
+                  <h4 className="text-sm font-medium text-yellow-800">
+                    Check Your Email
+                  </h4>
+                  <div className="mt-1 text-sm text-yellow-700">
+                    <p>We've sent confirmation emails to:</p>
+                    <ul className="list-disc list-inside mt-1">
+                      <li>You (confirmation of submission)</li>
+                      <li>Platform admin (for review)</li>
+                    </ul>
+                    <p className="mt-2 font-medium">
+                      Please check your <strong>spam/junk folder</strong> if you don't see the emails in your inbox.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <p className="text-sm text-gray-600 mb-4">
+                We'll review your request and contact you within 3 business days.
+              </p>
+              
+              <button
+                onClick={() => {
+                  setShowConfirmationModal(false)
+                  setSubmittedRequest(null)
+                }}
+                className="w-full bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
+              >
+                Got it!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
