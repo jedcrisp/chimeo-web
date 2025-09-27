@@ -131,6 +131,12 @@ class SubscriptionService {
       const userDoc = await getDoc(doc(db, 'users', userId))
       if (userDoc.exists()) {
         const userData = userDoc.data()
+        console.log('🔍 User profile data:', {
+          accessLevel: userData.accessLevel,
+          planType: userData.planType,
+          isOrganizationAdmin: userData.isOrganizationAdmin,
+          email: userData.email
+        })
         
         // Check for standard access level first
         if (userData.accessLevel === 'standard') {
@@ -167,6 +173,36 @@ class SubscriptionService {
             planType: userData.planType,
             status: 'active',
             ...this.pricingTiers[userData.planType] || this.pricingTiers.free
+          }
+        }
+        
+        // Fallback: if user is not an organization admin and not platform admin, treat as standard
+        const isPlatformAdmin = userId === 'z4a9tShrtmT5W88euqy92ihQiNB3' || 
+                               userData.email === 'jed@chimeo.app'
+        
+        if (!userData.isOrganizationAdmin && !isPlatformAdmin) {
+          console.log('✅ SubscriptionService: User is not admin, treating as standard access')
+          return {
+            userId,
+            planType: 'standard',
+            accessLevel: 'standard',
+            status: 'active',
+            name: 'Standard',
+            price: 0,
+            period: 'month',
+            description: 'Basic access for individual users',
+            features: [
+              'View alerts from followed organizations',
+              'Join groups as a member',
+              'Discover organizations',
+              'Basic push notifications',
+              'Email support'
+            ],
+            limits: {
+              admins: 0,
+              groups: 0,
+              alerts: 0
+            }
           }
         }
       }
