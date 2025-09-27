@@ -496,7 +496,16 @@ The Chimeo Team`,
           
           console.log('✅ Account created successfully')
           setError('')
-          toast.success('Account created successfully! Please check your email for a welcome message and then log in.')
+          
+          // Show account creation confirmation modal
+          setSubmittedRequest({
+            organizationName: 'Account Created',
+            adminName: displayName.trim(),
+            adminEmail: email,
+            isNewUser: true,
+            isAccountCreation: true
+          })
+          setShowConfirmationModal(true)
           
           // Reset form and switch to login mode
           resetForm()
@@ -1058,25 +1067,49 @@ The Chimeo Team`,
             </div>
             
             <h3 className="text-lg font-medium text-gray-900 text-center mb-2">
-              Organization Request Submitted!
+              {submittedRequest.isAccountCreation ? 'Account Created Successfully!' : 'Organization Request Submitted!'}
             </h3>
             
             <div className="text-center mb-4">
-              <p className="text-sm text-gray-600 mb-2">
-                <strong>{submittedRequest.organizationName}</strong> has been submitted for review.
-              </p>
-              <p className="text-sm text-gray-600">
-                Admin: <strong>{submittedRequest.adminName}</strong>
-              </p>
-              <p className="text-sm text-gray-600">
-                Email: <strong>{submittedRequest.adminEmail}</strong>
-              </p>
+              {submittedRequest.isAccountCreation ? (
+                <div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Great! Your account has been created successfully.
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Name: <strong>{submittedRequest.adminName}</strong>
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Email: <strong>{submittedRequest.adminEmail}</strong>
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-gray-600 mb-2">
+                    <strong>{submittedRequest.organizationName}</strong> has been submitted for review.
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Admin: <strong>{submittedRequest.adminName}</strong>
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Email: <strong>{submittedRequest.adminEmail}</strong>
+                  </p>
+                </div>
+              )}
             </div>
 
-            {submittedRequest.isNewUser && (
+            {submittedRequest.isNewUser && !submittedRequest.isAccountCreation && (
               <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
                 <p className="text-sm text-blue-800">
                   <strong>Account Created:</strong> You now have standard access. We will review your request for premium features.
+                </p>
+              </div>
+            )}
+
+            {submittedRequest.isAccountCreation && (
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Welcome to Chimeo!</strong> You now have standard access to all basic features.
                 </p>
               </div>
             )}
@@ -1091,23 +1124,43 @@ The Chimeo Team`,
                     Check Your Email
                   </h4>
                   <div className="mt-1 text-sm text-yellow-700">
-                    <p>We've sent confirmation emails to:</p>
-                    <ul className="list-disc list-inside mt-1">
-                      <li>You (confirmation of submission)</li>
-                      <li>Platform admin (for review)</li>
-                    </ul>
-                    <p className="mt-2 font-medium">
-                      Please check your <strong>spam/junk folder</strong> if you don't see the emails in your inbox.
-                    </p>
+                    {submittedRequest.isAccountCreation ? (
+                      <div>
+                        <p>We've sent a welcome email to:</p>
+                        <ul className="list-disc list-inside mt-1">
+                          <li>You (welcome message and getting started guide)</li>
+                        </ul>
+                        <p className="mt-2 font-medium">
+                          Please check your <strong>spam/junk folder</strong> if you don't see the email in your inbox.
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p>We've sent confirmation emails to:</p>
+                        <ul className="list-disc list-inside mt-1">
+                          <li>You (confirmation of submission)</li>
+                          <li>Platform admin (for review)</li>
+                        </ul>
+                        <p className="mt-2 font-medium">
+                          Please check your <strong>spam/junk folder</strong> if you don't see the emails in your inbox.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="text-center">
-              <p className="text-sm text-gray-600 mb-4">
-                We'll review your request and contact you within 3 business days.
-              </p>
+              {submittedRequest.isAccountCreation ? (
+                <p className="text-sm text-gray-600 mb-4">
+                  Please log in to view your account and start using Chimeo.
+                </p>
+              ) : (
+                <p className="text-sm text-gray-600 mb-4">
+                  We'll review your request and contact you within 3 business days.
+                </p>
+              )}
               
               <button
                 onClick={() => {
