@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore'
 import { db, auth } from '../services/firebase'
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
-import { Building, MapPin, Phone, Mail, Users, Plus, CheckCircle, X, User, Lock, MessageSquare, AlertCircle } from 'lucide-react'
+import { Building, MapPin, Phone, Mail, Users, Plus, CheckCircle, X, User, Lock, MessageSquare, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import notificationService from '../services/notificationService'
 import emailService from '../services/emailService'
@@ -39,6 +39,8 @@ export default function OrganizationRequest() {
   const [actionType, setActionType] = useState('') // 'approve', 'reject', 'request_info'
   const [actionMessage, setActionMessage] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   useEffect(() => {
     fetchOrganizations()
@@ -1253,28 +1255,54 @@ export default function OrganizationRequest() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Password *
                       </label>
-                      <input
-                        type="password"
-                        required
-                        value={requestForm.adminPassword}
-                        onChange={(e) => setRequestForm({ ...requestForm, adminPassword: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="Create password"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          required
+                          value={requestForm.adminPassword}
+                          onChange={(e) => setRequestForm({ ...requestForm, adminPassword: e.target.value })}
+                          className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          placeholder="Create password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Confirm Password *
                       </label>
-                      <input
-                        type="password"
-                        required
-                        value={requestForm.adminConfirmPassword}
-                        onChange={(e) => setRequestForm({ ...requestForm, adminConfirmPassword: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="Confirm password"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          required
+                          value={requestForm.adminConfirmPassword}
+                          onChange={(e) => setRequestForm({ ...requestForm, adminConfirmPassword: e.target.value })}
+                          className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          placeholder="Confirm password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                   
@@ -1289,6 +1317,9 @@ export default function OrganizationRequest() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                       placeholder="Additional contact email (optional)"
                     />
+                    <p className="mt-1 text-sm text-gray-500">
+                      This is the email that will be displayed on your organization profile
+                    </p>
                   </div>
                 </div>
                 
