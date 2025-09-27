@@ -1,9 +1,58 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import * as sgMail from '@sendgrid/mail';
 
-// Initialize SendGrid
-sgMail.setApiKey(functions.config().sendgrid?.api_key || process.env.SENDGRID_API_KEY);
+// Zoho OAuth Configuration
+const zohoClientId = functions.config().zoho?.client_id || process.env.ZOHO_CLIENT_ID;
+const zohoClientSecret = functions.config().zoho?.client_secret || process.env.ZOHO_CLIENT_SECRET;
+
+// Zoho OAuth token storage (in production, use a secure database)
+let zohoAccessToken: string | null = null;
+let zohoTokenExpiry: number = 0;
+
+// Function to get Zoho OAuth access token
+async function getZohoAccessToken(): Promise<string | null> {
+  if (!zohoClientId || !zohoClientSecret) {
+    console.log('⚠️ Zoho credentials not configured, using SendGrid only');
+    return null;
+  }
+
+  // Check if we have a valid token
+  if (zohoAccessToken && Date.now() < zohoTokenExpiry) {
+    return zohoAccessToken;
+  }
+
+  try {
+    console.log('🔑 Requesting Zoho OAuth token...');
+    
+    const response = await fetch('https://accounts.zoho.com/oauth/v2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: zohoClientId,
+        client_secret: zohoClientSecret,
+        scope: 'ZohoMail.messages.CREATE'
+      })
+    });
+
+    const data = await response.json();
+    
+    if (data.access_token) {
+      zohoAccessToken = data.access_token;
+      zohoTokenExpiry = Date.now() + (data.expires_in * 1000) - 60000; // 1 minute buffer
+      console.log('✅ Zoho OAuth token obtained successfully');
+      return zohoAccessToken;
+    } else {
+      console.error('❌ Failed to get Zoho token:', data);
+      return null;
+    }
+  } catch (error) {
+    console.error('❌ Error getting Zoho token:', error);
+    return null;
+  }
+}
 
 interface EmailData {
   to: string;
@@ -51,30 +100,67 @@ interface AdminAccessData {
   organizationId: string;
 }
 
-// Send email using SendGrid
-async function sendEmail(emailData: EmailData): Promise<boolean> {
+// Function to send email via Zoho
+async function sendEmailViaZoho(emailData: EmailData): Promise<boolean> {
   try {
-    const msg = {
-      to: emailData.to,
-      from: {
-        email: emailData.fromEmail || 'jed@chimeo.app', // Use verified email
-        name: emailData.fromName || 'Chimeo Platform'
-      },
-      subject: emailData.subject,
-      text: emailData.textContent,
-      html: emailData.htmlContent,
-    };
-
-    await sgMail.send(msg);
-    console.log('✅ Email sent successfully via SendGrid');
-    return true;
-  } catch (error) {
-    console.error('❌ Failed to send email via SendGrid:', error);
-    if (error.response && error.response.body) {
-      console.error('❌ SendGrid error details:', JSON.stringify(error.response.body, null, 2));
+    const accessToken = await getZohoAccessToken();
+    if (!accessToken) {
+      console.log('⚠️ No Zoho access token available');
+      return false;
     }
+
+    console.log('📧 Sending email via Zoho...');
+    console.log('📧 To:', emailData.to);
+    console.log('📧 Subject:', emailData.subject);
+
+    const response = await fetch('https://mail.zoho.com/api/messages', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        fromAddress: emailData.fromEmail || 'jed@chimeo.app',
+        toAddress: emailData.to,
+        subject: emailData.subject,
+        content: emailData.htmlContent,
+        mailFormat: 'html'
+      })
+    });
+
+    if (response.ok) {
+      console.log('✅ Email sent successfully via Zoho');
+      return true;
+    } else {
+      const errorData = await response.text();
+      console.error('❌ Zoho error:', response.status, errorData);
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Zoho error:', error);
     return false;
   }
+}
+
+
+// Main email sending function using Zoho only
+async function sendEmail(emailData: EmailData): Promise<boolean> {
+  console.log('📧 Attempting to send email via Zoho...');
+  
+  // Check if Zoho credentials are configured
+  if (!zohoClientId || !zohoClientSecret) {
+    console.error('❌ Zoho credentials not configured. Please set ZOHO_CLIENT_ID and ZOHO_CLIENT_SECRET');
+    return false;
+  }
+
+  // Send via Zoho
+  const zohoSuccess = await sendEmailViaZoho(emailData);
+  if (zohoSuccess) {
+    return true;
+  }
+
+  console.error('❌ Zoho email sending failed');
+  return false;
 }
 
 // Cloud Function: Send organization request email
