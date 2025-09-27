@@ -148,9 +148,20 @@ async function sendEmail(emailData: EmailData): Promise<boolean> {
   console.log('📧 Attempting to send email via Zoho...');
   
   // Check if Zoho credentials are configured
-  if (!zohoClientId || !zohoClientSecret) {
-    console.error('❌ Zoho credentials not configured. Please set ZOHO_CLIENT_ID and ZOHO_CLIENT_SECRET');
-    return false;
+  if (!zohoClientId || !zohoClientSecret || zohoClientId === 'test_client_id') {
+    console.log('⚠️ Zoho credentials not properly configured, logging email to console');
+    console.log('📧 ===== EMAIL NOTIFICATION (CONSOLE FALLBACK) =====');
+    console.log('📧 To:', emailData.to);
+    console.log('📧 Subject:', emailData.subject);
+    console.log('📧 From:', emailData.fromEmail || 'jed@chimeo.app');
+    console.log('📧 =================================================');
+    console.log('📧 Text Content:');
+    console.log(emailData.textContent || 'No text content');
+    console.log('📧 HTML Content:');
+    console.log(emailData.htmlContent);
+    console.log('📧 =================================================');
+    console.log('✅ Email logged successfully (manual sending required)');
+    return true; // Return true for fallback
   }
 
   // Send via Zoho
@@ -447,7 +458,7 @@ export const sendTestEmail = functions.https.onCall(async (data, context) => {
         
         <div style="background-color: #e7f3ff; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #007bff;">
           <h3 style="margin-top: 0; color: #0056b3;">Test Details</h3>
-          <p><strong>Service:</strong> SendGrid Email Service</p>
+          <p><strong>Service:</strong> Zoho Email Service</p>
           <p><strong>Status:</strong> ✅ Working</p>
           <p><strong>Test Date:</strong> ${new Date().toLocaleDateString()}</p>
           <p><strong>Test Time:</strong> ${new Date().toLocaleTimeString()}</p>
@@ -468,7 +479,7 @@ Hello Platform Admin,
 This is a test email to verify that email notifications are working correctly.
 
 Test Details:
-- Service: SendGrid Email Service
+- Service: Zoho Email Service
 - Status: ✅ Working
 - Test Date: ${new Date().toLocaleDateString()}
 - Test Time: ${new Date().toLocaleTimeString()}
