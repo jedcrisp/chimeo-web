@@ -214,32 +214,57 @@ export default function MyGroups() {
 
   const loadAllGroups = async () => {
     try {
-      // Get all organizations first
-      const orgsQuery = query(collection(db, 'organizations'))
-      const orgsSnapshot = await getDocs(orgsQuery)
+      if (!currentUser) return []
+      
+      // Get user's followed organizations first
+      const userRef = doc(db, 'users', currentUser.uid)
+      const userDoc = await getDoc(userRef)
+      
+      if (!userDoc.exists()) {
+        console.log('User document not found')
+        return []
+      }
+      
+      const userData = userDoc.data()
+      const followedOrgIds = userData.followedOrganizations || []
+      
+      if (followedOrgIds.length === 0) {
+        console.log('No followed organizations found - no groups to show')
+        return []
+      }
+      
+      console.log('🔍 Loading groups from followed organizations:', followedOrgIds)
       
       const allGroups = []
-      for (const orgDoc of orgsSnapshot.docs) {
+      for (const orgId of followedOrgIds) {
         try {
           const groupsQuery = query(
-            collection(db, 'organizations', orgDoc.id, 'groups'),
+            collection(db, 'organizations', orgId, 'groups'),
             where('isActive', '==', true)
           )
           const groupsSnapshot = await getDocs(groupsQuery)
+          
+          // Get organization name
+          const orgRef = doc(db, 'organizations', orgId)
+          const orgDoc = await getDoc(orgRef)
+          const orgName = orgDoc.exists() ? orgDoc.data().name : 'Unknown Organization'
           
           groupsSnapshot.docs.forEach(groupDoc => {
             allGroups.push({
               id: groupDoc.id,
               ...groupDoc.data(),
-              organizationId: orgDoc.id,
-              organizationName: orgDoc.data().name
+              organizationId: orgId,
+              organizationName: orgName
             })
           })
+          
+          console.log(`✅ Loaded ${groupsSnapshot.docs.length} groups from organization: ${orgName}`)
         } catch (error) {
-          console.error('Error loading groups for org:', orgDoc.id, error)
+          console.error('Error loading groups for org:', orgId, error)
         }
       }
       
+      console.log(`✅ Total groups loaded from followed organizations: ${allGroups.length}`)
       return allGroups
     } catch (error) {
       console.error('Error loading all groups:', error)
@@ -316,7 +341,7 @@ export default function MyGroups() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Groups</h1>
           <p className="text-gray-600 mt-1">
-            Manage which groups you follow to receive alerts
+            Manage which groups you follow from organizations you're following
           </p>
         </div>
         <div className="flex space-x-3">
@@ -324,7 +349,7 @@ export default function MyGroups() {
             onClick={() => setShowAllGroups(!showAllGroups)}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
-            {showAllGroups ? 'Show Only Followed' : 'Discover New Groups'}
+            {showAllGroups ? 'Show Only Followed' : 'Show All Available Groups'}
           </button>
           <button
             onClick={loadUserGroups}
@@ -351,7 +376,7 @@ export default function MyGroups() {
           <div className="flex items-center">
             <Building className="h-8 w-8 text-green-600" />
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Total Groups Available</p>
+              <p className="text-sm font-medium text-gray-600">Groups from Followed Organizations</p>
               <p className="text-2xl font-bold text-gray-900">{allGroups.length}</p>
             </div>
           </div>
@@ -464,13 +489,27 @@ export default function MyGroups() {
           <div className="text-center py-8">
             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No groups followed yet</h3>
-            <p className="text-gray-600 mb-4">Start following groups to receive alerts</p>
+            <p className="text-gray-600 mb-4">Start following groups from organizations you follow to receive alerts</p>
             <button
               onClick={() => setShowAllGroups(true)}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
-              Discover Groups
+              Show Available Groups
             </button>
+          </div>
+        )}
+        
+        {allGroups.length === 0 && showAllGroups && (
+          <div className="text-center py-8">
+            <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No groups available</h3>
+            <p className="text-gray-600 mb-4">You need to follow organizations first to see their groups</p>
+            <a
+              href="/discover"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors inline-block"
+            >
+              Discover Organizations
+            </a>
           </div>
         )}
       </div>
