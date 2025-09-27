@@ -127,10 +127,39 @@ class SubscriptionService {
         return subscription
       }
       
-      // Fallback: check user profile for planType
+      // Fallback: check user profile for planType or accessLevel
       const userDoc = await getDoc(doc(db, 'users', userId))
       if (userDoc.exists()) {
         const userData = userDoc.data()
+        
+        // Check for standard access level first
+        if (userData.accessLevel === 'standard') {
+          console.log('✅ SubscriptionService: Found standard access level in user profile')
+          return {
+            userId,
+            planType: 'standard',
+            accessLevel: 'standard',
+            status: 'active',
+            name: 'Standard',
+            price: 0,
+            period: 'month',
+            description: 'Basic access for individual users',
+            features: [
+              'View alerts from followed organizations',
+              'Join groups as a member',
+              'Discover organizations',
+              'Basic push notifications',
+              'Email support'
+            ],
+            limits: {
+              admins: 0,
+              groups: 0,
+              alerts: 0
+            }
+          }
+        }
+        
+        // Check for other plan types
         if (userData.planType && userData.planType !== 'free') {
           console.log('✅ SubscriptionService: Found planType in user profile:', userData.planType)
           return {

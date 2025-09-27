@@ -37,7 +37,7 @@ export function SubscriptionProvider({ children }) {
       const stats = await subscriptionService.getUsageStats(currentUser.uid)
       setUsageStats(stats)
       
-      console.log('✅ SubscriptionContext: Subscription loaded:', userSubscription.planType)
+      console.log('✅ SubscriptionContext: Subscription loaded:', userSubscription.planType || userSubscription.accessLevel)
       console.log('✅ SubscriptionContext: Usage stats loaded:', stats.usage)
       
     } catch (error) {
