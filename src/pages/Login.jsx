@@ -394,8 +394,23 @@ export default function Login() {
           setLoading(false)
           return
         }
-        if (password.length < 6) {
-          setError('Password must be at least 6 characters')
+        if (password.length < 8) {
+          setError('Password must be at least 8 characters')
+          setLoading(false)
+          return
+        }
+        if (!/[A-Z]/.test(password)) {
+          setError('Password must contain at least one uppercase letter')
+          setLoading(false)
+          return
+        }
+        if (!/[0-9]/.test(password)) {
+          setError('Password must contain at least one number')
+          setLoading(false)
+          return
+        }
+        if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+          setError('Password must contain at least one special character')
           setLoading(false)
           return
         }
@@ -576,9 +591,21 @@ export default function Login() {
               <div className="text-sm text-gray-600">
                 <p className="font-medium mb-1">Password Requirements:</p>
                 <ul className="space-y-1">
-                  <li className={`flex items-center ${password.length >= 6 ? 'text-green-600' : 'text-gray-500'}`}>
-                    <span className="mr-2">{password.length >= 6 ? '✓' : '○'}</span>
-                    At least 6 characters
+                  <li className={`flex items-center ${password.length >= 8 ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className="mr-2">{password.length >= 8 ? '✓' : '○'}</span>
+                    At least 8 characters
+                  </li>
+                  <li className={`flex items-center ${/[A-Z]/.test(password) ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className="mr-2">{/[A-Z]/.test(password) ? '✓' : '○'}</span>
+                    One uppercase letter
+                  </li>
+                  <li className={`flex items-center ${/[0-9]/.test(password) ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className="mr-2">{/[0-9]/.test(password) ? '✓' : '○'}</span>
+                    One number
+                  </li>
+                  <li className={`flex items-center ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className="mr-2">{/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? '✓' : '○'}</span>
+                    One special character
                   </li>
                   <li className={`flex items-center ${password === confirmPassword && confirmPassword.length > 0 ? 'text-green-600' : 'text-gray-500'}`}>
                     <span className="mr-2">{password === confirmPassword && confirmPassword.length > 0 ? '✓' : '○'}</span>
