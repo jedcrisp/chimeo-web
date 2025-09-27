@@ -2,8 +2,8 @@
 class EmailService {
   constructor() {
     this.isInitialized = true;
-    this.fromEmail = "jed@chimeo.app"; // Zoho account email
-    this.platformAdminEmail = "jed@chimeo.app"; 
+    this.fromEmail = "noreply@chimeo.app"; // Zoho account email
+    this.platformAdminEmail = "jed@chimeo.app";
   }
 
   // Generic send method (via Vercel API)
@@ -12,7 +12,7 @@ class EmailService {
       const response = await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to, subject, text: textContent, html: htmlContent }),
+        body: JSON.stringify({ to, subject, text: textContent, html: htmlContent, from: this.fromEmail }),
       });
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
