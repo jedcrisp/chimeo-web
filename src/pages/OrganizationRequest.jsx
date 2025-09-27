@@ -360,26 +360,34 @@ export default function OrganizationRequest() {
 
       await updateDoc(requestRef, updateData)
       
-      // Send approval email if request was approved
-      if (actionType === 'approve') {
-        try {
+      // Send appropriate email based on action type
+      try {
+        const userData = {
+          firstName: selectedRequest.adminFirstName,
+          lastName: selectedRequest.adminLastName,
+          email: selectedRequest.adminEmail
+        }
+        const organizationData = {
+          organizationName: selectedRequest.organizationName,
+          organizationType: selectedRequest.organizationType
+        }
+        
+        if (actionType === 'approve') {
           console.log('📧 Sending approval email...')
-          const userData = {
-            firstName: selectedRequest.adminFirstName,
-            lastName: selectedRequest.adminLastName,
-            email: selectedRequest.adminEmail
-          }
-          const organizationData = {
-            organizationName: selectedRequest.organizationName,
-            organizationType: selectedRequest.organizationType
-          }
-          
           await emailService.sendOrganizationApprovalEmail(userData, organizationData)
           console.log('✅ Approval email sent successfully')
-        } catch (emailError) {
-          console.error('❌ Failed to send approval email:', emailError)
-          // Don't fail the whole process if email fails
+        } else if (actionType === 'reject') {
+          console.log('📧 Sending rejection email...')
+          await emailService.sendOrganizationRejectionEmail(userData, organizationData, actionMessage)
+          console.log('✅ Rejection email sent successfully')
+        } else if (actionType === 'request_info') {
+          console.log('📧 Sending info request email...')
+          await emailService.sendOrganizationInfoRequestEmail(userData, organizationData, actionMessage)
+          console.log('✅ Info request email sent successfully')
         }
+      } catch (emailError) {
+        console.error('❌ Failed to send email notification:', emailError)
+        // Don't fail the whole process if email fails
       }
       
       const successMessage = actionType === 'approve' 

@@ -280,6 +280,148 @@ Chimeo Alerts
     return result;
   }
 
+  // Send organization rejection email
+  async sendOrganizationRejectionEmail(userData, organizationData, adminMessage = '') {
+    const { firstName, lastName, email } = userData
+    const { organizationName, organizationType } = organizationData
+    
+    const subject = `Organization Request Update - ${organizationName}`
+    const textContent = `
+Hello ${firstName},
+
+Thank you for your interest in Chimeo. After careful review, we are unable to approve your organization request for "${organizationName}" at this time.
+
+Organization Details:
+- Name: ${organizationName}
+- Type: ${organizationType}
+- Admin: ${firstName} ${lastName}
+- Email: ${email}
+
+${adminMessage ? `Admin Message: ${adminMessage}` : ''}
+
+We appreciate your interest in our platform and encourage you to:
+- Review our organization requirements
+- Consider reapplying in the future
+- Contact us if you have any questions
+
+If you have any questions about this decision, please don't hesitate to reach out to us.
+
+Best regards,
+The Chimeo Team
+    `
+    
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #dc3545;">Organization Request Update</h2>
+        
+        <p>Hello ${firstName},</p>
+        
+        <p>Thank you for your interest in Chimeo. After careful review, we are unable to approve your organization request for <strong>"${organizationName}"</strong> at this time.</p>
+        
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #333;">Organization Details</h3>
+          <p><strong>Name:</strong> ${organizationName}</p>
+          <p><strong>Type:</strong> ${organizationType}</p>
+          <p><strong>Admin:</strong> ${firstName} ${lastName}</p>
+          <p><strong>Email:</strong> ${email}</p>
+        </div>
+        
+        ${adminMessage ? `
+        <div style="background-color: #f8d7da; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #dc3545;">
+          <h4 style="margin-top: 0; color: #721c24;">Admin Message:</h4>
+          <p style="margin: 0; color: #721c24;">${adminMessage}</p>
+        </div>
+        ` : ''}
+        
+        <div style="background-color: #e3f2fd; padding: 20px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #1976d2;">Next Steps</h3>
+          <p>We appreciate your interest in our platform and encourage you to:</p>
+          <ul>
+            <li>Review our organization requirements</li>
+            <li>Consider reapplying in the future</li>
+            <li>Contact us if you have any questions</li>
+          </ul>
+        </div>
+        
+        <p>If you have any questions about this decision, please don't hesitate to reach out to us.</p>
+        
+        <p>Best regards,<br><strong>The Chimeo Team</strong></p>
+      </div>
+    `
+    
+    return await this.sendEmail(email, subject, textContent, htmlContent)
+  }
+
+  // Send organization info request email
+  async sendOrganizationInfoRequestEmail(userData, organizationData, adminMessage = '') {
+    const { firstName, lastName, email } = userData
+    const { organizationName, organizationType } = organizationData
+    
+    const subject = `Additional Information Required - ${organizationName}`
+    const textContent = `
+Hello ${firstName},
+
+Thank you for your organization request for "${organizationName}". We need some additional information before we can process your request.
+
+Organization Details:
+- Name: ${organizationName}
+- Type: ${organizationType}
+- Admin: ${firstName} ${lastName}
+- Email: ${email}
+
+${adminMessage ? `Information Needed: ${adminMessage}` : 'Please provide the following additional information:'}
+
+To provide the requested information:
+1. Log in to your Chimeo account
+2. Go to your organization request
+3. Reply with the additional details
+
+We look forward to reviewing your complete application.
+
+Best regards,
+The Chimeo Team
+    `
+    
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #007bff;">📋 Additional Information Required</h2>
+        
+        <p>Hello ${firstName},</p>
+        
+        <p>Thank you for your organization request for <strong>"${organizationName}"</strong>. We need some additional information before we can process your request.</p>
+        
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #333;">Organization Details</h3>
+          <p><strong>Name:</strong> ${organizationName}</p>
+          <p><strong>Type:</strong> ${organizationType}</p>
+          <p><strong>Admin:</strong> ${firstName} ${lastName}</p>
+          <p><strong>Email:</strong> ${email}</p>
+        </div>
+        
+        <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ffc107;">
+          <h4 style="margin-top: 0; color: #856404;">Information Needed:</h4>
+          <p style="margin: 0; color: #856404;">${adminMessage || 'Please provide the following additional information:'}</p>
+        </div>
+        
+        <div style="background-color: #e3f2fd; padding: 20px; border-radius: 5px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #1976d2;">How to Respond</h3>
+          <p>To provide the requested information:</p>
+          <ol>
+            <li>Log in to your Chimeo account</li>
+            <li>Go to your organization request</li>
+            <li>Reply with the additional details</li>
+          </ol>
+        </div>
+        
+        <p>We look forward to reviewing your complete application.</p>
+        
+        <p>Best regards,<br><strong>The Chimeo Team</strong></p>
+      </div>
+    `
+    
+    return await this.sendEmail(email, subject, textContent, htmlContent)
+  }
+
   // Example: Test Email
   async testEmail() {
     return this.sendEmail(
