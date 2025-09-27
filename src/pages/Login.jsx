@@ -7,16 +7,19 @@ import { db, auth } from '../services/firebase'
 import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword } from 'firebase/auth'
 import notificationService from '../services/notificationService'
 import emailService from '../services/emailService'
-import { Building, CheckCircle, X } from 'lucide-react'
+import { Building, CheckCircle, X, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   
   // Organization request states
   const [showRequestForm, setShowRequestForm] = useState(false)
@@ -386,6 +389,16 @@ export default function Login() {
           setLoading(false)
           return
         }
+        if (password !== confirmPassword) {
+          setError('Passwords do not match')
+          setLoading(false)
+          return
+        }
+        if (password.length < 6) {
+          setError('Password must be at least 6 characters')
+          setLoading(false)
+          return
+        }
         await signup(email, password, displayName.trim())
         console.log('✅ Login: Signup successful')
       }
@@ -413,8 +426,11 @@ export default function Login() {
   const resetForm = () => {
     setEmail('')
     setPassword('')
+    setConfirmPassword('')
     setDisplayName('')
     setError('')
+    setShowPassword(false)
+    setShowConfirmPassword(false)
   }
 
   const toggleMode = () => {
@@ -500,18 +516,77 @@ export default function Login() {
             </div>
             <div>
               <label htmlFor="password" className="sr-only">Password</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  className="appearance-none rounded-md relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
+            
+            {!isLogin && (
+              <div>
+                <label htmlFor="confirmPassword" className="sr-only">Confirm Password</label>
+                <div className="relative">
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    required={!isLogin}
+                    className="appearance-none rounded-md relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                    placeholder="Confirm Password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {!isLogin && (
+              <div className="text-sm text-gray-600">
+                <p className="font-medium mb-1">Password Requirements:</p>
+                <ul className="space-y-1">
+                  <li className={`flex items-center ${password.length >= 6 ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className="mr-2">{password.length >= 6 ? '✓' : '○'}</span>
+                    At least 6 characters
+                  </li>
+                  <li className={`flex items-center ${password === confirmPassword && confirmPassword.length > 0 ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className="mr-2">{password === confirmPassword && confirmPassword.length > 0 ? '✓' : '○'}</span>
+                    Passwords match
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
 
           {error && (
