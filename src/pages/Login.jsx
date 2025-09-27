@@ -284,6 +284,24 @@ export default function Login() {
         } else {
           console.warn('⚠️ Email service returned false - email may not have been sent')
         }
+
+        // Send confirmation email to the requester
+        try {
+          console.log('📧 Sending confirmation email to requester...')
+          const confirmationResult = await emailService.sendOrganizationRequestConfirmation({
+            ...requestData,
+            adminName: `${requestForm.adminFirstName} ${requestForm.adminLastName}`.trim()
+          })
+          console.log('📧 Confirmation email result:', confirmationResult)
+          
+          if (confirmationResult) {
+            console.log('✅ Confirmation email sent to requester')
+          } else {
+            console.warn('⚠️ Confirmation email service returned false')
+          }
+        } catch (confirmationError) {
+          console.error('❌ Failed to send confirmation email:', confirmationError)
+        }
       } catch (emailError) {
         console.error('❌ Failed to send email notification:', emailError)
         console.error('❌ Email error details:', {
