@@ -39,10 +39,14 @@ console.log('✅ Firebase: Firestore initialized successfully')
 let functions = null
 try {
   console.log('🔧 Firebase: Initializing functions...')
+  console.log('🔧 Firebase: App object:', app)
+  console.log('🔧 Firebase: getFunctions function:', typeof getFunctions)
   functions = getFunctions(app, 'us-central1') // Specify the region
   console.log('✅ Firebase: Functions initialized successfully')
+  console.log('🔧 Firebase: Functions object:', functions)
 } catch (error) {
   console.warn('⚠️ Firebase: Functions not available in this environment:', error.message)
+  console.warn('⚠️ Firebase: Error details:', error)
   functions = null
 }
 export { functions }
