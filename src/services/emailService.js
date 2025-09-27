@@ -140,6 +140,94 @@ The Chimeo Team
     );
   }
 
+  // Send organization approval email to requester
+  async sendOrganizationApprovalEmail(data) {
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + 30);
+    
+    return this.sendEmail(
+      data.adminEmail,
+      `Organization Approved - ${data.organizationName}`,
+      `
+Congratulations! Your organization has been approved!
+
+Hello ${data.adminName},
+
+Great news! Your organization request for "${data.organizationName}" has been approved and your account has been upgraded.
+
+Organization Details:
+- Organization: ${data.organizationName}
+- Type: ${data.organizationType}
+- Approval Date: ${new Date().toLocaleString()}
+
+Your Premium Trial:
+- Status: ACTIVE
+- Trial Period: 30 days
+- Trial Ends: ${trialEndDate.toLocaleDateString()}
+- Access Level: Premium
+
+What you can do now:
+- Create unlimited groups and send alerts
+- Access advanced features and analytics
+- Manage your organization settings
+- Invite team members
+
+Important: Your 30-day premium trial will end on ${trialEndDate.toLocaleDateString()}. If you don't upgrade to a paid subscription before then, your account will automatically return to the free tier.
+
+To upgrade your subscription, log in to your account and visit the subscription page.
+
+Welcome to Chimeo!
+
+Best regards,
+The Chimeo Team
+      `,
+      `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #28a745;">🎉 Congratulations! Your Organization Has Been Approved!</h2>
+          
+          <p>Hello <strong>${data.adminName}</strong>,</p>
+          
+          <p>Great news! Your organization request for <strong>"${data.organizationName}"</strong> has been approved and your account has been upgraded.</p>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #333;">Organization Details</h3>
+            <p><strong>Organization:</strong> ${data.organizationName}</p>
+            <p><strong>Type:</strong> ${data.organizationType}</p>
+            <p><strong>Approval Date:</strong> ${new Date().toLocaleString()}</p>
+          </div>
+          
+          <div style="background-color: #e8f5e8; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745;">
+            <h3 style="margin-top: 0; color: #28a745;">Your Premium Trial</h3>
+            <p><strong>Status:</strong> <span style="color: #28a745; font-weight: bold;">ACTIVE</span></p>
+            <p><strong>Trial Period:</strong> 30 days</p>
+            <p><strong>Trial Ends:</strong> ${trialEndDate.toLocaleDateString()}</p>
+            <p><strong>Access Level:</strong> Premium</p>
+          </div>
+          
+          <div style="background-color: #e3f2fd; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #1976d2;">What you can do now:</h3>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li>Create unlimited groups and send alerts</li>
+              <li>Access advanced features and analytics</li>
+              <li>Manage your organization settings</li>
+              <li>Invite team members</li>
+            </ul>
+          </div>
+          
+          <div style="background-color: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ffc107;">
+            <h3 style="margin-top: 0; color: #856404;">⚠️ Important Trial Information</h3>
+            <p>Your 30-day premium trial will end on <strong>${trialEndDate.toLocaleDateString()}</strong>. If you don't upgrade to a paid subscription before then, your account will automatically return to the free tier.</p>
+            <p>To upgrade your subscription, log in to your account and visit the subscription page.</p>
+          </div>
+          
+          <p>Welcome to Chimeo!</p>
+          
+          <p>Best regards,<br><strong>The Chimeo Team</strong></p>
+        </div>
+      `
+    );
+  }
+
   // Example: Test Email
   async testEmail() {
     return this.sendEmail(

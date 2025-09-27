@@ -917,7 +917,12 @@ export default function OrganizationRequest() {
           await emailService.initialize()
         }
         
-        const emailResult = await emailService.sendOrganizationApprovedEmail(organizationData, request.adminEmail)
+        const emailResult = await emailService.sendOrganizationApprovalEmail({
+          organizationName: organizationData.organizationName,
+          organizationType: organizationData.organizationType,
+          adminName: request.adminName || `${request.adminFirstName} ${request.adminLastName}`.trim(),
+          adminEmail: request.adminEmail
+        })
         console.log('📧 Email send result:', emailResult)
         
         if (emailResult) {
