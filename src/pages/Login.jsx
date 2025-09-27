@@ -54,13 +54,13 @@ export default function Login() {
   
   const { login, signup, signInWithGoogle, currentUser } = authContext || {}
 
-  // Auto-redirect if user is already authenticated
+  // Auto-redirect if user is already authenticated (only for login, not signup)
   useEffect(() => {
-    if (currentUser && !loading) {
+    if (currentUser && !loading && isLogin) {
       console.log('🔧 Login: User authenticated, redirecting to dashboard...')
       navigate('/')
     }
-  }, [currentUser, loading, navigate])
+  }, [currentUser, loading, navigate, isLogin])
 
   const fetchUserRequests = useCallback(async () => {
     if (!currentUser) return
@@ -389,6 +389,7 @@ export default function Login() {
           setLoading(false)
           return
         }
+        // Validate password requirements
         if (password !== confirmPassword) {
           setError('Passwords do not match')
           setLoading(false)
@@ -414,8 +415,90 @@ export default function Login() {
           setLoading(false)
           return
         }
-        await signup(email, password, displayName.trim())
-        console.log('✅ Login: Signup successful')
+        
+        // Create account without auto sign-in
+        try {
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+          const user = userCredential.user
+          
+          // Update user profile
+          await updateProfile(user, {
+            displayName: displayName.trim()
+          })
+          
+          // Create user document in Firestore
+          await setDoc(doc(db, 'users', user.uid), {
+            uid: user.uid,
+            email: user.email,
+            displayName: displayName.trim(),
+            access: 'standard',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          })
+          
+          // Send welcome email
+          try {
+            await emailService.sendEmail(
+              email,
+              'Welcome to Chimeo!',
+              `Welcome to Chimeo, ${displayName.trim()}!
+
+Your account has been successfully created. You can now:
+
+- Create and manage organizations
+- Join groups and receive alerts
+- Access all standard features
+
+To get started, simply log in with your email and password.
+
+If you have any questions, feel free to reach out to our support team.
+
+Best regards,
+The Chimeo Team`,
+              `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <h2 style="color: #28a745;">🎉 Welcome to Chimeo, ${displayName.trim()}!</h2>
+                  
+                  <p>Your account has been successfully created. You can now:</p>
+                  
+                  <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+                    <h3 style="margin-top: 0; color: #333;">What you can do:</h3>
+                    <ul style="margin: 0; padding-left: 20px;">
+                      <li>Create and manage organizations</li>
+                      <li>Join groups and receive alerts</li>
+                      <li>Access all standard features</li>
+                    </ul>
+                  </div>
+                  
+                  <div style="background-color: #e3f2fd; padding: 20px; border-radius: 5px; margin: 20px 0;">
+                    <h3 style="margin-top: 0; color: #1976d2;">Getting Started</h3>
+                    <p>To get started, simply log in with your email and password.</p>
+                  </div>
+                  
+                  <p>If you have any questions, feel free to reach out to our support team.</p>
+                  
+                  <p>Best regards,<br><strong>The Chimeo Team</strong></p>
+                </div>
+              `
+            )
+            console.log('✅ Welcome email sent successfully')
+          } catch (emailError) {
+            console.error('❌ Failed to send welcome email:', emailError)
+            // Don't fail account creation if email fails
+          }
+          
+          console.log('✅ Account created successfully')
+          setError('')
+          toast.success('Account created successfully! Please check your email for a welcome message and then log in.')
+          
+          // Reset form and switch to login mode
+          resetForm()
+          setIsLogin(true)
+          
+        } catch (signupError) {
+          console.error('❌ Error creating account:', signupError)
+          setError(signupError.message)
+        }
       }
     } catch (error) {
       console.error('❌ Login: Error during authentication:', error)
